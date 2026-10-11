@@ -49,7 +49,7 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 | [Missing-server setup](#missing-server-setup) | Guides first connection, distinguishes failures and opens Sessions directly; background service is optional. | v0.0.1 | v0.1.13 |
 | [Settings organization](#settings-organization) | Groups native settings into Appearance, Reading, Usage and Connection. | v0.0.9 | v0.1.10 |
 | [Native themes and fonts](#native-themes-and-fonts) | Theme foregrounds and equal chat/search typography. | v0.0.1 | v0.1.13 |
-| [T3 VSCode branding](#t3-vscode-branding) | Extension identity, listing metadata and screenshots of the native UI. | v0.0.7 | v0.1.12 |
+| [T3 VSCode branding](#t3-vscode-branding) | Extension identity, scannable README listing and a separate user guide for reference detail. | v0.0.7 | v0.1.19 |
 | [Isolated development and packaging](#isolated-development-and-packaging) | Tests in disposable profiles and produces channel-specific VSIX installers. | v0.0.1 | v0.1.15 |
 | [Release versioning](#release-versioning) | Keeps the owner-selected version and publishes only a specifically authorized version/channel. | v0.1.10 | v0.1.17 |
 | [Feature tracking and regression review](#feature-tracking-and-regression-review) | Maintains this history and requires an independent review before packaging. | v0.0.8 | v0.0.8 |
@@ -940,6 +940,15 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 #### v0.1.12
 
 - Set the permanent Marketplace identity to `hungtienhuang.t3-vscode` using the owner-confirmed publisher.
+
+#### v0.1.19
+
+- Rewrite the README listing as a scannable landing page: what the extension is, the screenshot gallery, a short feature table, a three-step quick start and a compact **Scope and limitations** section, following this repository's own response-style rules.
+- Move the exhaustive reference material (settings enumeration, connection diagnostics, usage meters, sessions and drafts, composer and editing, references and attachments, rendering, find in session, scheduled tasks and local VSIX installation) into the new user-facing [user guide](user-guide.md) without duplicating it in the README.
+- Keep the T3 Code install/service links, the Marketplace channel banner and the Linux, local-server and remote-server caveats. Restate the specialized tool preview and interactive checkpoint restore limits as [the architecture document](t3-vscode-architecture.md) records them, and keep cross-window chat movement as unverified.
+- Document the automatic usage refresh in the user guide, including the jittered interval, the deferral while a session is busy, the pause while no meter is displayed, and the single-instance target when exactly one meter is shown.
+- Add four README screenshots — an agent-only response diff in VS Code's diff editor, **Find in session**, the model catalog with effort and permission controls, and the scheduled task editor — captured from the real extension in an isolated profile.
+- Extend `scripts/prepare-readme-fixture.ts` with a Git-backed demo workspace and a synthetic saved turn (baseline tree, two ready checkpoints and one completed run) and `scripts/capture-readme.mjs` with the matching capture steps; no capture calls a provider.
 
 ### Isolated development and packaging
 
