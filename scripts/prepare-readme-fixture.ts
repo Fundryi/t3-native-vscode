@@ -1,15 +1,20 @@
 /** Synthetic demo conversations for screenshots of the real extension; no provider turns. */
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { lstat, mkdir, mkdtemp, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { promisify } from "node:util";
 import * as Schema from "effect/Schema";
-import { OrchestrationV2TurnItemJson } from "@t3tools/contracts";
+import { OrchestrationV2CheckpointJson, OrchestrationV2CheckpointScopeJson, OrchestrationV2RunJson, OrchestrationV2TurnItemJson } from "@t3tools/contracts";
 import { HostState } from "../src/host/hostState.js";
 import { T3Client } from "../src/host/t3Client.js";
-import { configureLiveTestModel } from "./liveTestModel.js";
+import { captureTurnBaseline, turnBaselineRef } from "../src/host/turnBaseline.js";
+import { configureLiveTestModel, liveTestSelection } from "./liveTestModel.js";
+
+const exec = promisify(execFile);
 
 const flag = process.argv.indexOf("--base-dir");
 assert.ok(flag >= 0 && process.argv[flag + 1], "Pass --base-dir <disposable-T3-home-in-tmp>.");
@@ -34,11 +39,19 @@ if (process.argv.includes("--seed")) {
   const items = (fixture.items as unknown[]).map(item => Schema.encodeSync(OrchestrationV2TurnItemJson)(Schema.decodeUnknownSync(OrchestrationV2TurnItemJson)(item)));
   const ids = new Set(Object.values(fixture.threads));
   assert.ok(items.every(item => ids.has(item.threadId)));
+  // The response-diff demo also needs the run and checkpoint metadata T3 records for a saved turn.
+  const projection = (fixture.projection ?? { scopes: [], checkpoints: [], runs: [] }) as Record<"scopes" | "checkpoints" | "runs", unknown[]>;
+  const scopes = projection.scopes.map(row => Schema.encodeSync(OrchestrationV2CheckpointScopeJson)(Schema.decodeUnknownSync(OrchestrationV2CheckpointScopeJson)(row)));
+  const checkpoints = projection.checkpoints.map(row => Schema.encodeSync(OrchestrationV2CheckpointJson)(Schema.decodeUnknownSync(OrchestrationV2CheckpointJson)(row)));
+  const runs = projection.runs.map(row => Schema.encodeSync(OrchestrationV2RunJson)(Schema.decodeUnknownSync(OrchestrationV2RunJson)(row)));
+  assert.ok([...scopes, ...checkpoints, ...runs].every(row => ids.has(row.threadId)), "Seeded runs and checkpoints belong to the prepared conversations.");
   const db = new DatabaseSync(join(home, "userdata/statev2.sqlite"));
   try {
     for (const threadId of ids) {
-      const count = db.prepare("select count(*) as count from orchestration_v2_projection_turn_items where thread_id=?").get(threadId as string) as { count: number };
-      assert.equal(count.count, 0, "Only seed newly prepared empty conversations.");
+      for (const table of ["orchestration_v2_projection_turn_items", "orchestration_v2_projection_runs", "orchestration_v2_projection_checkpoints"]) {
+        const count = db.prepare(`select count(*) as count from ${table} where thread_id=?`).get(threadId as string) as { count: number };
+        assert.equal(count.count, 0, "Only seed newly prepared empty conversations.");
+      }
     }
     db.exec("BEGIN IMMEDIATE");
     const put = db.prepare("insert into orchestration_v2_projection_turn_items (turn_item_id,thread_id,run_id,node_id,provider_thread_id,provider_turn_id,parent_item_id,ordinal,type,status,updated_at,payload_json) values(?,?,?,?,?,?,?,?,?,?,?,?)");
@@ -47,12 +60,27 @@ if (process.argv.includes("--seed")) {
       put.run(item.id, item.threadId, item.runId, item.nodeId, null, null, null, item.ordinal, item.type, item.status, item.updatedAt, JSON.stringify(item));
       position.run(item.threadId, item.id, item.ordinal);
     }
+    const putScope = db.prepare("insert into orchestration_v2_projection_checkpoint_scopes (scope_id,thread_id,run_id,node_id,parent_scope_id,provider_thread_id,kind,ordinal_within_parent,advances_app_run_count,created_at,payload_json) values(?,?,?,?,?,?,?,?,?,?,?)");
+    for (const scope of scopes) putScope.run(scope.id, scope.threadId, scope.runId, scope.nodeId, scope.parentScopeId, scope.providerThreadId, scope.kind, scope.ordinalWithinParent, scope.advancesAppRunCount ? 1 : 0, scope.createdAt, JSON.stringify(scope));
+    const putCheckpoint = db.prepare("insert into orchestration_v2_projection_checkpoints (checkpoint_id,thread_id,scope_id,run_id,node_id,parent_checkpoint_id,ordinal_within_scope,app_run_ordinal,status,captured_at,payload_json) values(?,?,?,?,?,?,?,?,?,?,?)");
+    for (const checkpoint of checkpoints) putCheckpoint.run(checkpoint.id, checkpoint.threadId, checkpoint.scopeId, checkpoint.runId, checkpoint.nodeId, checkpoint.parentCheckpointId, checkpoint.ordinalWithinScope, checkpoint.appRunOrdinal, checkpoint.status, checkpoint.capturedAt, JSON.stringify(checkpoint));
+    const putRun = db.prepare("insert into orchestration_v2_projection_runs (run_id,thread_id,ordinal,provider,provider_instance_id,provider_thread_id,status,requested_at,completed_at,payload_json) values(?,?,?,?,?,?,?,?,?,?)");
+    // T3 records the provider instance in both the legacy provider column and provider_instance_id.
+    for (const run of runs) putRun.run(run.id, run.threadId, run.ordinal, run.providerInstanceId, run.providerInstanceId, run.providerThreadId, run.status, run.requestedAt, run.completedAt, JSON.stringify(run));
     db.exec("COMMIT");
-    console.log(`Seeded ${items.length} demo items without calling a model; restart the isolated server.`);
+    console.log(`Seeded ${items.length} demo items, ${runs.length} saved runs and ${checkpoints.length} checkpoints without calling a model; restart the isolated server.`);
   } finally { db.close(); }
 } else {
+  // The screenshot workspace is a disposable Git repository so saved turn checkpoints have somewhere to live.
+  const workspace = join(home, "workspace");
+  await mkdir(workspace, { recursive: true });
+  const git = (args: string[], env: Record<string, string> = {}) => exec("git", ["-C", workspace, ...args], { env: { ...process.env, ...env }, encoding: "utf8" }).then(result => result.stdout.trim());
+  await git(["rev-parse", "--git-dir"]).catch(async () => {
+    await git(["init", "--quiet"]);
+    await git(["config", "user.name", "T3 VSCode fixture"]); await git(["config", "user.email", "fixture@example.invalid"]);
+  });
   let credential: Parameters<ConstructorParameters<typeof HostState>[0]["credentials"]["save"]>[0] | null = null;
-  const host = new HostState({ home, workspaceRoots: () => [join(home, "workspace")], credentials: { get: async () => credential, save: async value => { credential = value; }, clear: async () => { credential = null; } } }, new T3Client());
+  const host = new HostState({ home, workspaceRoots: () => [workspace], credentials: { get: async () => credential, save: async value => { credential = value; }, clear: async () => { credential = null; } } }, new T3Client());
   try {
     await host.start(); assert.equal(host.snapshot().phase, "ready", "Start the isolated server first.");
     await configureLiveTestModel(host);
@@ -114,8 +142,46 @@ body{margin:0;padding:20px;font:14px system-ui;color:var(--foreground,#ddd);back
     for (const [input, output] of [["cat train.py", "# Read the current training step"], ["python -m pytest tests/test_loss.py -q", "3 passed in 0.42s"], ["git diff --check", ""]]) add({ type: "command_execution", input, output, exitCode: 0 });
     assistant("### Use logits directly\n\nPass the raw logits to `cross_entropy`; PyTorch combines log-softmax and negative log likelihood in a numerically stable operation.\n\n```python\nlogits = model(batch.inputs)\nloss = F.cross_entropy(logits, batch.targets)\nloss.backward()\noptimizer.step()\n```\n\nKeep the original logits for the loss calculation. Compute probabilities only when you need them for reporting or inference.\n\nSee [train.py](train.py) for the complete training step.");
     await writeFile(join(home, "workspace/train.py"), "import torch.nn.functional as F\n\n\ndef training_step(model, batch, optimizer):\n    optimizer.zero_grad(set_to_none=True)\n    logits = model(batch.inputs)\n    loss = F.cross_entropy(logits, batch.targets)\n    loss.backward()\n    optimizer.step()\n    return loss.detach()\n");
+    // An agent-only response diff: a saved baseline tree, two ready checkpoints and one completed run.
+    await thread("diff", "Stabilize the metrics helper");
+    const diffThread = currentThread;
+    const diffMessage = randomUUID();
+    add({ type: "user_message", messageId: diffMessage, createdBy: "user", creationSource: "web", inputIntent: "turn_start", attachments: [],
+      text: "Replace the hand-written softmax in trainer/metrics.py with the stable helper, add an accuracy metric and cover both with tests." });
+    for (const [input, output] of [["rg -n \"exp\\(\\)\" trainer", "trainer/metrics.py:5"], ["python -m pytest tests -q", "2 passed in 0.31s"]]) add({ type: "command_execution", input, output, exitCode: 0 });
+    assistant("### Stable loss, explicit accuracy\n\n`F.cross_entropy` fuses log-softmax with negative log likelihood, so the manual `exp()` division is both slower and less stable. I moved `batch_loss` onto it and added `batch_accuracy` beside it.\n\nThe new tests pin the loss for a known logit vector and check that accuracy counts `argmax` hits.");
+    await mkdir(join(workspace, "trainer"), { recursive: true });
+    await mkdir(join(workspace, "tests"), { recursive: true });
+    const metricsPath = join(workspace, "trainer/metrics.py");
+    await writeFile(metricsPath, "import torch\n\n\ndef batch_loss(logits, targets):\n    probabilities = logits.exp() / logits.exp().sum(dim=-1, keepdim=True)\n    picked = probabilities.gather(-1, targets.unsqueeze(-1)).squeeze(-1)\n    return -picked.log().mean()\n");
+    await captureTurnBaseline(workspace, diffThread, diffMessage);
+    const baselineTree = await git(["rev-parse", `${turnBaselineRef(diffThread, diffMessage)}^{tree}`]);
+    await git(["update-ref", "refs/t3/checkpoints/readme/0", baselineTree, ""]);
+    await writeFile(metricsPath, "import torch\nimport torch.nn.functional as F\n\n\ndef batch_loss(logits, targets):\n    \"\"\"Numerically stable cross-entropy straight from the raw logits.\"\"\"\n    return F.cross_entropy(logits, targets)\n\n\ndef batch_accuracy(logits, targets):\n    return (logits.argmax(dim=-1) == targets).float().mean()\n");
+    await writeFile(join(workspace, "tests/test_metrics.py"), "import torch\n\nfrom trainer.metrics import batch_accuracy, batch_loss\n\n\ndef test_batch_loss_matches_the_manual_softmax():\n    logits = torch.tensor([[2.0, 1.0, 0.1]])\n    targets = torch.tensor([0])\n    assert torch.allclose(batch_loss(logits, targets), torch.tensor(0.4170), atol=1e-4)\n\n\ndef test_batch_accuracy_counts_argmax_hits():\n    logits = torch.tensor([[0.2, 0.8], [0.9, 0.1]])\n    targets = torch.tensor([1, 0])\n    assert batch_accuracy(logits, targets).item() == 1.0\n");
+    const index = join(await mkdtemp(join(tmpdir(), "t3-readme-index-")), "index");
+    await git(["read-tree", "--empty"], { GIT_INDEX_FILE: index });
+    await git(["add", "--all", "--", ":/"], { GIT_INDEX_FILE: index });
+    await git(["update-ref", "refs/t3/checkpoints/readme/1", await git(["write-tree"], { GIT_INDEX_FILE: index }), ""]);
+    const selection = liveTestSelection(host.snapshot());
+    const scopeId = `readme-scope-${randomUUID()}`, nodeId = `readme-node-${randomUUID()}`, runId = `readme-run-${randomUUID()}`;
+    const checkpointIds = [`readme-checkpoint-${randomUUID()}`, `readme-checkpoint-${randomUUID()}`] as const;
+    const files = [{ path: "tests/test_metrics.py", kind: "added", additions: 15, deletions: 0 }, { path: "trainer/metrics.py", kind: "modified", additions: 7, deletions: 3 }];
+    add({ type: "checkpoint", runId, checkpointId: checkpointIds[1], scopeId, files });
+    const projection = {
+      scopes: [{ id: scopeId, threadId: diffThread, runId, nodeId, parentScopeId: null, providerThreadId: null, kind: "root_run", ordinalWithinParent: 0, advancesAppRunCount: true, cwd: workspace, createdAt: now }],
+      checkpoints: [
+        // The baseline belongs to the same run, which also keeps it inside T3's projection window.
+        { id: checkpointIds[0], threadId: diffThread, scopeId, runId, nodeId, parentCheckpointId: null, ordinalWithinScope: 0, appRunOrdinal: null, ref: "refs/t3/checkpoints/readme/0", status: "ready", files: [], capturedAt: now },
+        { id: checkpointIds[1], threadId: diffThread, scopeId, runId, nodeId, parentCheckpointId: checkpointIds[0], ordinalWithinScope: 1, appRunOrdinal: 1, ref: "refs/t3/checkpoints/readme/1", status: "ready", files, capturedAt: now },
+      ],
+      runs: [{ id: runId, threadId: diffThread, ordinal: 1, providerInstanceId: selection.instanceId, modelSelection: selection, providerThreadId: null, userMessageId: diffMessage, rootNodeId: null, activeAttemptId: null, status: "completed", requestedAt: now, startedAt: now, completedAt: now, checkpointId: checkpointIds[1], contextHandoffId: null }],
+    };
     for (const item of items) Schema.decodeUnknownSync(OrchestrationV2TurnItemJson)(item);
-    await writeFile(metadataPath, JSON.stringify({ home, threads, items }));
+    for (const scope of projection.scopes) Schema.decodeUnknownSync(OrchestrationV2CheckpointScopeJson)(scope);
+    for (const checkpoint of projection.checkpoints) Schema.decodeUnknownSync(OrchestrationV2CheckpointJson)(checkpoint);
+    for (const run of projection.runs) Schema.decodeUnknownSync(OrchestrationV2RunJson)(run);
+    await writeFile(metadataPath, JSON.stringify({ home, threads, items, projection }));
     console.log("Prepared README conversations; stop the isolated server, run --seed, then restart it.");
   } finally { await host.dispose(); }
 }
