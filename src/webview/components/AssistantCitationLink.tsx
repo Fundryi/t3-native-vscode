@@ -1,22 +1,22 @@
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { createContext, useContext, useState } from "react";
+import { ChevronDownIcon, ChevronUpIcon, ExternalLinkIcon } from "lucide-react";
 import type { AssistantCitation } from "@t3tools/contracts";
 
+export const citationKey = (citation: AssistantCitation) => [citation.environmentId, citation.threadId, citation.messageId, citation.start, citation.end, citation.text].join("\u0000");
+export const AssistantCitationNumbersContext = createContext<ReadonlyMap<string, number> | null>(null);
+
 export function AssistantCitationLink({ citation }: { readonly citation: AssistantCitation }) {
-  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
-  const trigger = useRef<HTMLButtonElement>(null); const popup = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!position) return;
-    const outside = (event: PointerEvent) => { if (!popup.current?.contains(event.target as Node) && !trigger.current?.contains(event.target as Node)) setPosition(null); };
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { setPosition(null); trigger.current?.focus(); } };
-    window.addEventListener("pointerdown", outside); window.addEventListener("keydown", escape);
-    return () => { window.removeEventListener("pointerdown", outside); window.removeEventListener("keydown", escape); };
-  }, [position]);
-  return <span className="citation-link"><button ref={trigger} className="text-button" title={citation.text} aria-expanded={position !== null} onClick={() => {
-    const bounds = trigger.current!.getBoundingClientRect();
-    setPosition(position ? null : { left: Math.max(8, Math.min(bounds.left, window.innerWidth - Math.min(352, window.innerWidth - 16) - 8)), top: Math.max(8, Math.min(bounds.bottom + 5, window.innerHeight - Math.min(240, window.innerHeight - 16) - 8)) });
-  }}>Assistant quote</button>{position ? createPortal(<div ref={popup} className="citation-preview" role="dialog" aria-label="Saved assistant quote" style={position}>
-    <blockquote>{citation.text}</blockquote>{citation.comment ? <p>Comment: {citation.comment}</p> : null}
-    <button className="text-button" onClick={() => { setPosition(null); window.dispatchEvent(new CustomEvent("t3-open-citation", { detail: citation })); }}>Open source</button>
-  </div>, document.body) : null}</span>;
+  const [expanded, setExpanded] = useState(false); const number = useContext(AssistantCitationNumbersContext)?.get(citationKey(citation));
+  return <span className="citation-card" data-expanded={expanded}>
+    <span className="citation-card-quote">
+      <span className="citation-card-badge" aria-hidden="true">❝{number}</span>
+      <span className="citation-card-text">{citation.text}</span>
+      <span className="citation-card-tools">
+        <button type="button" className="citation-card-tool" aria-label={expanded ? "Collapse quote" : "Expand quote"} title={expanded ? "Collapse quote" : "Expand quote"} aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{expanded ? <ChevronUpIcon size={13} /> : <ChevronDownIcon size={13} />}</button>
+        <button type="button" className="citation-card-tool" aria-label="Open quote source" title="Open quote source" onClick={() => window.dispatchEvent(new CustomEvent("t3-open-citation", { detail: citation }))}><ExternalLinkIcon size={13} /></button>
+      </span>
+    </span>
+    {/* Labelled, and a real node rather than generated content, so the comment stays selectable and attributable to its quote. */}
+    {citation.comment === undefined ? null : <span className="citation-card-comment"><span className="citation-card-comment-label">Comment:</span> {citation.comment}</span>}
+  </span>;
 }

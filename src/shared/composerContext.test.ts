@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { EnvironmentId, MessageId, ThreadId } from "@t3tools/contracts";
 import { collectAssistantCitations, withAssistantCitationComment } from "@t3tools/shared/assistantCitations";
 import { createAssistantTextSelector, findAssistantCitationText } from "../webview/components/t3/assistantTextSelection.js";
-import { contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, insertAssistantQuote, insertFileReference, removeContextReference, type FileReference } from "./composerContext.js";
+import { assistantQuoteLabel, contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, insertAssistantQuote, insertFileReference, removeContextReference, type FileReference } from "./composerContext.js";
+import { stripRenderedAssistantQuotes } from "./assistantQuoteText.js";
 import { insertAttachmentReferences } from "./composerAttachments.js";
 import { collectComposerContextReferences } from "@t3tools/shared/composerContextReferences";
 import { parseDraftTransfer } from "./viewDraft.js";
@@ -39,6 +40,7 @@ test("Removing or editing a comment preserves the citation source and exact sele
 const inlineCitation = { version: 1 as const, environmentId: EnvironmentId.make("env"), threadId: ThreadId.make("thread"), messageId: MessageId.make("message"), text: "Keep the original source.", start: 0, end: 25, prefix: "", suffix: "", comment: "Explain this." };
 const inlineQuote = { type: "assistant" as const, contextId: "quote_one", citation: inlineCitation };
 const selectedFile = { type: "file", uri: "file:///tmp/project/README.md", path: "/tmp/project/README.md", label: "README.md", range: { start: { line: 43, column: 3 }, end: { line: 47, column: 1 } }, text: "  unsaved selected text\n```\npartial line" } satisfies FileReference;
+const quoteCitation = (text: string, comment?: string) => ({ version: 1 as const, environmentId: EnvironmentId.make("env"), threadId: ThreadId.make("thread"), messageId: MessageId.make("message"), text, start: 0, end: text.length, prefix: "", suffix: "", ...(comment === undefined ? {} : { comment }) });
 
 test("Editor references insert readable file/range tokens at the cursor and retain exact unsaved snapshots", () => {
   const inserted = insertFileReference("Before replace after.", [], selectedFile, { start: 7, end: 14 });
@@ -144,4 +146,69 @@ test("Path suggestions become whole-file references that chip, send as one @ lin
   const sent = formatComposerMessage(alongside.text, alongside.contexts);
   assert.equal(sent.split("Snapshot from the editor").length, 2);
   assert.ok(sent.includes("[@parts/ch1_intro.tex](file:///tmp/project/parts/ch1_intro.tex)") && sent.includes("[@README.md:43-46](file:///tmp/project/README.md#L43-L46)"));
+});
+
+test("Referenced quotes send one citation link and one verbatim readable block that strips back out", () => {
+  const tricky = quoteCitation("Core contributions (one per research question)\n\n> already quoted\na. period [brackets]", "Rewrite 1.2 (briefly).");
+  const plain = quoteCitation("A second, plainer quote.");
+  const first = { type: "assistant" as const, contextId: "quote_aaaa1111", citation: tricky };
+  const second = { type: "assistant" as const, contextId: "quote_bbbb2222", citation: plain };
+  const one = insertAssistantQuote("Fix ", first, { start: 4, end: 4 });
+  const two = insertAssistantQuote(`${one.text} and `, second, { start: one.text.length + 5, end: one.text.length + 5 });
+  assert.ok(one.text.includes(assistantQuoteLabel(tricky)));
+  const sent = formatComposerMessage(two.text, [first, second]);
+  const citations = collectAssistantCitations(sent);
+  assert.deepEqual(citations.map((match) => match.citation), [tricky, plain]);
+  assert.equal(sent.split("> Assistant quote:").length, 3);
+  // Punctuation stays verbatim; only markup is neutralized, so a quoted `>` cannot nest a blockquote.
+  assert.ok(sent.includes("> Core contributions (one per research question)\n> \n> &gt; already quoted\n> a. period [brackets]"));
+  assert.ok(sent.includes("Comment: Rewrite 1.2 (briefly)."));
+  for (const escape of ["\\(", "\\)", "\\[", "\\]", "\\.", "\\-", "\\#", "\\+", "\\|", "\\~", "\\{", "\\}"]) assert.ok(!sent.includes(escape), `sent text escaped ${escape}`);
+  assert.equal(stripRenderedAssistantQuotes(sent), `Fix ${citations[0]!.source} and ${citations[1]!.source}`);
+  // A transcript that converted line endings or trimmed trailing spaces must still strip.
+  assert.equal(stripRenderedAssistantQuotes(sent.replaceAll("\n", "\r\n").replaceAll("> \r\n", ">\r\n")), `Fix ${citations[0]!.source} and ${citations[1]!.source}`);
+  const edited = `${sent}\n\n> Assistant quote:\n> Words the user typed.`;
+  assert.ok(stripRenderedAssistantQuotes(edited).endsWith("\n\n> Assistant quote:\n> Words the user typed."));
+  assert.equal(stripRenderedAssistantQuotes("Nothing to strip."), "Nothing to strip.");
+});
+
+test("A whole-file token cannot claim a longer path that extends it, and a huge quote still strips", () => {
+  const menuFile = (path: string): FileReference => ({ type: "file", uri: `file:///w/${path}`, path, label: path });
+  const first = insertFileReference("compare ", [], menuFile(".env"), { start: 8, end: 8 });
+  const second = insertFileReference(first.text, first.contexts, menuFile(".env.local"), { start: first.cursor, end: first.cursor });
+  assert.equal(second.text, "compare @.env @.env.local ");
+  const sent = formatComposerMessage(second.text, second.contexts);
+  assert.equal(sent, "compare [@.env](file:///w/.env) [@.env.local](file:///w/.env.local)");
+  assert.equal(fileReferenceOccurrences(second.text, second.contexts).length, 2);
+  for (const pair of [["Dockerfile", "Dockerfile.dev"], ["docs/api", "docs/api.md"], ["src/app", "src/app.tsx"]]) {
+    const [short, long] = pair as [string, string];
+    const one = insertFileReference("", [], menuFile(short), { start: 0, end: 0 });
+    const two = insertFileReference(one.text, one.contexts, menuFile(long), { start: one.cursor, end: one.cursor });
+    assert.ok(formatComposerMessage(two.text, two.contexts).includes(`(file:///w/${long})`), `${long} lost its own link`);
+  }
+  // A quote of several thousand short lines once built a pattern past the regular-expression size limit.
+  const many = quoteCitation(Array.from({ length: 4_000 }, () => "x").join("\n"));
+  const huge = { type: "assistant" as const, contextId: "quote_cccc3333", citation: many };
+  const hugeSent = formatComposerMessage(insertAssistantQuote("Look ", huge, { start: 5, end: 5 }).text, [huge]);
+  assert.equal(stripRenderedAssistantQuotes(hugeSent), `Look ${collectAssistantCitations(hugeSent)[0]!.source}`);
+});
+
+test("Quote blocks strip whatever the comment or the quoted text looks like", () => {
+  const sent = (citation: ReturnType<typeof quoteCitation>, id: string) => {
+    const context = { type: "assistant" as const, contextId: id, citation };
+    const message = formatComposerMessage(insertAssistantQuote("Fix ", context, { start: 4, end: 4 }).text, [context]);
+    return { message, stripped: stripRenderedAssistantQuotes(message) };
+  };
+  // Shift+Enter in the comment box puts a newline in the comment; it must still line up with the message's lines.
+  for (const comment of ["one line", "line1\nline2", "line1\n\nline2", "trailing \nspaces  "]) {
+    const { message, stripped } = sent(quoteCitation("q", comment), "quote_dddd4444");
+    assert.ok(message.includes(`Comment: ${comment}`), `comment ${JSON.stringify(comment)} missing from the wire`);
+    assert.equal(stripped, `Fix ${collectAssistantCitations(message)[0]!.source}`, `comment ${JSON.stringify(comment)} was not stripped`);
+  }
+  // One quote's rendered lines can repeat inside another's; the longer block has to be removed first.
+  const short = { type: "assistant" as const, contextId: "quote_eeee5555", citation: quoteCitation("x") };
+  const long = { type: "assistant" as const, contextId: "quote_ffff6666", citation: quoteCitation("Assistant quote:\nx") };
+  const both = formatComposerMessage(`Fix ${insertAssistantQuote("", short, { start: 0, end: 0 }).text} and ${insertAssistantQuote("", long, { start: 0, end: 0 }).text}`, [short, long]);
+  const links = collectAssistantCitations(both);
+  assert.equal(stripRenderedAssistantQuotes(both), `Fix ${links[0]!.source} and ${links[1]!.source}`);
 });

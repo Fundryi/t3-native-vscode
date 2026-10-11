@@ -5,7 +5,7 @@ import type { ComposerSuggestion, HostStateSnapshot } from "../../shared/bridge"
 import { useActions } from "../actions";
 import { PendingRequests } from "./PendingRequests";
 import { clearDraft, readDraftSelection, rememberDraftSelection, takeEditorReferenceFocus, updateDraft, useDraftRecovery, useComposerDraft } from "../composerDrafts";
-import { contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, insertFileReference, removeContextReference, type FileReference } from "../../shared/composerContext";
+import { assistantQuoteLabel, contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, insertFileReference, removeContextReference, type FileReference } from "../../shared/composerContext";
 import type { AssistantCitation } from "@t3tools/contracts";
 import { applyClaudePromptEffortPrefix, getProviderOptionCurrentValue, isClaudeUltrathinkPrompt } from "@t3tools/shared/model";
 import { effortDescriptor } from "../../shared/modelOptions";
@@ -255,7 +255,7 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
         <button className="context-label" title={context.type === "file" ? context.text || context.path : `${context.citation.text}${context.citation.comment ? `\nComment: ${context.citation.comment}` : ""}`} onClick={() => {
           if (context.type === "assistant") onEditCitation(context.citation, index);
           else void openFileReference(context);
-        }}>{context.type === "file" ? `@${fileReferenceLabel(context)}` : context.citation.comment ? "Assistant quote · Comment" : "Assistant quote"}</button>
+        }}>{context.type === "file" ? `@${fileReferenceLabel(context)}` : assistantQuoteLabel(context.citation)}</button>
         <button className="icon-button" aria-label={`Remove reference ${index + 1}`} onClick={() => updateDraft(draftKey, (draft) => ({ ...draft, text: removeContextReference(draft.text, context), contexts: draft.contexts.filter((_, position) => position !== index) }))}><XIcon size={12} /></button>
       </div>)}</div> : null}
       <textarea ref={textarea} value={text} placeholder={running ? "Send a follow-up…" : "Ask anything, or describe a task…"} aria-label="Message" title={shortcutHint} aria-description="Click a file reference to open its source, an image reference to preview it or a quote reference to edit its comment; Alt+Enter opens the reference at the cursor." disabled={disabled || picking} rows={2}

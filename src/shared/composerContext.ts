@@ -1,7 +1,8 @@
 import { ComposerContextId, type AssistantCitation } from "@t3tools/contracts";
-import { collectAssistantCitations, renderAssistantCitationsAsText, serializeAssistantCitation } from "@t3tools/shared/assistantCitations";
+import { collectAssistantCitations, serializeAssistantCitation } from "@t3tools/shared/assistantCitations";
 import { collectComposerContextReferences, formatComposerContextReference, replaceComposerContextReferences } from "@t3tools/shared/composerContextReferences";
 import { insertComposerReferenceText, type TextSelection } from "./composerAttachments.js";
+import { renderAssistantQuoteBlock } from "./assistantQuoteText.js";
 
 export interface FileReference {
   readonly type: "file";
@@ -20,9 +21,13 @@ export interface InsertReferenceEvent { readonly draftKey: string; readonly refe
 
 /** Draft-only quote references keep their payload out of the input; sending expands them to T3's portable citation format. */
 export function insertAssistantQuote(text: string, context: AssistantQuoteContext & { contextId: string }, selection: TextSelection) {
-  const quote = context.citation.text.replace(/\s+/g, " ").trim();
-  const reference = formatComposerContextReference({ kind: "assistant-quote", contextId: ComposerContextId.make(context.contextId), label: `❝ ${quote.length > 36 ? `${quote.slice(0, 36)}…` : quote}` });
+  const reference = formatComposerContextReference({ kind: "assistant-quote", contextId: ComposerContextId.make(context.contextId), label: assistantQuoteLabel(context.citation) });
   return insertComposerReferenceText(text, reference, selection);
+}
+/** Draft tokens and chips share one preview, so several quotes in a message stay distinguishable. */
+export function assistantQuoteLabel(citation: AssistantCitation): string {
+  const quote = citation.text.replace(/\s+/g, " ").trim();
+  return `❝ ${quote.length > 36 ? `${quote.slice(0, 36)}…` : quote}`;
 }
 export function contextIsReferenced(text: string, context: ComposerContext): boolean {
   if (context.type === "file") return !context.inlineText || fileReferenceOccurrences(text, [context]).length > 0;
@@ -93,9 +98,8 @@ export function formatComposerMessage(text: string, contexts: ReadonlyArray<Comp
   return [inlineText.trim(), ...contexts.map((context) => {
     if (context.type === "assistant") {
       if (context.contextId && !used.has(context.contextId)) return "";
-      const link = serializeAssistantCitation(context.citation);
-      // Retain T3's clickable source and readable quote/comment for every provider/server version.
-      return `${context.contextId ? "" : link}${renderAssistantCitationsAsText(link)}`;
+      // Retain T3's clickable source for chip-only legacy quotes, and the readable quote/comment for every provider/server version.
+      return `${context.contextId ? "" : serializeAssistantCitation(context.citation)}${renderAssistantQuoteBlock(context.citation)}`;
     }
     if (context.inlineText && !usedFiles.has(context)) return "";
     // A whole-file reference has no snapshot to attach: its inline link already is the whole payload.

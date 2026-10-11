@@ -7,7 +7,7 @@ import { TranscriptView } from "./TranscriptView";
 import type { AssistantCitation } from "@t3tools/contracts";
 import { withAssistantCitationComment } from "@t3tools/shared/assistantCitations";
 import { readDraft, updateDraft } from "../composerDrafts";
-import { insertAssistantQuote } from "../../shared/composerContext";
+import { insertAssistantQuote, type ComposerContext } from "../../shared/composerContext";
 import type { TextSelection } from "../../shared/composerAttachments";
 import { AssistantSelectionToolbar } from "./AssistantSelectionToolbar";
 import { CitationCommentEditor } from "./CitationCommentEditor";
@@ -18,6 +18,16 @@ import { useSearchPreferences } from "../searchPreferences";
 import { ScheduledTaskList } from "./ScheduledTaskList";
 import { SessionHistory } from "./SessionHistory";
 
+/** Short enough to stay readable as a draft token, and checked against the draft so one cannot shadow another. */
+function quoteContextId(contexts: ReadonlyArray<ComposerContext>): string {
+  const taken = (id: string) => contexts.some((context) => context.type === "assistant" && context.contextId === id);
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const id = `quote_${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+    if (!taken(id)) return id;
+  }
+  // A short id that keeps colliding would drop a quote's payload at send; length beats readability there.
+  return `quote_${crypto.randomUUID().replaceAll("-", "")}`;
+}
 export function ChatView({ state }: { readonly state: HostStateSnapshot }) {
   const [searchPreferences, setSearchPreferences] = useSearchPreferences(state);
   const [findOpen, setFindOpen] = useState(false);
@@ -84,8 +94,8 @@ export function ChatView({ state }: { readonly state: HostStateSnapshot }) {
         const context = { type: "assistant" as const, citation: withAssistantCitationComment(commentTarget.citation, comment) };
         let cursor: number | undefined;
         if (commentTarget.index === undefined) {
-          const inlineContext = { ...context, contextId: `quote_${crypto.randomUUID()}` };
           updateDraft(commentTarget.draftKey, (draft) => {
+            const inlineContext = { ...context, contextId: quoteContextId(draft.contexts) };
             const inserted = insertAssistantQuote(draft.text, inlineContext, commentTarget.selection ?? { start: draft.text.length, end: draft.text.length });
             cursor = inserted.cursor;
             return { ...draft, text: inserted.text, contexts: [...draft.contexts, inlineContext] };

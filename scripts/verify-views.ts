@@ -305,7 +305,7 @@ try {
   await second.getByRole("button", { name: "Cite selection in composer" }).click();
   await second.getByRole("textbox", { name: "Comment on selected text" }).fill("Explain why this stays in the second tab.");
   await second.getByRole("button", { name: "Save", exact: true }).click();
-  await second.getByRole("button", { name: "Assistant quote · Comment", exact: true }).waitFor();
+  await second.getByRole("button", { name: "❝ reply in second conversation", exact: true }).waitFor();
   const inlineText = await quoteInput.inputValue();
   const quoteReference = collectComposerContextReferences(inlineText)[0]!;
   assert.equal(quoteReference.kind, "assistant-quote");
@@ -322,7 +322,7 @@ try {
   await second.getByRole("textbox", { name: "Comment on selected text" }).fill("Changed comment");
   await second.getByRole("button", { name: "Cancel", exact: true }).click();
   assert.ok((await second.locator(".context-label").getAttribute("title"))?.includes("Explain why"));
-  await second.getByRole("button", { name: "Assistant quote · Comment", exact: true }).click();
+  await second.getByRole("button", { name: "❝ reply in second conversation", exact: true }).click();
   await second.getByRole("textbox", { name: "Comment on selected text" }).fill("Updated comment");
   await second.getByRole("button", { name: "Save", exact: true }).click();
   await quoteInput.focus(); await quoteInput.press("Control+End");
@@ -402,9 +402,11 @@ try {
   await third.waitForFunction(() => (document.querySelector('select[aria-label="Effort level"]') as HTMLSelectElement).value === "high");
   assert.equal(await third.getByRole("textbox", { name: "Message", exact: true }).inputValue(), "Draft in third tab");
   publishText(client, "third", `Saved source: ${serializeAssistantCitation(citation)}`, 2);
-  await third.getByRole("button", { name: "Assistant quote", exact: true }).click();
-  await third.getByRole("dialog", { name: "Saved assistant quote" }).waitFor();
-  await third.getByRole("button", { name: "Open source", exact: true }).click();
+  await third.locator(".citation-card").waitFor();
+  assert.equal(await third.locator(".citation-card-badge").innerText(), "❝1");
+  await third.getByRole("button", { name: "Expand quote", exact: true }).click();
+  await third.getByRole("button", { name: "Collapse quote", exact: true }).waitFor();
+  await third.getByRole("button", { name: "Open quote source", exact: true }).click();
   await third.locator(".chat-heading strong").filter({ hasText: "second conversation" }).waitFor();
   await third.waitForFunction(() => CSS.highlights?.has("t3-assistant-citation"));
   assert.equal(host.snapshot("tab-two").activeThreadId, "second"); assert.equal(host.snapshot("tab-three").activeThreadId, "second");
