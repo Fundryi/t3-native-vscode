@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.20 — Unpublished
+## 0.1.20 — Alpha prerelease
 
 - Write a file chosen from the `@` menu as the same plain `@path` token the editor's Ctrl/Cmd+K uses, with a removable chip. It previously inserted a bare Markdown link that had no reference behind it, so clicking it in the message box did nothing.
 - Keep the `@` visible in the sent message. File references now send as `[@path:12-40](uri#L12-L40)` rather than dropping the prefix. A path chosen from the menu is labelled with its workspace-relative path, as editor selections already were, so files that share a name stay apart.
