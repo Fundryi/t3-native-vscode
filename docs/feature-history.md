@@ -2,7 +2,7 @@
 
 This document tracks features by release, including how later versions changed them. Versions refer to T3 VSCode, not the separate T3 Code server. Historical entries were checked against Git and the v0.0.1–v0.0.7 release documentation; v0.0.9, v0.1.10 and v0.1.11 were local previews, and v0.1.12 is the first Marketplace alpha prerelease; v0.1.13 is published on the release channel, with same-version revisions including double-click renaming, session search, tab History, new-chat actions, Markdown composer tools, durable draft recovery, occurrence search filters, dense transcript spacing with visible assistant messages and connection onboarding that opens Sessions automatically. The Windows pairing fix was published as prerelease v0.1.14 and promoted to release v0.1.15 after the owner confirmed the preview works.
 
-The published v0.1.16 includes selected-text image descriptions, local model management, compact session activity, scheduled tasks and queued-message editing. The v0.1.17 prerelease adds agent-only response diffs. Its published Git baseline is `b71e129` (manifest v0.1.16). The owner explicitly authorized publication of v0.1.17 to the Marketplace prerelease channel. v0.1.18 is published to the Marketplace release channel from `251cfec`, with the transcript resize-padding, streaming row-overlap and automatic usage-refresh changes. v0.1.19 is the newest state: the owner explicitly authorized its publication to the Marketplace prerelease channel, and it keeps that background usage refresh from delaying sent messages. See the release verification entries below for earlier installers and publication history.
+The published v0.1.16 includes selected-text image descriptions, local model management, compact session activity, scheduled tasks and queued-message editing. The v0.1.17 prerelease adds agent-only response diffs. Its published Git baseline is `b71e129` (manifest v0.1.16). The owner explicitly authorized publication of v0.1.17 to the Marketplace prerelease channel. v0.1.18 is published to the Marketplace release channel from `251cfec`, with the transcript resize-padding, streaming row-overlap and automatic usage-refresh changes. v0.1.19 was published to the Marketplace prerelease channel with the owner's explicit authorization, and keeps that background usage refresh from delaying sent messages. v0.1.20 is the newest state and is unpublished: it reworks how file references and assistant quotes are written into and rendered from a message. See the release verification entries below for earlier installers and publication history.
 
 ## Overview
 
@@ -21,13 +21,13 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 | [Subagent conversations](#subagent-conversations) | Opens child conversations with status previews and a route back to the parent. | v0.0.1 | v0.0.8 |
 | [Untouched chat cleanup](#untouched-chat-cleanup) | Removes untouched new chats and rejected first-send threads. | v0.0.8 | v0.1.13 |
 | [Compact composer](#compact-composer) | Permanent toolbar and compact controls inside the message box. | v0.0.1 | v0.1.13 |
-| [Slash commands and file suggestions](#slash-commands-and-file-suggestions) | Offers provider commands, skills and workspace files while typing. | v0.0.6 | v0.0.6 |
+| [Slash commands and file suggestions](#slash-commands-and-file-suggestions) | Offers provider commands, skills and workspace files while typing. | v0.0.6 | v0.1.20 |
 | [Queue and steer](#queue-and-steer) | Enter queues follow-ups; Ctrl/Cmd+Enter steers supported active runs. | v0.0.6 | v0.0.8 |
 | [Queue controls and task progress](#queue-controls-and-task-progress) | Edits queued text at the prompt font size; reorders follow-ups and shows current tasks. | v0.0.6 | v0.1.16 |
 | [Attachment presentation](#attachment-presentation) | Draft and sent previews with local recovery after closure. | v0.0.1 | v0.1.13 |
 | [Clipboard paste and file picker](#clipboard-paste-and-file-picker) | Image paste uses selected words as its description; local uploads survive tab closure. | v0.0.8 | v0.1.16 |
 | [Streaming and progressive history](#streaming-and-progressive-history) | Streams replies, loads older history and keeps rows separate as rich content settles. | v0.0.1 | v0.1.18 |
-| [Markdown and media](#markdown-and-media) | Formatted text, code, underline, tables, images, video and audio. | v0.0.1 | v0.1.18 |
+| [Markdown and media](#markdown-and-media) | Formatted text, code, underline, tables, images, video and audio. | v0.0.1 | v0.1.20 |
 | [Collapsed activity](#collapsed-activity) | Timed thought/tool groups separated by visible assistant messages and steers. | v0.0.1 | v0.1.13 |
 | [Interactive HTML graphics](#interactive-html-graphics) | Displays T3's inline HTML visualizations and mockups. | v0.0.8 | v0.0.8 |
 | [Mermaid diagrams](#mermaid-diagrams) | Renders diagrams with native theme colors and an expanded preview. | v0.0.8 | v0.0.8 |
@@ -38,9 +38,9 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 | [Effort and permission controls](#effort-and-permission-controls) | Advertised model options and runtime modes inside the composer. | v0.0.1 | v0.1.13 |
 | [Account usage](#account-usage) | Collapsed sidebar limits, refresh time and Status meters action. | v0.0.6 | v0.1.13 |
 | [Status bar meters](#status-bar-meters) | Shows provider/account usage with configurable account selection and automatic refresh. | v0.0.7 | v0.1.19 |
-| [Native file links](#native-file-links) | Opens chat-linked files and ranges in VS Code's editor. | v0.0.1 | v0.0.5 |
-| [Editor references](#editor-references) | Inserts selected file ranges at the last-used chat's prompt cursor with Ctrl/Cmd+K or Alt+K. | v0.0.4 | v0.1.12 |
-| [Assistant citations](#assistant-citations) | Inserts assistant quotes at the prompt cursor with comments and source links. | v0.0.4 | v0.1.11 |
+| [Native file links](#native-file-links) | Opens chat-linked files and ranges in VS Code's editor. | v0.0.1 | v0.1.20 |
+| [Editor references](#editor-references) | Inserts selected file ranges at the last-used chat's prompt cursor with Ctrl/Cmd+K or Alt+K. | v0.0.4 | v0.1.20 |
+| [Assistant citations](#assistant-citations) | Inserts assistant quotes at the prompt cursor with comments and source links. | v0.0.4 | v0.1.20 |
 | [Response forks](#response-forks) | One supported fork at the end of each settled assistant run. | v0.0.5 | v0.1.13 |
 | [Saved turn diffs](#saved-turn-diffs) | Shows one nonempty agent-only response diff; hides manual edits. | v0.0.6 | v0.1.17 |
 | [Conversation tab titles](#conversation-tab-titles) | Names editor tabs after their active conversations. | v0.0.2 | v0.0.8 |
@@ -350,6 +350,12 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 - Show provider commands and skills for `/`, and workspace file/thread suggestions for `@`.
 - Support keyboard selection and provider-specific model/usage command actions.
 
+#### v0.1.20
+
+- Insert a chosen `@` path as the same plain `@path` token the editor uses, with a removable chip, instead of a Markdown link with no reference behind it.
+- Open the chosen file from its draft token, its chip or the sent message. Directories reveal in the Explorer; see [Native file links](#native-file-links).
+- Label the token with the workspace-relative path, so files that share a name stay distinguishable.
+
 The [read-only file-reference investigation](file-reference-investigation.md) explains current directory-search limits and the proposed Tab/Enter split; those proposals are not implemented.
 
 ### Queue and steer
@@ -498,6 +504,10 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 #### v0.1.18
 
 - Keep Markdown element renderers stable across host updates so images, video and diagrams no longer remount into loading placeholders; rendered output is unchanged.
+
+#### v0.1.20
+
+- Draw thematic breaks (`---`), which previously rendered as an unstyled browser default.
 
 ### Collapsed activity
 
@@ -714,6 +724,10 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 
 - Resolve relative paths, file URLs and line/column ranges in native editors.
 
+#### v0.1.20
+
+- Reveal a linked directory in the Explorer instead of failing to open it as a document. A link that names a line keeps its previous path and pays for no extra lookup.
+
 ### Editor references
 
 #### v0.0.4
@@ -739,6 +753,11 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 - Preserve exact unsaved source snapshots through sending, queueing, steering and draft handoff, and omit snapshots whose inline references were removed.
 - Refresh repeated selections, distinguish different selections with the same line label and restore prompt focus after opening a chat.
 
+#### v0.1.20
+
+- Keep the `@` visible in the sent message: references now send as `[@path:12-40](uri#L12-L40)` instead of dropping the prefix.
+- Accept whole-file references with no range or snapshot, so `@` menu picks and editor selections share one format.
+
 ### Assistant citations
 
 #### v0.0.4
@@ -755,6 +774,14 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 - Preserve source links and comments at their inline positions when sending, queueing or steering.
 - Open comments from an inline reference or quote chip, and omit deleted references from the sent quote context.
 - Retain quote identities across draft handoff and keep independent editor drafts separate.
+
+#### v0.1.20
+
+- Send the quoted text verbatim instead of backslash-escaping its punctuation. The old escaping turned `(text)` into `\(text\)`, which the Markdown math normalizer then rendered as KaTeX, so quotes appeared as run-together italics or red errors.
+- Show each quote as a numbered card with the text collapsed to two lines, an expand control and a source link, replacing the repeated `Assistant quote` links and the duplicated quote block below them.
+- Hide the readable quote block the message still carries for providers and other clients, which never expand `t3-citation:` links.
+- Label draft tokens and chips with a preview of the quoted text, and shorten quote reference ids so the draft stays readable. The chip no longer marks an attached comment except in its tooltip.
+- Known limitations: Find in session still matches the hidden readable block, Copy still copies the raw message text, and an expanded quote collapses when the virtualized transcript recycles its row.
 
 ### Response forks
 

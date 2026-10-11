@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.1.20 — Unpublished
+
+- Write a file chosen from the `@` menu as the same plain `@path` token the editor's Ctrl/Cmd+K uses, with a removable chip. It previously inserted a bare Markdown link that had no reference behind it, so clicking it in the message box did nothing.
+- Keep the `@` visible in the sent message. File references now send as `[@path:12-40](uri#L12-L40)` rather than dropping the prefix. A path chosen from the menu is labelled with its workspace-relative path, as editor selections already were, so files that share a name stay apart.
+- Open a referenced file from its draft token, its chip or the sent message. Directories now reveal in the Explorer instead of failing to open as a document.
+- Send quoted assistant text verbatim. The previous escaping turned `(text)` into `\(text\)`, which the Markdown math normalizer then rendered as KaTeX, so quotes containing parentheses appeared as run-together italics or red errors; `[text]` became display math and broke the quote block apart.
+- Replace the repeated `Assistant quote` links and the duplicated quote block below them with one numbered card per quote, collapsed to two lines, with an expand control and a source link. The message still carries a readable quote block for providers and other clients, which never expand `t3-citation:` links; the transcript hides it.
+- Label quote tokens and chips with a preview of the quoted text instead of the word `Assistant quote`, and shorten quote reference ids so the draft stays readable.
+- Draw thematic breaks (`---`), which previously rendered as an unstyled browser default.
+- Pass 226 deterministic tests, TypeScript checking, full builds and the headless webview regression suite. Two rounds of fresh-context regression review found three blocking defects, all introduced by this change set and all fixed with a covering test: a whole-file `@` token claimed a longer path that extended it at a `.` boundary, so picking `@.env` then `@.env.local` sent two links to `.env`; the quote-stripping pattern exceeded the regular-expression size limit for a quote of a few thousand short lines, which would have thrown during transcript render; and the line-based replacement for it then failed to hide the readable block whenever a comment contained a newline, which Shift+Enter in the comment box produces. Known limitations, unchanged: Find in session still matches the readable quote block the transcript hides, Copy still copies the raw message text, a quote chip no longer marks that a comment is attached except in its tooltip, and an expanded quote collapses again when the virtualized transcript recycles its row.
+
 ## 0.1.19 — Alpha prerelease
 
 - Stop the periodic usage refresh from delaying sent messages. A refresh that falls due while a message is being sent or a response is running now waits for the session to go idle instead of competing with it, and is forced through only once the meters are five intervals stale.
