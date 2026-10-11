@@ -1,4 +1,5 @@
 import { htmlVisual } from "./chatVisuals.js";
+import { renderedMessageText } from "./assistantQuoteText.js";
 import type { TranscriptItem } from "./bridge.js";
 
 export const SEARCH_SOURCES = ["user", "assistant", "tools", "thought", "files", "other"] as const;
@@ -14,7 +15,8 @@ export function searchPattern(options: SessionSearchOptions): RegExp {
 }
 export function searchableFields(row: TranscriptItem, scope: SessionSearchOptions["scope"]): ReadonlyArray<{ field: string; text: string }> {
   const item = row.item;
-  if (item.type === "user_message" || item.type === "assistant_message") return [{ field: "text", text: item.text }, ...(item.type === "user_message" ? item.attachments.map((attachment, index) => ({ field: `attachment:${index}`, text: attachment.name })) : [])];
+  if (item.type === "assistant_message") return [{ field: "text", text: item.text }];
+  if (item.type === "user_message") return [{ field: "text", text: renderedMessageText(item.text) }, ...item.attachments.map((attachment, index) => ({ field: `attachment:${index}`, text: attachment.name }))];
   if (scope === "messages") return [];
   switch (item.type) {
     case "reasoning": return [{ field: "text", text: item.text }];

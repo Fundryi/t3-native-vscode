@@ -10,7 +10,7 @@ import { viewsHarness, publishText } from "../src/host/testing/fakeTransport.js"
 import { Events, type RpcMessage } from "../src/shared/bridge.js";
 import { DEFAULT_APPEARANCE, type AppearanceSettings } from "../src/shared/appearance.js";
 import type { ModelPickerPreferences } from "../src/shared/modelPreferences.js";
-import { ProviderInstanceId, ProviderDriverKind, MessageId, RunId, ThreadId, ProjectId, RuntimeRequestId, TurnItemId } from "@t3tools/contracts";
+import { ProviderInstanceId, ProviderDriverKind, EnvironmentId, MessageId, RunId, ThreadId, ProjectId, RuntimeRequestId, TurnItemId } from "@t3tools/contracts";
 import * as DateTime from "effect/DateTime";
 import { v2Now } from "../vendor/client-runtime/src/state/orchestrationV2TestFixtures.ts";
 import { collectAssistantCitations, serializeAssistantCitation } from "@t3tools/shared/assistantCitations";
@@ -168,6 +168,35 @@ async function checkSessionFind(second: Page, third: Page, selectInView: (page: 
   assert.equal(await second.getByRole("textbox", { name: "Message", exact: true }).inputValue(), "Keep my search draft");
   await second.screenshot({ path: `${evidence}/session-search-preserved-draft.png` });
   await verifySearchPanel(second, third, host, client, evidence);
+  // A quoted message is searched as it renders: the readable block and the percent-encoded href are not results,
+  // and a hit behind the two-line clamp opens its card instead of falling back to the recorded-text notice.
+  const quote = { version: 1 as const, environmentId: EnvironmentId.make("audit"), threadId: ThreadId.make("second"), messageId: MessageId.make("message"),
+    text: "Telemetry shows scalloping", start: 0, end: 26, prefix: "", suffix: "", comment: "Why scalloping?" };
+  const quoteId = TurnItemId.make("search-quote-message");
+  const quoteRow = { ...seed, sourceItemId: quoteId, position: 1, item: { ...seed.item, id: quoteId, type: "user_message" as const, attachments: [], inputIntent: "turn_start" as const, createdBy: "user" as const, creationSource: "web" as const,
+    text: `Discuss the baseline ${serializeAssistantCitation(quote)}\n\n> Assistant quote:\n> ${quote.text}\n\nComment: ${quote.comment}\n` } };
+  // Later checks share this client and thread, so both overrides are restored at the end of the block.
+  const restoreHistory = client.getHistory;
+  client.getHistory = async () => ({ snapshotSequence: 72, items: [], hasMoreHistory: false, nextCursor: null });
+  client.threadHandlers.get("first")!({ kind: "snapshot", snapshotSequence: 72, hasMoreHistory: false, historyCursor: null,
+    projection: { ...searchProjection, turnItems: [quoteRow.item], visibleTurnItems: [quoteRow] } });
+  await second.locator(".citation-card").waitFor();
+  assert.equal(await second.locator(".citation-card").getAttribute("data-expanded"), "false");
+  await second.getByRole("button", { name: "Find in session", exact: true }).click();
+  await second.getByRole("textbox", { name: "Find in this session", exact: true }).fill("scalloping");
+  await second.waitForFunction(() => document.querySelector(".find-count")?.textContent === "1/2");
+  await second.getByRole("button", { name: "Next match", exact: true }).click();
+  await second.waitForFunction(() => document.querySelector(".citation-card")?.getAttribute("data-expanded") === "true" && CSS.highlights.has("t3-session-match"));
+  assert.equal(await second.locator(".citation-source-notice").count(), 0, "A match inside a quote card must resolve in the rendered DOM");
+  await second.getByRole("button", { name: "Close session search", exact: true }).click();
+  await second.waitForFunction(() => !CSS.highlights.has("t3-session-match"));
+  // Expansion outlives the search and the virtualized row, so returning to the message does not silently re-clamp it.
+  assert.equal(await second.locator(".citation-card").getAttribute("data-expanded"), "true");
+  await selectInView(second, "second"); await selectInView(second, "first");
+  await second.locator('.citation-card[data-expanded="true"]').waitFor();
+  client.getHistory = restoreHistory;
+  client.threadHandlers.get("first")!({ kind: "snapshot", snapshotSequence: 73, hasMoreHistory: true, historyCursor: "older-search", projection: searchProjection });
+  await second.waitForFunction(() => !document.querySelector(".citation-card"));
   console.log("PASS: full-session search, case/word/content filters, older command reveal and highlight, math source lookup, keyboard find and double-click renaming preserve per-tab state and drafts.");
 }
 try {

@@ -1,5 +1,5 @@
 import type { AssistantCitation } from "@t3tools/contracts";
-import { collectAssistantCitations } from "@t3tools/shared/assistantCitations";
+import { assistantCitationsToPlainText, collectAssistantCitations } from "@t3tools/shared/assistantCitations";
 
 /** Markup only. The vendored escaper also backslash-escaped punctuation, and the math normalizer then read its `\(…\)`/`\[…\]` as KaTeX. */
 function neutralizeMarkup(text: string): string {
@@ -46,4 +46,30 @@ export function stripRenderedAssistantQuotes(text: string): string {
     lines = [...lines.slice(0, start), "", ...lines.slice(end)]; stripped = true;
   }
   return stripped ? lines.join("\n").trim() : text;
+}
+
+const CITATION_LINK = "[Assistant quote](t3-citation:";
+let renderedSource = "", renderedText = "";
+/**
+ * What the transcript shows: the readable quote block is gone and each citation link reads as its
+ * quote and comment. Strip first, flatten second — the stripper finds its blocks through the links
+ * that flattening consumes. Memoized on the last message, since search asks for the same row twice.
+ */
+export function renderedMessageText(text: string): string {
+  if (!text.includes(CITATION_LINK)) return text;
+  if (text !== renderedSource) { renderedSource = text; renderedText = assistantCitationsToPlainText(stripRenderedAssistantQuotes(text)); }
+  return renderedText;
+}
+
+/**
+ * A quote carries runs of blank lines wherever it spans blocks: rendered markdown puts a newline
+ * text node between every pair, and the capture counts each one. Collapsed here rather than at
+ * capture, which is a faithful port of T3 Code's reader — diverging it stopped this client
+ * resolving whole-message quotes the T3 app keeps producing.
+ * Collapsed cards get one flowing paragraph, so neither of the two visible lines is spent on a
+ * blank; expanded cards keep one blank line per break, and both keep code indentation.
+ */
+export function quoteDisplayText(text: string, expanded: boolean): string {
+  if (!expanded) return text.replace(/\s+/g, " ").trim();
+  return text.replace(/\n[^\S\n]*\n(?:[^\S\n]*\n)+/g, "\n\n").replace(/^(?:[^\S\n]*\n)+/, "").replace(/(?:\n[^\S\n]*)+$/, "");
 }

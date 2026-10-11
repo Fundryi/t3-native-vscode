@@ -15,7 +15,7 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 | [Conversation management](#conversation-management) | Rename, pin, archive, restore and delete conversations. | v0.0.1 | v0.1.13 |
 | [Settled and Archive](#settled-and-archive) | Separate collapsible lists for settled and archived conversations. | v0.0.6 | v0.0.7 |
 | [Conversation search](#conversation-search) | Searches native thread titles and message snippets. | v0.0.1 | v0.0.6 |
-| [Find in session](#find-in-session) | Full-history occurrence search, persistent filters and collapsible Above/Side results. | v0.1.13 | v0.1.13 |
+| [Find in session](#find-in-session) | Full-history occurrence search, persistent filters and collapsible Above/Side results. | v0.1.13 | v0.1.20 |
 | [Conversation status and notifications](#conversation-status-and-notifications) | Immediate accepted-send status, pinned Working header and input notifications. | v0.0.1 | v0.1.13 |
 | [Message navigation rail](#message-navigation-rail) | Previews and jumps between exchanges in the current conversation. | v0.0.8 | v0.0.8 |
 | [Subagent conversations](#subagent-conversations) | Opens child conversations with status previews and a route back to the parent. | v0.0.1 | v0.0.8 |
@@ -237,6 +237,12 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 - Collapse to a floating search bar plus results disclosure without reserved pane height; the disclosure restores the last placement.
 - Use the layout icon to switch Above/Side or expand directly to Side from collapse, with automatic Above fallback below 640px.
 - Preserve pointer/keyboard resizing and workspace-local layout, context, order and height, without sharing queries between tabs.
+
+#### v0.1.20
+
+- Search a quoted message as the transcript renders it: the readable quote block is excluded and each citation reads as its quote and comment, so results, previews and occurrence order match what is on screen instead of the stored wire text.
+- Expand a quote automatically when a result inside it is opened, so the match is visible rather than hidden behind the collapsed card.
+- Copy a message as it reads, with quotes in readable form instead of their citation URLs.
 
 ### Conversation status and notifications
 
@@ -785,7 +791,8 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 - Show each quote as a numbered card with the text collapsed to two lines, an expand control and a source link, replacing the repeated `Assistant quote` links and the duplicated quote block below them.
 - Hide the readable quote block the message still carries for providers and other clients, which never expand `t3-citation:` links.
 - Label draft tokens and chips with a preview of the quoted text, and shorten quote reference ids so the draft stays readable. The chip no longer marks an attached comment except in its tooltip.
-- Known limitations: Find in session still matches the hidden readable block, Copy still copies the raw message text, and an expanded quote collapses when the virtualized transcript recycles its row.
+- Collapse the runs of blank lines a quote carries when it spans blocks, and drop the leading filler a quote of a table, blockquote or loose list begins with. The collapsed card reads as one flowing paragraph so neither visible line is blank; the expanded card keeps one blank line per break and any code indentation. Done when the card renders rather than when the quote is captured: the capture is a faithful port of T3 Code's reader, and changing it stopped this client resolving whole-message quotes that the T3 app keeps producing.
+- Keep a quote expanded once opened, including while the virtualized transcript unmounts and remounts its row.
 
 ### Response forks
 

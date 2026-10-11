@@ -1,4 +1,5 @@
 import { searchPattern } from "../shared/sessionSearch";
+import { isCitationExpanded, setCitationExpanded } from "./citationExpansion";
 import type { SearchTarget } from "./components/SessionFind";
 
 /** CSS Highlights leaves the markdown/source DOM intact for quotes and citations. */
@@ -21,6 +22,12 @@ export function highlightSearchResult(root: HTMLElement, target: SearchTarget): 
   }
   if (!start || !end) return false;
   const range = document.createRange(); range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
+  // A clamped card hides the hit behind two visible lines. Expand it and report failure so the caller's
+  // retry re-resolves and scrolls once the grown card has laid out; waiting on the rendered attribute
+  // rather than a frame count keeps that honest when React commits late.
+  const card = range.startContainer.parentElement?.closest<HTMLElement>(".citation-card");
+  const key = card?.dataset.expanded === "true" ? undefined : card?.dataset.citationKey;
+  if (key) { if (!isCitationExpanded(key)) setCitationExpanded(key, true); return false; }
   if (typeof Highlight !== "undefined" && CSS.highlights) CSS.highlights.set("t3-session-match", new Highlight(range));
   range.startContainer.parentElement?.scrollIntoView({ block: "center", behavior: "instant" });
   return true;
