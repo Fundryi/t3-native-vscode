@@ -247,7 +247,12 @@ export class BridgeHandler {
     const vscode = await import("vscode");
     if (/^https?:\/\//i.test(href)) { await vscode.env.openExternal(vscode.Uri.parse(href)); return; }
     const target = resolveChatFileLink(href, this.hostState.workspaceForThread(threadId));
-    const document = await vscode.workspace.openTextDocument(vscode.Uri.file(target.path));
+    const uri = vscode.Uri.file(target.path);
+    // The @ menu offers directories beside files, and a directory has no document to show. A link
+    // that names a position is already known to be a file, so it never pays for the extra stat.
+    const stat = target.line ? undefined : await Promise.resolve(vscode.workspace.fs.stat(uri)).catch(() => undefined);
+    if (stat && stat.type & vscode.FileType.Directory) { await vscode.commands.executeCommand("revealInExplorer", uri); return; }
+    const document = await vscode.workspace.openTextDocument(uri);
     const editor = await vscode.window.showTextDocument(document, { preview: true });
     if (target.line) {
       const position = new vscode.Position(target.line - 1, (target.column ?? 1) - 1);

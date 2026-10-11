@@ -78,6 +78,8 @@ export interface ComposerSuggestion {
   readonly id: string; readonly label: string; readonly description: string;
   readonly kind: "file" | "directory" | "thread" | "model" | "usage" | "command" | "skill";
   readonly value: string;
+  /** Absolute `file://` URL for path suggestions, so the renderer can bind one as a file reference. */
+  readonly uri?: string;
 }
 export interface ConversationQueue {
   readonly activeRunId: string | null;

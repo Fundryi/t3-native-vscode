@@ -14,7 +14,9 @@ export function parseDraftTransfer(raw: unknown, expectedKey: string, allowPendi
     if (!isObject(context)) throw new Error("Invalid draft context.");
     if (context.type === "assistant") return { type: "assistant", citation: Schema.decodeUnknownSync(AssistantCitation)(context.citation), ...(context.contextId !== undefined ? { contextId: Schema.decodeUnknownSync(ComposerContextId)(context.contextId) } : {}) };
     const position = (raw: unknown) => isObject(raw) && Number.isInteger(raw.line) && Number(raw.line) > 0 && Number.isInteger(raw.column) && Number(raw.column) > 0;
-    if (context.type !== "file" || ![context.uri, context.path, context.label, context.text].every((value) => typeof value === "string") || !isObject(context.range) || !position(context.range.start) || !position(context.range.end)) throw new Error("Invalid file reference in draft.");
+    // A reference picked from the `@` menu covers a whole file, so it carries neither a range nor a snapshot.
+    const range = context.range === undefined ? undefined : isObject(context.range) && position(context.range.start) && position(context.range.end);
+    if (context.type !== "file" || ![context.uri, context.path, context.label].every((value) => typeof value === "string") || range === false || context.text !== undefined && (typeof context.text !== "string" || range === undefined)) throw new Error("Invalid file reference in draft.");
     if (context.inlineText !== undefined && (typeof context.inlineText !== "string" || !context.inlineText.startsWith("@") || context.inlineText.length < 2)) throw new Error("Invalid inline file reference.");
     return context as unknown as ComposerContext;
   });

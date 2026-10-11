@@ -5,6 +5,7 @@ import type { TextSelection } from "../shared/composerAttachments.js";
 import { randomUUID } from "node:crypto";
 import { realpathSync } from "node:fs";
 import { basename, isAbsolute, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   ScheduledTaskUpsertInput, type ScheduledTask, OrchestrationV2TurnItemJson, ModelSelection as ModelSelectionSchema, type ChatAttachment, getProviderAttachmentLimitError,
   ProviderApprovalDecision, ProviderInteractionMode, RuntimeMode,
@@ -970,7 +971,7 @@ export class HostState {
       const result = await this.client.searchPaths(cwd, query);
       this.requireView(viewId);
       // Returned paths and their server ordering come from T3's workspace index.
-      return result.entries.map((entry) => ({ id: `path:${entry.kind}:${entry.path}`, kind: entry.kind, value: entry.path, label: basename(entry.path), description: entry.path.includes("/") ? entry.path.slice(0, entry.path.lastIndexOf("/")) : "" }));
+      return result.entries.map((entry) => ({ id: `path:${entry.kind}:${entry.path}`, kind: entry.kind, value: entry.path, uri: pathToFileURL(resolve(cwd, entry.path)).toString(), label: basename(entry.path), description: entry.path.includes("/") ? entry.path.slice(0, entry.path.lastIndexOf("/")) : "" }));
     }
     if (kind !== "slash-command" && kind !== "skill") throw new Error("Unknown composer trigger.");
     let provider = this.client.config?.providers.find((provider) => provider.instanceId === instanceId);

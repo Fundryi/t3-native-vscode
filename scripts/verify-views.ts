@@ -487,8 +487,14 @@ try {
   assert.equal(await input.inputValue(), "/compact ");
   await input.fill("Please inspect @example");
   await second.getByRole("option").filter({ hasText: "example.ts" }).waitFor();
-  await input.press("Enter"); assert.equal(await input.inputValue(), "Please inspect [example.ts](src/example.ts) ");
+  // A chosen path is the same plain token an editor selection inserts, with a chip and a working click.
+  await input.press("Enter"); assert.equal(await input.inputValue(), "Please inspect @src/example.ts ");
+  await second.getByRole("button", { name: "@src/example.ts", exact: true }).waitFor();
   assert.equal(client.pathSearches.at(-1)?.cwd, "/tmp/t3-vscode");
+  await second.getByRole("button", { name: "Send message", exact: true }).click();
+  await second.waitForFunction(() => (document.querySelector('textarea[aria-label="Message"]') as HTMLTextAreaElement)?.value === "");
+  const pathMessage = client.commands.findLast((command) => command.type === "message.dispatch"); assert.ok(pathMessage);
+  assert.equal(pathMessage.text, "Please inspect [@src/example.ts](file:///tmp/t3-vscode/src/example.ts)");
   await input.fill("/usage"); await second.getByRole("option").filter({ hasText: "/usage-limits" }).click();
   await accountSidebar.waitForFunction(() => (document.querySelector('.account-usage') as HTMLDetailsElement).open);
   await accountSidebar.getByText("91% left", { exact: true }).waitFor();

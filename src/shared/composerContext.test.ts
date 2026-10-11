@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { EnvironmentId, MessageId, ThreadId } from "@t3tools/contracts";
 import { collectAssistantCitations, withAssistantCitationComment } from "@t3tools/shared/assistantCitations";
 import { createAssistantTextSelector, findAssistantCitationText } from "../webview/components/t3/assistantTextSelection.js";
-import { contextIsReferenced, fileReferenceOccurrences, formatComposerMessage, insertAssistantQuote, insertFileReference, removeContextReference, type FileReference } from "./composerContext.js";
+import { contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, insertAssistantQuote, insertFileReference, removeContextReference, type FileReference } from "./composerContext.js";
 import { insertAttachmentReferences } from "./composerAttachments.js";
 import { collectComposerContextReferences } from "@t3tools/shared/composerContextReferences";
 import { parseDraftTransfer } from "./viewDraft.js";
@@ -38,14 +38,14 @@ test("Removing or editing a comment preserves the citation source and exact sele
 
 const inlineCitation = { version: 1 as const, environmentId: EnvironmentId.make("env"), threadId: ThreadId.make("thread"), messageId: MessageId.make("message"), text: "Keep the original source.", start: 0, end: 25, prefix: "", suffix: "", comment: "Explain this." };
 const inlineQuote = { type: "assistant" as const, contextId: "quote_one", citation: inlineCitation };
-const selectedFile: FileReference = { type: "file", uri: "file:///tmp/project/README.md", path: "/tmp/project/README.md", label: "README.md", range: { start: { line: 43, column: 3 }, end: { line: 47, column: 1 } }, text: "  unsaved selected text\n```\npartial line" };
+const selectedFile = { type: "file", uri: "file:///tmp/project/README.md", path: "/tmp/project/README.md", label: "README.md", range: { start: { line: 43, column: 3 }, end: { line: 47, column: 1 } }, text: "  unsaved selected text\n```\npartial line" } satisfies FileReference;
 
 test("Editor references insert readable file/range tokens at the cursor and retain exact unsaved snapshots", () => {
   const inserted = insertFileReference("Before replace after.", [], selectedFile, { start: 7, end: 14 });
   assert.equal(inserted.text, "Before @README.md:43-46  after.");
   assert.equal(inserted.cursor, "Before @README.md:43-46 ".length);
   const sent = formatComposerMessage(inserted.text, inserted.contexts);
-  assert.ok(sent.startsWith("Before [README.md:43-46](file:///tmp/project/README.md#L43-L46)  after."));
+  assert.ok(sent.startsWith("Before [@README.md:43-46](file:///tmp/project/README.md#L43-L46)  after."));
   assert.ok(sent.includes("43:3–47:1 (end exclusive)"));
   assert.ok(sent.includes("````\n" + selectedFile.text + "\n````"));
   assert.deepEqual(parseDraftTransfer({ draftKey: "file-chat", draft: { text: inserted.text, contexts: inserted.contexts } }, "file-chat")?.draft.contexts, inserted.contexts);
@@ -79,7 +79,7 @@ test("Repeated editor references refresh one snapshot and disambiguate paths fro
 
 test("Different partial selections on the same source lines preserve their own snapshots", () => {
   const first = insertFileReference("", [], selectedFile, { start: 0, end: 0 });
-  const shorter: FileReference = { ...selectedFile, range: { start: { line: 43, column: 8 }, end: { line: 46, column: 12 } }, text: "different partial selection" };
+  const shorter = { ...selectedFile, range: { start: { line: 43, column: 8 }, end: { line: 46, column: 12 } }, text: "different partial selection" } satisfies FileReference;
   const second = insertFileReference(first.text, first.contexts, shorter, { start: first.cursor, end: first.cursor });
   assert.equal(fileReferenceOccurrences(second.text, second.contexts).length, 2);
   const sent = formatComposerMessage(second.text, second.contexts);
@@ -128,4 +128,20 @@ test("Deleting inline quotes omits their payload while duplicate references shar
   assert.deepEqual(transferred.draft.contexts, [inlineQuote]);
   assert.deepEqual(collectAssistantCitations(formatComposerMessage(transferred.draft.text, transferred.draft.contexts))[0]?.citation, inlineCitation);
   assert.throws(() => parseDraftTransfer({ draftKey: "thread", draft: { text: "", contexts: [{ ...inlineQuote, contextId: "invalid:id" }] } }, "thread"));
+});
+
+test("Path suggestions become whole-file references that chip, send as one @ link and survive a handoff", () => {
+  const picked: FileReference = { type: "file", uri: "file:///tmp/project/parts/ch1_intro.tex", path: "parts/ch1_intro.tex", label: "parts/ch1_intro.tex" };
+  const inserted = insertFileReference("Explain @parts", [], picked, { start: 8, end: 14 });
+  assert.equal(inserted.text, "Explain @parts/ch1_intro.tex ");
+  const context = inserted.contexts[0] as FileReference;
+  assert.equal(contextIsReferenced(inserted.text, context), true);
+  assert.equal(fileReferenceLabel(context), "parts/ch1_intro.tex");
+  assert.equal(formatComposerMessage(inserted.text, inserted.contexts), "Explain [@parts/ch1_intro.tex](file:///tmp/project/parts/ch1_intro.tex)");
+  assert.equal(formatComposerMessage(removeContextReference(inserted.text, context), inserted.contexts), "Explain");
+  assert.deepEqual(parseDraftTransfer({ draftKey: "new", draft: { text: inserted.text, contexts: inserted.contexts } }, "new")?.draft.contexts, inserted.contexts);
+  const alongside = insertFileReference(inserted.text, inserted.contexts, selectedFile, { start: inserted.cursor, end: inserted.cursor });
+  const sent = formatComposerMessage(alongside.text, alongside.contexts);
+  assert.equal(sent.split("Snapshot from the editor").length, 2);
+  assert.ok(sent.includes("[@parts/ch1_intro.tex](file:///tmp/project/parts/ch1_intro.tex)") && sent.includes("[@README.md:43-46](file:///tmp/project/README.md#L43-L46)"));
 });

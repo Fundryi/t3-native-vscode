@@ -8,9 +8,9 @@ export interface FileReference {
   readonly uri: string;
   readonly path: string;
   readonly label: string;
-  /** One-based positions; the end is exclusive, as in VS Code selections. */
-  readonly range: { readonly start: { readonly line: number; readonly column: number }; readonly end: { readonly line: number; readonly column: number } };
-  readonly text: string;
+  /** One-based positions; the end is exclusive, as in VS Code selections. Absent on whole-file references. */
+  readonly range?: { readonly start: { readonly line: number; readonly column: number }; readonly end: { readonly line: number; readonly column: number } };
+  readonly text?: string;
   /** Readable draft token; absent on legacy references that were added as chips only. */
   readonly inlineText?: string;
 }
@@ -37,6 +37,7 @@ export function removeContextReference(text: string, context: ComposerContext): 
 }
 
 export function fileReferenceLabel(reference: FileReference): string {
+  if (!reference.range) return reference.label;
   const { start, end } = reference.range;
   const lastLine = end.column === 1 && end.line > start.line ? end.line - 1 : end.line;
   return `${reference.label}:${start.line}${lastLine > start.line ? `-${lastLine}` : ""}`;
@@ -44,7 +45,8 @@ export function fileReferenceLabel(reference: FileReference): string {
 export function fileReferenceOccurrences(text: string, contexts: ReadonlyArray<ComposerContext>) {
   const protectedRanges = [...collectComposerContextReferences(text), ...collectAssistantCitations(text)];
   const matches: Array<{ start: number; end: number; context: FileReference }> = [];
-  for (const context of contexts) {
+  // Longest token first: whole-file references end at a `.`, so `@.env` would otherwise claim `@.env.local`.
+  for (const context of [...contexts].sort((a, b) => (b.type === "file" && b.inlineText ? b.inlineText.length : 0) - (a.type === "file" && a.inlineText ? a.inlineText.length : 0))) {
     if (context.type !== "file" || !context.inlineText) continue;
     for (let start = text.indexOf(context.inlineText); start >= 0; start = text.indexOf(context.inlineText, start + context.inlineText.length)) {
       const end = start + context.inlineText.length;
@@ -58,8 +60,8 @@ export function insertFileReference(text: string, contexts: ReadonlyArray<Compos
   const sameRange = (item: ComposerContext) => item.type === "file" && item.uri === reference.uri && JSON.stringify(item.range) === JSON.stringify(reference.range);
   const label = fileReferenceLabel(reference);
   const collision = contexts.some(item => item.type === "file" && fileReferenceLabel(item) === label && !sameRange(item));
-  const { start, end } = reference.range;
-  const uniqueLabel = collision ? `${reference.path}:${start.line}:${start.column}-${end.line}:${end.column}` : label;
+  const { start, end } = reference.range ?? {};
+  const uniqueLabel = collision ? start && end ? `${reference.path}:${start.line}:${start.column}-${end.line}:${end.column}` : reference.path : label;
   const existing = contexts.find(item => sameRange(item) && item.type === "file" && item.inlineText) as FileReference | undefined;
   const inlineText = existing?.inlineText ?? `@${/[\s"\\]/.test(uniqueLabel) ? JSON.stringify(uniqueLabel) : uniqueLabel}`;
   const context = { ...reference, inlineText };
@@ -67,10 +69,11 @@ export function insertFileReference(text: string, contexts: ReadonlyArray<Compos
   const inserted = insertComposerReferenceText(text, `${prefix}${inlineText} `, selection);
   return { ...inserted, contexts: [...contexts.filter(item => !sameRange(item)), context] };
 }
+/** The `@` stays in the label so the transcript shows the token the user typed, and renderers can spot it. */
 function fileReferenceLink(context: FileReference): string {
-  const title = fileReferenceLabel(context).replace(/[\\[\]]/g, "\\$&");
-  const lastLine = context.range.end.column === 1 && context.range.end.line > context.range.start.line ? context.range.end.line - 1 : context.range.end.line;
-  const range = `#L${context.range.start.line}${lastLine > context.range.start.line ? `-L${lastLine}` : ""}`;
+  const title = `@${fileReferenceLabel(context).replace(/[\\[\]]/g, "\\$&")}`;
+  const lastLine = context.range && (context.range.end.column === 1 && context.range.end.line > context.range.start.line ? context.range.end.line - 1 : context.range.end.line);
+  const range = context.range && lastLine ? `#L${context.range.start.line}${lastLine > context.range.start.line ? `-L${lastLine}` : ""}` : "";
   return `[${title}](${(context.uri + range).replace(/[()]/g, character => encodeURIComponent(character))})`;
 }
 export function formatComposerMessage(text: string, contexts: ReadonlyArray<ComposerContext>): string {
@@ -95,9 +98,11 @@ export function formatComposerMessage(text: string, contexts: ReadonlyArray<Comp
       return `${context.contextId ? "" : link}${renderAssistantCitationsAsText(link)}`;
     }
     if (context.inlineText && !usedFiles.has(context)) return "";
-    const { start, end } = context.range;
-    const selection = context.text ? `Selected range: ${start.line}:${start.column}–${end.line}:${end.column} (end exclusive). Snapshot from the editor, including unsaved changes.` : "File reference from the editor.";
-    const fence = "`".repeat(Math.max(3, ...[...context.text.matchAll(/`+/g)].map((match) => match[0].length + 1)));
-    return `${fileReferenceLink(context)}\n${selection}${context.text ? `\n${fence}\n${context.text}\n${fence}` : ""}`;
+    // A whole-file reference has no snapshot to attach: its inline link already is the whole payload.
+    if (!context.range && !context.text) return "";
+    const { start, end } = context.range ?? {};
+    const selection = !start || !end ? "" : context.text ? `Selected range: ${start.line}:${start.column}–${end.line}:${end.column} (end exclusive). Snapshot from the editor, including unsaved changes.` : "File reference from the editor.";
+    const fence = "`".repeat(Math.max(3, ...[...(context.text ?? "").matchAll(/`+/g)].map((match) => match[0].length + 1)));
+    return [fileReferenceLink(context), selection, context.text ? `${fence}\n${context.text}\n${fence}` : ""].filter(Boolean).join("\n");
   })].filter(Boolean).join("\n\n");
 }

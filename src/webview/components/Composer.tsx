@@ -5,13 +5,13 @@ import type { ComposerSuggestion, HostStateSnapshot } from "../../shared/bridge"
 import { useActions } from "../actions";
 import { PendingRequests } from "./PendingRequests";
 import { clearDraft, readDraftSelection, rememberDraftSelection, takeEditorReferenceFocus, updateDraft, useDraftRecovery, useComposerDraft } from "../composerDrafts";
-import { contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, removeContextReference } from "../../shared/composerContext";
+import { contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, insertFileReference, removeContextReference, type FileReference } from "../../shared/composerContext";
 import type { AssistantCitation } from "@t3tools/contracts";
 import { applyClaudePromptEffortPrefix, getProviderOptionCurrentValue, isClaudeUltrathinkPrompt } from "@t3tools/shared/model";
 import { effortDescriptor } from "../../shared/modelOptions";
 import { ModelPicker } from "./ModelPicker";
 import { detectComposerTrigger } from "../../shared/composerSuggestions";
-import { replaceTextRange, serializeComposerFileLink } from "@t3tools/shared/composerTrigger";
+import { replaceTextRange } from "@t3tools/shared/composerTrigger";
 import { useBridgeQuery } from "../useBridgeQuery";
 import { ComposerSuggestions } from "./ComposerSuggestions";
 import { ConversationActivity } from "./ConversationActivity";
@@ -111,14 +111,21 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
   const highlighted = Math.min(suggestionIndex, Math.max(0, items.length - 1));
   useEffect(() => setSuggestionIndex(0), [triggerKey]);
   useEffect(() => { if (suggestionsOpen) document.getElementById(`composer-suggestion-${highlighted}`)?.scrollIntoView({ block: "nearest" }); }, [highlighted, suggestionsOpen]);
+  const focusCursor = (position: number) => requestAnimationFrame(() => { textarea.current?.focus(); textarea.current?.setSelectionRange(position, position); });
   const chooseSuggestion = (item: ComposerSuggestion) => {
     if (!trigger) return;
-    const replacement = item.kind === "file" || item.kind === "directory" ? `${serializeComposerFileLink(item.value)} ` : item.value;
-    const next = replaceTextRange(text, trigger.rangeStart, trigger.rangeEnd, replacement);
+    if (item.kind === "file" || item.kind === "directory") {
+      // The relative path is the label, so three different `index.ts` stay distinguishable in the chips.
+      const reference: FileReference = { type: "file", uri: item.uri ?? item.value, path: item.value, label: item.value };
+      const inserted = insertFileReference(text, contexts, reference, { start: trigger.rangeStart, end: trigger.rangeEnd });
+      markTouched(); updateDraft(draftKey, (draft) => ({ ...draft, text: inserted.text, contexts: inserted.contexts }));
+      setCursor(inserted.cursor); setDismissedTrigger(triggerKey); focusCursor(inserted.cursor); return;
+    }
+    const next = replaceTextRange(text, trigger.rangeStart, trigger.rangeEnd, item.value);
     setText(next.text); setCursor(next.cursor); setDismissedTrigger(triggerKey);
     if (item.kind === "model") setModelsOpen(true);
     else if (item.kind === "usage") onUsage();
-    else requestAnimationFrame(() => { textarea.current?.focus(); textarea.current?.setSelectionRange(next.cursor, next.cursor); });
+    else focusCursor(next.cursor);
   };
   useEffect(() => {
     const focus = (event: Event) => {
@@ -200,9 +207,11 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
       setAttachmentError(result.errors.join("\n") || null);
     })).catch((cause) => setAttachmentError(cause instanceof Error ? cause.message : String(cause))).finally(() => { setPicking(false); textarea.current?.focus(); });
   };
+  // A whole-file reference has no position to carry, so it opens the file as-is.
+  const openFileReference = (context: FileReference) => run("openLink", { href: context.range ? `${context.uri}:${context.range.start.line}:${context.range.start.column}` : context.uri });
   const activateInlineReference = (position: number): boolean => {
     const fileContext = fileReferenceOccurrences(text, contexts).find(ref => ref.start <= position && position < ref.end)?.context;
-    if (fileContext) { void run("openLink", { href: `${fileContext.uri}:${fileContext.range.start.line}:${fileContext.range.start.column}` }); return true; }
+    if (fileContext) { void openFileReference(fileContext); return true; }
     const reference = collectComposerContextReferences(text).find((ref) => ref.start <= position && position < ref.end);
     if (reference?.kind === "assistant-quote") {
       const index = contexts.findIndex((context) => context.type === "assistant" && context.contextId === reference.contextId);
@@ -245,7 +254,7 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
       {visibleContexts.length ? <div className="composer-contexts" aria-label="Message references">{visibleContexts.map(({ context, index }) => <div className="context-chip" key={index}>
         <button className="context-label" title={context.type === "file" ? context.text || context.path : `${context.citation.text}${context.citation.comment ? `\nComment: ${context.citation.comment}` : ""}`} onClick={() => {
           if (context.type === "assistant") onEditCitation(context.citation, index);
-          else void run("openLink", { href: `${context.uri}:${context.range.start.line}:${context.range.start.column}` });
+          else void openFileReference(context);
         }}>{context.type === "file" ? `@${fileReferenceLabel(context)}` : context.citation.comment ? "Assistant quote · Comment" : "Assistant quote"}</button>
         <button className="icon-button" aria-label={`Remove reference ${index + 1}`} onClick={() => updateDraft(draftKey, (draft) => ({ ...draft, text: removeContextReference(draft.text, context), contexts: draft.contexts.filter((_, position) => position !== index) }))}><XIcon size={12} /></button>
       </div>)}</div> : null}
