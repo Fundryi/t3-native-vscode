@@ -25,7 +25,7 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 | [Queue and steer](#queue-and-steer) | Enter queues follow-ups; Ctrl/Cmd+Enter steers supported active runs. | v0.0.6 | v0.0.8 |
 | [Queue controls and task progress](#queue-controls-and-task-progress) | Edits queued text at the prompt font size; reorders follow-ups and shows current tasks. | v0.0.6 | v0.1.16 |
 | [Attachment presentation](#attachment-presentation) | Draft and sent previews with local recovery after closure. | v0.0.1 | v0.1.13 |
-| [Clipboard paste and file picker](#clipboard-paste-and-file-picker) | Image paste uses selected words as its description; local uploads survive tab closure. | v0.0.8 | v0.1.16 |
+| [Clipboard paste and file picker](#clipboard-paste-and-file-picker) | Image paste uses selected words as its description; local uploads survive tab closure. | v0.0.8 | v0.1.20 |
 | [Streaming and progressive history](#streaming-and-progressive-history) | Streams replies, loads older history and keeps rows separate as rich content settles. | v0.0.1 | v0.1.18 |
 | [Markdown and media](#markdown-and-media) | Formatted text, code, underline, tables, images, video and audio. | v0.0.1 | v0.1.20 |
 | [Collapsed activity](#collapsed-activity) | Timed thought/tool groups separated by visible assistant messages and steers. | v0.0.1 | v0.1.13 |
@@ -432,6 +432,10 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 
 - Use selected prose as the first pasted image's description, normalizing it to a valid inline label while retaining filenames for an empty selection and later images.
 - Preserve whole existing references, cursor placement, upload ownership and the description delivered to the provider; file picking and drag/drop retain their existing behavior.
+
+#### v0.1.20
+
+- Restore the caret in the same update that inserts a reference, rather than a frame later. Typing or moving the cursor in that frame was previously undone, so text typed immediately after a paste landed back at the insertion point. Pasted images, `@` menu picks and the attachment picker share one path.
 
 ## Message rendering
 

@@ -372,6 +372,9 @@ Escaped delimiters \(\alpha+\beta\) and \[\int_0^1 x^2\,dx=\frac{1}{3}\].`;
     element.dispatchEvent(new ClipboardEvent('paste', { clipboardData: transfer, bubbles: true, cancelable: true }));
   }, png);
   await page.waitForFunction(() => document.querySelector('textarea').value.includes('![this result](t3-context://v1/image/'));
+  // The caret must already sit after the reference, before the next paint. Asserting only the final
+  // text would also pass if it were never restored, because Control+End moves to the end anyway.
+  assert.equal(await page.evaluate(() => { const input = document.querySelector('textarea'); return input.selectionStart === input.value.indexOf(')', input.value.indexOf('![this result](')) + 1; }), true, 'Pasting leaves the caret after the inserted reference');
   await page.getByRole('textbox', { name: 'Message', exact: true }).press('Control+End');
   await page.getByRole('textbox', { name: 'Message', exact: true }).pressSequentially(' More context.');
   await page.waitForFunction(() => !document.querySelector('.composer-attachment .attachment-state')?.textContent.includes('Uploading'));

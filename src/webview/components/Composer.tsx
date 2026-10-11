@@ -111,7 +111,19 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
   const highlighted = Math.min(suggestionIndex, Math.max(0, items.length - 1));
   useEffect(() => setSuggestionIndex(0), [triggerKey]);
   useEffect(() => { if (suggestionsOpen) document.getElementById(`composer-suggestion-${highlighted}`)?.scrollIntoView({ block: "nearest" }); }, [highlighted, suggestionsOpen]);
-  const focusCursor = (position: number) => requestAnimationFrame(() => { textarea.current?.focus(); textarea.current?.setSelectionRange(position, position); });
+  // Committing a new value drops the textarea's selection. Restoring it before the browser paints,
+  // rather than a frame later, keeps a keystroke in that frame from landing back at the old caret.
+  const pendingCaret = useRef<{ position: number; focus: boolean } | null>(null);
+  useLayoutEffect(() => {
+    const pending = pendingCaret.current; const input = textarea.current;
+    if (!pending || !input) return;
+    pendingCaret.current = null;
+    if (pending.focus) input.focus();
+    const position = Math.min(input.value.length, pending.position);
+    input.setSelectionRange(position, position);
+  });
+  const placeCursor = (position: number, focus = false) => { pendingCaret.current = { position, focus }; };
+  const focusCursor = (position: number) => placeCursor(position, true);
   const chooseSuggestion = (item: ComposerSuggestion) => {
     if (!trigger) return;
     if (item.kind === "file" || item.kind === "directory") {
@@ -196,14 +208,14 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
     markTouched(); setAttachmentError(null);
     const selection = { start: textarea.current?.selectionStart ?? text.length, end: textarea.current?.selectionEnd ?? text.length };
     void pasteAttachments(draftKey, files, state.activeThreadId, selection, (cursor) => {
-      setCursor(cursor); requestAnimationFrame(() => textarea.current?.setSelectionRange(cursor, cursor));
+      setCursor(cursor); placeCursor(cursor);
     }, { useSelectedTextAsImageDescription }).catch((cause) => setAttachmentError(cause instanceof Error ? cause.message : String(cause)));
   };
   const pickFiles = () => {
     const selection = { start: textarea.current?.selectionStart ?? text.length, end: textarea.current?.selectionEnd ?? text.length };
     setPicking(true); setAttachmentError(null);
     void trackAttachmentWork(draftKey, bridge.request<{ attachments: DraftAttachment[]; errors: string[] }>("pickAttachments", undefined, 10 * 60_000).then((result) => {
-      if (result.attachments.length) { markTouched(); const cursor = addDraftAttachments(draftKey, result.attachments, selection); if (cursor !== undefined) { setCursor(cursor); requestAnimationFrame(() => textarea.current?.setSelectionRange(cursor, cursor)); } }
+      if (result.attachments.length) { markTouched(); const cursor = addDraftAttachments(draftKey, result.attachments, selection); if (cursor !== undefined) { setCursor(cursor); placeCursor(cursor); } }
       setAttachmentError(result.errors.join("\n") || null);
     })).catch((cause) => setAttachmentError(cause instanceof Error ? cause.message : String(cause))).finally(() => { setPicking(false); textarea.current?.focus(); });
   };
