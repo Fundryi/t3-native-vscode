@@ -158,6 +158,23 @@ select, input { color: inherit; background: var(--card); }
 .markdown blockquote { padding-left: 12px; border-left: 2px solid var(--input); color: var(--muted-foreground); margin: 10px 0; }
 .markdown pre, .tool-output, .command-input { font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-size: var(--font-size-code, 13px); overflow: auto; white-space: pre; background: var(--code-background); border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 10px 0; }
 .markdown pre code { background: none; padding: 0; font-size: inherit; }.markdown code { font-family: var(--vscode-editor-font-family, ui-monospace, monospace); font-size: .9em; background: var(--muted); border-radius: 4px; padding: 2px 4px; }
+/* A fenced block. Its <pre> opts out of the shared rule above, which command and tool output keep using. */
+.code-block { margin: 10px 0; border: 1px solid var(--border); border-radius: 8px; background: var(--code-background); overflow: hidden; }
+.code-block-header { display: flex; align-items: center; gap: 2px; min-height: 27px; padding: 0 3px 0 12px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--foreground) 4%, transparent); color: var(--muted-foreground); font-size: 0.6875rem; line-height: 1; }
+.code-block-language { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.code-block-tool { width: 23px; height: 23px; }
+.code-block-tool[aria-pressed="true"] { color: var(--foreground); background: var(--muted); }
+.markdown .code-block-body { margin: 0; padding: 0; border: 0; border-radius: 0; background: none; overflow-x: auto; line-height: 1.55; }
+.code-block-body:focus-visible { outline: 1px solid var(--ring); outline-offset: -1px; }
+.code-block-body code { display: block; width: max-content; min-width: 100%; }
+.code-block-line { display: grid; grid-template-columns: calc(var(--code-digits) * 1ch + 22px) minmax(0, 1fr); }
+.code-block-line:first-child > * { padding-top: 10px; }.code-block-line:last-child > * { padding-bottom: 10px; }
+.code-block-number { position: sticky; left: 0; padding-inline: 10px 12px; border-right: 1px solid var(--border); background: var(--code-background); color: var(--muted-foreground); text-align: right; font-variant-numeric: tabular-nums; user-select: none; }
+.code-block-number::before { content: attr(data-line); }
+.code-block-text { padding-inline: 12px; white-space: pre; overflow-wrap: normal; }
+.code-block[data-wrap="true"] .code-block-body { overflow-x: hidden; }
+.code-block[data-wrap="true"] code { width: auto; }
+.code-block[data-wrap="true"] .code-block-text { white-space: pre-wrap; overflow-wrap: anywhere; }
 .markdown table { border-collapse: collapse; display: block; overflow: auto; margin: 12px 0; font-size: 0.75rem; }.markdown th, .markdown td { border: 1px solid var(--border); padding: 6px 9px; text-align: left; }
 .work-entry { color: var(--foreground); }.work-entry.failed { border-left: 2px solid var(--destructive); padding-left: 6px; }
 .work-status { font-size: 0.625rem; }.work-entry .command-input { color: var(--foreground); }

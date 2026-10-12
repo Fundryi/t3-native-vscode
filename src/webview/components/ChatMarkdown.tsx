@@ -12,6 +12,8 @@ import { useActions } from "../actions";
 import { AssistantCitationLink, AssistantCitationNumbersContext, citationKey } from "./AssistantCitationLink";
 import { ChatMedia } from "./ChatMedia";
 import { MermaidVisual } from "./MermaidVisual";
+import { CodeBlock } from "./CodeBlock";
+import { codeBlockLanguage } from "../../shared/codeBlock";
 import type { ChatAssetSource } from "../../shared/chatVisuals";
 import { OrchestrationMessageContext, type ChatAttachment } from "@t3tools/contracts";
 import { parseComposerContextHref } from "@t3tools/shared/composerContextReferences";
@@ -47,6 +49,10 @@ const components: Components = {
     if (code?.type === "element" && code.tagName === "code" && Array.isArray(code.properties.className) && code.properties.className.includes("language-mermaid")) {
       const diagram = code.children.map((child) => child.type === "text" ? child.value : "").join("");
       return <MermaidVisual source={diagram} streaming={streaming} />;
+    }
+    if (code?.type === "element" && code.tagName === "code") {
+      const language = codeBlockLanguage(code.properties.className);
+      return <CodeBlock code={code.children.map((child) => child.type === "text" ? child.value : "").join("")} {...(language ? { language } : {})} />;
     }
     return <pre>{children}</pre>;
   },
