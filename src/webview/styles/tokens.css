@@ -259,6 +259,20 @@ body.vscode-high-contrast, body.vscode-high-contrast-light { --border: var(--vsc
 .citation-card-tool:hover, .citation-card-tool:focus-visible { color: var(--foreground); background: var(--muted); }
 .citation-card-tool:focus-visible { outline: 1px solid var(--ring); outline-offset: 1px; }
 
+/* An attached editor reference of a sent message: one row per reference, expanded on click. */
+.message-references { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.message-reference { border: 1px solid var(--border); border-radius: 8px; background: color-mix(in srgb, var(--foreground) 3%, transparent); overflow: hidden; }
+.message-reference-head { display: flex; align-items: center; gap: 6px; min-height: 27px; padding: 0 3px 0 9px; color: var(--muted-foreground); font-size: 0.75rem; cursor: pointer; }
+.message-reference-head:focus-visible { outline: 1px solid var(--ring); outline-offset: -1px; }
+.message-reference-path { color: var(--foreground); font-family: var(--vscode-editor-font-family, ui-monospace, monospace); white-space: nowrap; }
+.message-reference-summary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.message-reference-tool { width: 23px; height: 23px; }
+.message-reference-detail { margin: 0; padding: 7px 12px 0; color: var(--muted-foreground); font-size: 0.6875rem; }
+/* Collapsed by CSS, never unmounted: session search counts occurrences in the rendered DOM. */
+.message-reference[data-expanded="false"] .message-reference-body { display: none; }
+.message-reference[data-expanded="true"] .message-reference-summary { visibility: hidden; }
+.message-reference .code-block { margin: 7px; }
+
 .citation-source-notice { position: absolute; top: 6px; left: 12px; right: 12px; z-index: 3; border: 1px solid var(--border); background: var(--card); color: var(--muted-foreground); border-radius: 6px; padding: 8px; font-size: 0.75rem; }
 
 .composer-box { position: relative; }

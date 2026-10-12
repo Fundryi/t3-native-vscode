@@ -16,6 +16,8 @@ import { MessageNavigator } from "./MessageNavigator";
 import { messageExchanges } from "../../shared/messageNavigation";
 import { finalResponseCheckpoints, transcriptRows, workSummary, workElapsed, responseBoundaries, isWorkItem, type DisplayRow } from "../../shared/transcriptRows";
 import { renderedMessageText, stripRenderedAssistantQuotes } from "../../shared/assistantQuoteText";
+import { splitMessageReferences } from "../../shared/messageReferences";
+import { MessageReferences } from "./MessageReferences";
 import { htmlVisual } from "../../shared/chatVisuals";
 import { HtmlVisual } from "./HtmlVisual";
 import { ChatMedia } from "./ChatMedia";
@@ -96,11 +98,14 @@ const TurnItem = memo(function TurnItem(props: { row: TranscriptItem; threadId: 
 });
 const TurnContent = memo(function TurnContent({ row, threadId, environmentId }: { row: TranscriptItem; threadId: string; environmentId: string }) {
   const { item } = row; const run = useActions();
+  // References come out before quotes are stripped: the stripper matches `> ` lines anywhere, so running it
+  // first can rewrite a snapshot that repeats a quote, and the section then stops being attributable.
+  const sent = useMemo(() => splitMessageReferences(item.type === "user_message" ? item.text : ""), [item]);
   const assetSource = { sourceThreadId: row.sourceThreadId, itemId: row.sourceItemId ?? row.item.id };
   const markdown = (text: string) => <ChatMarkdown text={text} threadId={threadId} assetSource={assetSource} {...(item.type === "user_message" ? { context: item.context, attachments: item.attachments } : {})} />;
   const openThread = (id: string) => { void run("selectThread", { threadId: id }); };
   switch (item.type) {
-    case "user_message": return <article className="message user-message" data-item-type={item.type}><div className="user-bubble">{item.inputIntent === "steer" ? <span className="steer-label">↪ Steer</span> : null}{item.attachments.length ? <div className="attachments">{item.attachments.map((attachment, index) => /^(image|video|audio)\//.test(attachment.mimeType) ? <div className="attachment-thumbnail" key={attachment.id}><ChatMedia src={attachment.name} alt={attachment.name} threadId={threadId} source={assetSource} attachmentId={attachment.id} kind={attachment.mimeType.startsWith("video/") ? "video" : attachment.mimeType.startsWith("audio/") ? "audio" : "image"} /><span>{attachment.name}</span></div> : <span key={index}><FileIcon size={12} />{attachment.name}</span>)}</div> : null}{markdown(stripRenderedAssistantQuotes(item.text))}</div><CopyButton text={renderedMessageText(item.text)} /></article>;
+    case "user_message": return <article className="message user-message" data-item-type={item.type}><div className="user-bubble">{item.inputIntent === "steer" ? <span className="steer-label">↪ Steer</span> : null}{item.attachments.length ? <div className="attachments">{item.attachments.map((attachment, index) => /^(image|video|audio)\//.test(attachment.mimeType) ? <div className="attachment-thumbnail" key={attachment.id}><ChatMedia src={attachment.name} alt={attachment.name} threadId={threadId} source={assetSource} attachmentId={attachment.id} kind={attachment.mimeType.startsWith("video/") ? "video" : attachment.mimeType.startsWith("audio/") ? "audio" : "image"} /><span>{attachment.name}</span></div> : <span key={index}><FileIcon size={12} />{attachment.name}</span>)}</div> : null}{sent.text || !sent.references.length ? markdown(stripRenderedAssistantQuotes(sent.text)) : null}<MessageReferences references={sent.references} scope={row.key} threadId={threadId} /></div>{/* Copy and search keep the sent payload: a row hides the snapshot from the page, not from the user. */}<CopyButton text={renderedMessageText(item.text)} /></article>;
     case "assistant_message": return <article className="message assistant-message" data-item-type={item.type}>
       {!item.runId ? <AssistantHeader /> : null}
       {!row.canFork ? <div className="response-actions message-copy"><CopyButton text={item.text} /></div> : null}

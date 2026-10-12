@@ -1,3 +1,5 @@
+import { stripRenderedAssistantQuotes } from "./assistantQuoteText.js";
+import { splitMessageReferences } from "./messageReferences.js";
 import type { TranscriptItem } from "./bridge.js";
 
 export type MessageNavigationPlacement = "left" | "right" | "off";
@@ -17,8 +19,13 @@ export interface MessageExchange {
 export function messageExchanges(rows: ReadonlyArray<TranscriptItem>): MessageExchange[] {
   const exchanges: MessageExchange[] = [];
   for (const [rowIndex, row] of rows.entries()) {
-    if (row.item.type === "user_message") exchanges.push({ key: row.key, rowIndex,
-      prompt: row.item.text.trim() ? row.item.text : row.item.attachments.map((attachment) => attachment.name).join(", ") || "Attached message", response: null });
+    if (row.item.type === "user_message") {
+      // Preview what the transcript shows, not the wire text: attached snapshots and readable quote
+      // blocks are most of a referencing message and would crowd out the words the user typed.
+      const prompt = stripRenderedAssistantQuotes(splitMessageReferences(row.item.text).text);
+      exchanges.push({ key: row.key, rowIndex,
+        prompt: prompt.trim() ? prompt : row.item.attachments.map((attachment) => attachment.name).join(", ") || "Attached message", response: null });
+    }
     else if (row.item.type === "assistant_message" && exchanges.length) exchanges[exchanges.length - 1]!.response = row.item.text;
   }
   return exchanges;
