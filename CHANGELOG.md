@@ -1,6 +1,12 @@
 # Changelog
 
-## 0.1.20 — Alpha prerelease
+## 0.1.21 — Unpublished
+
+- Carries everything listed under 0.1.20, which was packaged but never reached the Marketplace.
+
+## 0.1.20 — Packaged, never published
+
+Publication to the prerelease channel was authorized and attempted on October 11, 2026. The first attempt reached the Marketplace and was refused by an Azure DevOps outage; a second was blocked locally before any request was sent. No version number was consumed, and the owner moved the work to 0.1.21 rather than retrying. Everything below ships in 0.1.21.
 
 - Write a file chosen from the `@` menu as the same plain `@path` token the editor's Ctrl/Cmd+K uses, with a removable chip. It previously inserted a bare Markdown link that had no reference behind it, so clicking it in the message box did nothing.
 - Keep the `@` visible in the sent message. File references now send as `[@path:12-40](uri#L12-L40)` rather than dropping the prefix. A path chosen from the menu is labelled with its workspace-relative path, as editor selections already were, so files that share a name stay apart.
