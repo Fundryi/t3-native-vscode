@@ -35,6 +35,9 @@ const components: Components = {
     const citation = href ? parseAssistantCitationHref(href) : null;
     if (citation) return <AssistantCitationLink citation={citation} />;
     if (href?.startsWith("t3-context:")) return inlineAttachment(href) ?? <span>{children}</span>;
+    // Web links are left to the webview host, which prompts before opening. Calling openExternal as
+    // well opened the browser immediately, racing that prompt and ignoring its answer.
+    if (href && /^https?:\/\//i.test(href)) return <a href={href}>{children}</a>;
     return <a href={href} onClick={(event) => { event.preventDefault(); if (href) void run("openLink", { href, threadId }); }}>{children}</a>;
   },
   img: function MarkdownImage({ alt, src }) {
