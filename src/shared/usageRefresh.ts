@@ -1,4 +1,4 @@
-export const DEFAULT_USAGE_REFRESH_SECONDS = 300;
+export const DEFAULT_USAGE_REFRESH_SECONDS = 600;
 export const MIN_USAGE_REFRESH_SECONDS = 15;
 /** Extra delay, as a fraction of the interval, drawn randomly per tick so a fixed beat cannot keep landing on the same keystrokes. */
 export const USAGE_REFRESH_JITTER = 0.2;

@@ -51,7 +51,7 @@ The status bar shows a small provider icon followed by reported month/week/sessi
 
 ### Automatic refresh
 
-Usage refreshes once when T3 VSCode connects and then on the interval set by **T3 VSCode: Usage: Refresh Interval Seconds**. Each wait adds up to 20% random jitter, so the default 300 seconds means a real gap of 300 to 360 seconds — about every five to six minutes. Set the value to `0` to disable periodic refresh; values from 1 to 14 are raised to 15.
+Usage refreshes once when T3 VSCode connects and then on the interval set by **T3 VSCode: Usage: Refresh Interval Seconds**. Each wait adds up to 20% random jitter, so the default 600 seconds means a real gap of 600 to 720 seconds — about every ten to twelve minutes. Set the value to `0` to disable periodic refresh; values from 1 to 14 are raised to 15.
 
 A refresh makes T3 rescan provider transcripts and re-probe provider instances, which competes with sending a message on the same server:
 
