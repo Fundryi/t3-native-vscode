@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { codeBlockLanguage, codeBlockLayout, codeBlockSource } from "./codeBlock";
+import { codeBlockLanguage, codeBlockLanguageName, codeBlockLayout, codeBlockSource } from "./codeBlock";
 
 test("a fence's language comes from its language class", () => {
   assert.equal(codeBlockLanguage(["language-ts"]), "ts");
@@ -26,4 +26,13 @@ test("a snippet numbers from its real first line and the gutter fits its last", 
   assert.equal(codeBlockLayout("a\nb\nc", 7).digits, 1);
   assert.equal(codeBlockLayout("a\nb", 99).digits, 3);
   for (const bad of [0, -3, 1.5, NaN, Infinity, 2 ** 60]) assert.equal(codeBlockLayout("a", bad).first, 1);
+});
+
+test("A fence's header names its language in full, and an unnamed fence says plain text", () => {
+  for (const [fence, name] of [["py", "Python"], ["ts", "TypeScript"], ["md", "Markdown"], ["tex", "LaTeX"], ["sh", "Shell"], ["TSX", "TypeScript React"]]) {
+    assert.equal(codeBlockLanguageName(fence), name);
+  }
+  for (const empty of [undefined, "", "   "]) assert.equal(codeBlockLanguageName(empty), "Plain text");
+  // An abbreviation we do not know is shown as written rather than guessed at or dropped.
+  assert.equal(codeBlockLanguageName("zig"), "zig");
 });
