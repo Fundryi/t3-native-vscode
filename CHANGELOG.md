@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.21 — Unpublished
+## 0.1.21 — Alpha prerelease
 
 - Render fenced code with a line-number gutter, optional soft wrap and a copy button. A wrapped line keeps its single number and the next line starts below the whole wrapped block, as a text editor does; wrap is per block, defaults on, and survives scrolling the block out of view. The header names the language in full — Python, TypeScript, LaTeX — or says Plain text for an unnamed fence.
 - Collapse a sent message's attached file references into one row each, showing the path and a summary and expanding to the snapshot, so the words you typed are no longer buried in payload rendered at the same weight.
