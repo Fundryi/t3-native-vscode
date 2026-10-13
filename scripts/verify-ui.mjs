@@ -440,7 +440,9 @@ Escaped delimiters \(\alpha+\beta\) and \[\int_0^1 x^2\,dx=\frac{1}{3}\].`;
   });
   assert.equal(await page.locator('.project-heading').count(), 0);
   assert.equal(await page.locator('.session-list > .session-tree-node').count() > 0, true);
-  assert.equal(await page.locator('.history-heading').getByRole('button', { name: 'New thread', exact: true }).count(), 1);
+  // The sessions band is gone; its + sits beside the search field and names what the active tab creates.
+  assert.equal(await page.locator('.dedicated-sessions .history-heading').count(), 0);
+  assert.equal(await page.locator('.sidebar-search-row').getByRole('button', { name: 'New thread', exact: true }).count(), 1);
   assert.equal(await page.getByRole('button', { name: /^New thread in / }).count(), 0);
   assert.equal(await page.locator('.session-list .thread[data-thread-id="subagent-one"]').count(), 0);
   await page.locator('.session-list').getByRole('button', { name: 'Expand session of Migrate the T3 chat experience', exact: true }).click();

@@ -20,7 +20,7 @@ export async function verifyEditorChat({ home, evidence, profile, workbench, sid
   await sidebar.evaluate('document.querySelector(".account-usage > summary").click()');
 
   const newChat = async () => {
-    await sidebar.evaluate(`document.querySelector('.history-heading [aria-label="New thread"]').click()`);
+    await sidebar.evaluate(`document.querySelector('.sidebar-search-row [aria-label="New thread"]').click()`);
     const panel = await findWebview('panel');
     await panel.wait('document.querySelector(".chat-empty") && document.querySelector(".chat-main").dataset.threadId');
     return panel;

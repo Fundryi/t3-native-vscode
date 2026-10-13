@@ -47,6 +47,8 @@
   --sidebar-row-hover: var(--vscode-list-hoverBackground, #f4f4f5);
   --sidebar-row-active: var(--vscode-list-inactiveSelectionBackground, #e4e4e7);
   --message-surface: var(--vscode-textBlockQuote-background, var(--muted));
+  /* A list divider must read on the sidebar background; --border matches it in several light themes. */
+  --list-separator: color-mix(in srgb, var(--foreground) 14%, transparent);
   --code-background: var(--vscode-textCodeBlock-background, var(--background));
 }
 
@@ -77,32 +79,33 @@ select, input { color: inherit; background: var(--card); }
 .subtle { color: var(--muted-foreground); font-size: 0.75rem; }
 .error-banner { flex-shrink: 0; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 9px 12px; color: var(--destructive); border-bottom: 1px solid var(--destructive); font-size: 0.75rem; overflow-wrap: anywhere; }
 .error-banner button { flex-shrink: 0; }
-.projects-sidebar { width: 250px; min-width: 200px; flex-shrink: 0; display: none; flex-direction: column; min-height: 0; padding: 5px 8px 0; background: var(--sidebar); color: var(--sidebar-foreground); border-right: 1px solid var(--border); z-index: 20; }
+.projects-sidebar { width: 250px; min-width: 200px; flex-shrink: 0; display: none; flex-direction: column; min-height: 0; padding: 5px 0 0; background: var(--sidebar); color: var(--sidebar-foreground); border-right: 1px solid var(--border); z-index: 20; }
 .navigation-open .projects-sidebar { display: flex; }
 .history-heading { display: flex; align-items: center; justify-content: space-between; min-height: 33px; padding: 0 6px; font-size: 0.8125rem; }
 .sidebar-brand { height: 35px; display: flex; align-items: center; gap: 7px; padding: 0 9px; font-weight: 500; }
 .sidebar-brand button { margin-left: auto; }
 .new-chat { display: flex; align-items: center; gap: 8px; text-align: left; border: 1px solid var(--border); background: var(--card); border-radius: 8px; padding: 8px 10px; margin: 12px 3px 10px; }
-.thread-search { display: flex; align-items: center; gap: 7px; padding: 5px 8px; margin: 6px 0 8px; border: 1px solid var(--input); border-radius: 6px; background: var(--card); color: var(--foreground); }
+.sidebar-search-row { display: flex; align-items: stretch; gap: 4px; margin: 5px 8px 6px; min-width: 0; }
+.sidebar-search-add { width: 27px; height: auto; border: 1px solid var(--input); border-radius: 6px; }
+.thread-search { flex: 1; display: flex; align-items: center; gap: 7px; min-width: 0; padding: 5px 8px; border: 1px solid var(--input); border-radius: 6px; background: var(--card); color: var(--foreground); }
 .thread-search:focus-within { border-color: var(--ring); }
 .thread-search input { width: 100%; border: 0; background: transparent; outline: none; font-size: 0.75rem; }
 .sidebar-section { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; padding: 0 7px; color: var(--muted-foreground); font-size: 0.6875rem; font-weight: 600; }
 .session-list { flex: 1; overflow: auto; padding: 0 0 16px; }
-.thread { display: flex; align-items: center; gap: 8px; border: 0; border-radius: 7px; background: transparent; color: var(--muted-foreground); width: 100%; text-align: left; padding: 7px 10px 7px 14px; font-size: 0.75rem; }
-.thread:hover { background: var(--sidebar-row-hover); }
-.thread.active { background: var(--sidebar-row-active); color: var(--foreground); }
-.thread > svg { flex-shrink: 0; opacity: .7; }
-.thread-text { min-width: 0; flex: 1; }
-.thread-title, .thread-match { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.thread { display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; border: 0; background: transparent; color: var(--muted-foreground); width: 100%; text-align: left; font-size: 0.75rem; }
+.session-tree-row:hover { background: var(--sidebar-row-hover); }
+.session-tree-row:has(> .thread.active) { background: var(--sidebar-row-active); color: var(--foreground); }
+.thread-meta > svg { flex: none; opacity: .7; }
+.thread-match { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .thread-match { font-size: 0.625rem; color: var(--primary); }
 .search-status { margin: 0; padding: 2px 8px; font-size: 0.6875rem; }
 .history-shelves { max-height: 45%; overflow: auto; flex-shrink: 0; }
 .history-shelf { border-top: 1px solid var(--border); }
-.history-shelf > summary { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 7px; font-size: 0.75rem; }
+.history-shelf > summary { display: flex; align-items: center; gap: 7px; cursor: pointer; padding: 7px 8px; font-size: 0.75rem; }
 .history-shelf > summary::after { content: "›"; }
 .history-shelf[open] > summary::after { transform: rotate(90deg); }
 .shelf-count { margin-left: auto; color: var(--muted-foreground); font-size: 0.6875rem; }
-.history-settings { padding: 3px; }
+.history-settings { padding: 3px 5px; }
 .thread-dot, .connection-dot { height: 6px; width: 6px; border-radius: 50%; background: var(--primary); flex-shrink: 0; }
 .thread-dot.waiting { background: var(--warning); }
 .connection-dot { background: #22c55e; }
@@ -232,14 +235,13 @@ body[data-surface="sidebar"] .timeline-header { padding-top: 8px; padding-bottom
   .user-bubble { max-width: calc(100% - 27px); }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
-body.vscode-high-contrast, body.vscode-high-contrast-light { --border: var(--vscode-contrastBorder, #fff); --input: var(--vscode-contrastBorder, #fff); }
+/* High contrast draws every boundary explicitly, so the washed separator joins the other borders rather than staying a 1.35 hint. */
+body.vscode-high-contrast, body.vscode-high-contrast-light { --border: var(--vscode-contrastBorder, #fff); --input: var(--vscode-contrastBorder, #fff); --list-separator: var(--vscode-contrastBorder, #fff); }
+/* High contrast paints the selection background the same as the list, so the band is invisible there and aria-current was the only cue. */
+body.vscode-high-contrast .session-tree-row:has(> .thread.active), body.vscode-high-contrast-light .session-tree-row:has(> .thread.active) { outline: 1px solid var(--vscode-contrastActiveBorder, var(--vscode-contrastBorder, #f38518)); outline-offset: -1px; }
 
 /* Font preferences are supplied by the host from native VS Code settings. */
 .approval-card .font-mono { font-size: var(--font-size-code, 13px); }
-.composer-contexts { display: flex; flex-wrap: wrap; gap: 0.375rem; margin-bottom: 0.5rem; }
-.context-chip { display: flex; align-items: center; gap: 0.25rem; max-width: 100%; font-size: 0.6875rem; background: var(--muted); border: 1px solid var(--border); border-radius: 0.375rem; padding: 0.25rem 0.375rem; }
-.context-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.context-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; background: transparent; text-align: left; }
 .citation-selection-button { position: fixed; z-index: 60; box-shadow: 0 4px 18px #0003; gap: 0.375rem; }
 .citation-comment { position: fixed; z-index: 70; width: min(24rem, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow: auto; padding: 0.875rem; border: 1px solid var(--input); border-radius: 0.75rem; background: var(--card); box-shadow: 0 10px 35px #0005; }
 .citation-comment-quote { max-height: 6rem; overflow: auto; border-left: 2px solid var(--input); padding-left: 0.625rem; margin-bottom: 0.5rem; white-space: pre-wrap; font-size: 0.75rem; color: var(--muted-foreground); }
@@ -330,41 +332,45 @@ body.vscode-high-contrast, body.vscode-high-contrast-light { --border: var(--vsc
 /* Dedicated session management fills the sidebar; editor History uses a separate compact picker. */
 .sidebar-view { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--sidebar); color: var(--sidebar-foreground); }
 .sidebar-view .dedicated-sessions { display: flex; position: static; inset: auto; flex: 1; width: 100%; min-width: 0; border: 0; box-shadow: none; }
-.dedicated-sessions .history-heading { font-size: .6875rem; font-weight: 600; }
-.thread { color: var(--foreground); border-radius: 3px; padding: 7px 8px; }
-.thread.active { background: var(--vscode-list-activeSelectionBackground, var(--sidebar-row-active)); color: var(--vscode-list-activeSelectionForeground, var(--foreground)); }
-.thread-title { font-size: .8125rem; font-weight: 550; }
+.thread { color: var(--foreground); border-radius: 0; padding: .15rem .38rem; }
+.session-tree-row:has(> .thread.active) { background: var(--vscode-list-activeSelectionBackground, var(--sidebar-row-active)); color: var(--vscode-list-activeSelectionForeground, var(--foreground)); }
+.session-tree-row:has(> .thread.active) > .session-tree-toggle, .thread.active { background: transparent; color: inherit; }
+.thread:focus-visible, .session-tree-toggle:focus-visible, .scheduled-task-open:focus-visible { outline-offset: -2px; }
+.thread-title { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; font-size: .8125rem; font-weight: 550; line-height: 1.3; }
 .thread-branch { display: block; font-size: .625rem; color: var(--muted-foreground); }
 .thread.active .thread-branch { color: inherit; opacity: .8; }
 .thread-title-line, .thread-meta { display: flex; align-items: center; min-width: 0; gap: 6px; }
 .thread-title-line .thread-title, .thread-meta > small { flex: 1; min-width: 0; }
-.thread-meta { margin-top: 2px; }
+/* Line two keeps its height with or without a badge: rows that resize as runs start and stop are worse than the space. */
+.thread-meta { font-size: .625rem; line-height: 1.2; min-height: max(13px, 1.3em); }
 .thread-branch { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .thread-age { flex: none; color: var(--muted-foreground); font-size: .625rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .thread.active .thread-age { color: inherit; opacity: .85; }
 .thread-working, .thread-input { display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0; font-size: .625rem; color: var(--primary); }
 .thread.active .thread-working { color: inherit; }
-@media (max-width: 240px) { .thread-working > span, .thread-input > span { display: none; } }
+@media (max-width: 200px) { .thread-working > span, .thread-input > span { display: none; } }
 .provider-icon { width: 12px; height: 12px; flex-shrink: 0; }
 .thread-input { display: inline-flex; color: var(--primary); }
 .thread.active .thread-input { color: inherit; }
 .history-settings { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); }
 .history-settings > span { font-size: .625rem; color: var(--muted-foreground); }
 .account-usage { flex-shrink: 0; border-bottom: 1px solid var(--border); max-height: 50%; overflow: auto; }
-.account-usage > summary { display: flex; align-items: center; gap: 6px; padding: 8px 12px; font-size: .625rem; cursor: pointer; list-style: none; }
+.account-usage > summary { display: flex; align-items: center; gap: 6px; padding: 3px 10px; font-size: .625rem; cursor: pointer; list-style: none; }
 .account-usage > summary > svg { transform: rotate(-90deg); }
 .account-usage[open] > summary > svg { transform: none; }
-.account-usage-body { padding: 3px 12px 12px; }
-.account-usage-update { display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-top: 3px; color: var(--muted-foreground); font-size: .6875rem; }
-.account-usage-update .icon-button { width: 23px; height: 23px; }
-.usage-account-choice { display: flex; align-items: center; gap: 6px; min-width: 0; margin-bottom: 10px; }
+.account-usage-body { padding: 0 10px 8px; }
+.account-usage-update { display: flex; align-items: center; gap: 4px; color: var(--muted-foreground); font-size: .6875rem; }
+.account-usage-update > small { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-usage-update .icon-button { width: 22px; height: 22px; }
+.usage-account-choice { display: flex; align-items: center; gap: 6px; min-width: 0; margin: 4px 0 6px; }
 .usage-account-choice select { flex: 1; min-width: 0; max-width: 100%; background: var(--vscode-dropdown-background, var(--card)); color: var(--vscode-dropdown-foreground, var(--foreground)); border: 1px solid var(--vscode-dropdown-border, var(--input)); padding: 3px; font-size: .75rem; }
-.account-limit { margin: 9px 0; }
-.account-limit > div:first-child { display: flex; justify-content: space-between; gap: 5px; font-size: .6875rem; }
-.account-limit-bar { height: 4px; border-radius: 2px; background: var(--input); margin: 3px 0; overflow: hidden; }
+.account-limit { margin: 6px 0 0; }
+.account-limit > div:first-child { display: flex; justify-content: space-between; gap: 5px; min-width: 0; font-size: .6875rem; }
+.account-limit-value { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+.account-limit-missing { color: var(--muted-foreground); }
+.account-limit-bar { height: 4px; border-radius: 2px; background: var(--input); margin: 2px 0 0; overflow: hidden; }
 .account-limit-bar i { display: block; height: 100%; background: var(--vscode-progressBar-background, var(--primary)); }
-.account-limit small { color: var(--muted-foreground); font-size: .5625rem; }
-.account-usage-actions { display: flex; justify-content: space-between; gap: 6px; font-size: .6875rem; }
+.account-limit small { color: var(--muted-foreground); font-size: .5625rem; white-space: nowrap; }
 .composer-box { background: var(--vscode-input-background, var(--card)); color: var(--vscode-input-foreground, var(--foreground)); border-radius: 3px; }
 .composer-box textarea::placeholder { color: var(--vscode-input-placeholderForeground, var(--muted-foreground)); }
 .thread-search { background: var(--vscode-input-background, var(--card)); color: var(--vscode-input-foreground, var(--foreground)); border-radius: 3px; }
@@ -480,24 +486,17 @@ body.vscode-high-contrast, body.vscode-high-contrast-light { --border: var(--vsc
 .visual-expanded-content { width: min(900px, 100%); }
 
 /* Attachments use the same compact thumbnails in drafts and sent messages. */
-.composer-attachments { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 10px 0; }
-.composer-attachment { position: relative; width: 88px; min-width: 0; border: 1px solid var(--border); border-radius: 7px; padding: 4px; background: var(--muted); }
-.attachment-preview { display: flex; width: 100%; height: 62px; align-items: center; justify-content: center; overflow: hidden; border: 0; border-radius: 4px; padding: 0; background: transparent; cursor: pointer; }
-.attachment-preview img { width: 100%; height: 100%; object-fit: cover; }
-.attachment-name, .attachment-state { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.65rem; line-height: 1.45; }
-.attachment-state { color: var(--muted-foreground); }
-.remove-attachment { position: absolute; top: 2px; right: 2px; background: var(--background); border: 1px solid var(--border); width: 21px; height: 21px; }
-.attachment-failed { border-color: var(--destructive); }.attachment-failed .attachment-state { color: var(--destructive); }
 .composer-attachment-error { padding: 6px 12px; color: var(--destructive); font-size: 0.75rem; white-space: pre-wrap; }
 .user-bubble .attachments { margin: 0 0 8px; }
 .attachment-thumbnail { display: flex; flex-direction: column; width: 96px; max-width: 100%; gap: 3px; }
 .attachment-thumbnail .chat-media { display: block; width: 96px; height: 72px; object-fit: cover; border-radius: 6px; }
 .attachment-thumbnail > span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-main[hidden] { display: none; }
-.session-tree-row { display: flex; align-items: center; min-width: 0; }
-.session-tree-row > .thread { flex: 1; min-width: 0; }
-.session-tree-toggle, .session-tree-spacer { width: 16px; min-width: 16px; padding: 0; }
-.session-tree-toggle { height: 24px; }
+.session-tree-row { display: grid; grid-template-columns: 16px minmax(0, 1fr); min-width: 0; border-top: 1px solid var(--list-separator); }
+.session-list > .session-tree-node:first-child > .session-tree-row { border-top: 0; }
+.session-tree-row > .thread { grid-column: 2; grid-row: 1 / span 2; min-width: 0; }
+.session-tree-toggle, .session-tree-spacer { grid-column: 1; grid-row: 1 / span 2; width: 16px; min-width: 16px; padding: 0; }
+.session-tree-toggle { height: auto; }
 .session-tree-children { margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--vscode-tree-indentGuidesStroke, var(--border)); }
 .subagent-entry { margin: 10px 0; }
 .subagent-line { display: flex; align-items: center; gap: 4px; }
@@ -582,15 +581,14 @@ body.vscode-high-contrast, body.vscode-high-contrast-light { --border: var(--vsc
 /* The same session rows serve the sidebar and each editor's local History picker. */
 .thread-sections { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .session-history-picker { position: fixed; z-index: 100; display: flex; border: 1px solid var(--vscode-widget-border, var(--border)); border-radius: 4px; background: var(--vscode-editorWidget-background, var(--card)); color: var(--foreground); box-shadow: 0 5px 18px var(--vscode-widget-shadow, #0003); }
-.compact-history { display: flex; flex-direction: column; min-height: 0; width: 100%; padding: 4px 6px 0; }
+.compact-history { display: flex; flex-direction: column; min-height: 0; width: 100%; padding: 4px 0 0; }
 .compact-history .history-heading { font-size: .75rem; }
 .compact-history .history-heading > span { color: var(--muted-foreground); font-size: .625rem; }
 .compact-history .thread-sections { display: block; overflow: auto; overscroll-behavior: contain; }
 .compact-history .session-list { overflow: visible; padding-bottom: 6px; }
 .compact-history .history-shelves { max-height: none; overflow: visible; }
-.compact-history .thread { padding: 6px; }
 .compact-history .thread-title { font-size: .8125rem; }
-.history-picker-hint { flex-shrink: 0; border-top: 1px solid var(--border); padding: 6px 3px; color: var(--muted-foreground); font-size: .625rem; }
+.history-picker-hint { flex-shrink: 0; border-top: 1px solid var(--border); padding: 6px 9px; color: var(--muted-foreground); font-size: .625rem; }
 
 /* Permanent source-formatting tools; all composer controls share its border. */
 .composer-formatting { display: flex; align-items: center; flex-wrap: wrap; gap: 3px 0; padding: 0 0 4px; margin: 0 0 5px; border-bottom: 1px solid var(--border); }
@@ -631,24 +629,30 @@ body.vscode-high-contrast, body.vscode-high-contrast-light { --border: var(--vsc
 
 /* Sessions and scheduled tasks share a sidebar; editing keeps the front page mounted. */
 .sidebar-front, .sidebar-manager { flex: 1; min-height: 0; min-width: 0; flex-direction: column; }
-.sidebar-tabs { display: flex; flex: none; border-bottom: 1px solid var(--border); padding: 0 8px; }
-.sidebar-tabs > button { flex: 1; padding: 8px 4px; border-bottom: 2px solid transparent; font-size: .75rem; }
-.sidebar-tabs > button[aria-selected="true"] { border-bottom-color: var(--primary); font-weight: 600; }
+.sidebar-tabs { display: flex; flex: none; gap: 3px; border-bottom: 1px solid var(--border); padding: 0 6px; }
+.sidebar-tabs > button { flex: none; padding: 3px 7px; border-bottom: 2px solid transparent; color: var(--muted-foreground); font-size: .75rem; }
+.sidebar-tabs > button:hover { color: var(--foreground); }
+.sidebar-tabs > button[aria-selected="true"] { border-bottom-color: var(--primary); color: var(--foreground); font-weight: 600; }
 .sidebar-tabs small { margin-left: 5px; color: var(--muted-foreground); }
 .task-scope-note { margin: 5px 8px; color: var(--muted-foreground); font-size: .6875rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scheduled-task-list { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; padding: 0 8px; }
+.scheduled-task-list { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
 .scheduled-task-list .history-heading { font-size: .6875rem; }
 .scheduled-task-list .history-heading strong { flex: 1; }
 .scheduled-task-scroll { overflow: auto; flex: 1; min-height: 0; }
-.scheduled-task-row { display: flex; align-items: center; min-width: 0; padding: 4px 2px; gap: 2px; border-radius: 5px; }
+.scheduled-task-row { display: flex; align-items: center; min-width: 0; padding: 0 4px 0 0; gap: 2px; border-top: 1px solid var(--list-separator); }
+.scheduled-task-rows > .scheduled-task-row:first-child { border-top: 0; }
 .scheduled-task-row:hover { background: var(--sidebar-row-hover); }
-.scheduled-task-open { flex: 1; min-width: 0; text-align: left; padding: 4px; }
-.scheduled-task-title { display: flex; align-items: center; gap: 5px; font-size: .75rem; }
-.scheduled-task-title svg { flex: none; }
-.scheduled-task-title strong, .scheduled-task-open small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.scheduled-task-open small { margin-top: 3px; color: var(--muted-foreground); font-size: .625rem; }
+.scheduled-task-open { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1; min-width: 0; text-align: left; padding: .15rem .38rem; }
+.scheduled-task-title { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: .75rem; }
+.scheduled-task-meta { display: flex; align-items: center; gap: 5px; min-width: 0; color: var(--muted-foreground); font-size: .625rem; line-height: 1.2; min-height: max(13px, 1.3em); }
+.scheduled-task-meta > svg { flex: none; opacity: .7; }
+.scheduled-task-title strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; flex: 1; min-width: 0; overflow: hidden; overflow-wrap: anywhere; line-height: 1.3; }
+.scheduled-task-meta > small:not(.task-run-state) { display: block; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-run-state { display: inline-flex; align-items: center; gap: 3px; flex: none; color: var(--primary); white-space: nowrap; }
+.task-run-state.failed { color: var(--destructive); }
+.task-run-state > svg { flex: none; }
 .scheduled-task-row > input { margin: 0 2px; flex: none; }
-.task-refresh { display: flex; gap: 5px; align-items: center; flex: none; border-top: 1px solid var(--border); padding: 8px 4px; font-size: .6875rem; }
+.task-refresh { display: flex; gap: 5px; align-items: center; flex: none; border-top: 1px solid var(--border); padding: 8px 10px; font-size: .6875rem; }
 .session-expanded-groups { padding-left: 16px; }
 .session-task-group > summary { cursor: pointer; padding: 4px 6px; color: var(--muted-foreground); font-size: .6875rem; }
 .session-task-group > summary small { margin-left: 6px; }

@@ -30,11 +30,19 @@ export function sessionTree(threads: ReadonlyArray<ThreadSummary>, matches: Read
   return roots;
 }
 
+const RUNNING_STATUSES = ["preparing", "running", "starting", "waiting"];
+/**
+ * A subagent's own status lags the run its parent drives, so a working child can still read as idle.
+ * `activityRunStatus` is the live signal, and the sidebar and the transcript card must agree on it.
+ */
+export function threadIsWorking(thread: Pick<ThreadSummary, "status" | "activityRunStatus">): boolean {
+  return RUNNING_STATUSES.includes(thread.activityRunStatus ?? "") || RUNNING_STATUSES.includes(thread.status);
+}
 export function subagentStatus(item: Extract<WireTurnItem, { type: "subagent" }>, child?: ThreadSummary): string {
   if (child?.pendingRuntimeRequest) return "input";
   // Parent task results can stay completed while the child works on a follow-up.
   if (child?.activityRunStatus) return child.activityRunStatus;
-  if (child && ["preparing", "running", "starting", "waiting"].includes(child.status)) return child.status;
+  if (child && RUNNING_STATUSES.includes(child.status)) return child.status;
   return item.status;
 }
 

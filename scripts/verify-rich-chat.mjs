@@ -152,13 +152,13 @@ export async function verifyEmptyChat({ workbench, sidebar, findWebview }) {
     await tab.locator('.tab-actions [aria-label^="Close"]').click();
     await tab.waitFor({ state: 'detached' });
   };
-  await sidebar.evaluate(`document.querySelector('.history-heading [aria-label="New thread"]').click()`);
+  await sidebar.evaluate(`document.querySelector('.sidebar-search-row [aria-label="New thread"]').click()`);
   const empty = await findWebview('panel');
   await empty.wait('document.querySelector(".chat-heading strong")?.textContent === "New thread"');
   const emptyId = await empty.evaluate('document.querySelector(".chat-main").dataset.threadId');
   await closeNewThread();
   await sidebar.wait(`!document.querySelector('.thread[data-thread-id="${emptyId}"]')`);
-  await sidebar.evaluate(`document.querySelector('.history-heading [aria-label="New thread"]').click()`);
+  await sidebar.evaluate(`document.querySelector('.sidebar-search-row [aria-label="New thread"]').click()`);
   const typed = await findWebview('panel');
   await typed.wait('document.querySelector(".chat-heading strong")?.textContent === "New thread"');
   const typedId = await typed.evaluate('document.querySelector(".chat-main").dataset.threadId');

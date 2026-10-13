@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sessionTree, subagentStatus } from "./sessionTree.js";
+import { sessionTree, subagentStatus, threadIsWorking } from "./sessionTree.js";
 import type { ThreadSummary, WireTurnItem } from "./bridge.js";
 
 const thread = (id: string, fields: Partial<ThreadSummary> = {}): ThreadSummary => ({ id, projectId: "project", title: id, status: "idle", modelSelection: { instanceId: "codex", model: "test" }, runtimeMode: "auto", interactionMode: "default", updatedAt: "2026-10-06T00:00:00Z", archived: false, pinned: false, activeRunId: null, ...fields });
@@ -30,4 +30,19 @@ test("Subagent hover status follows current child activity and input requests ah
   assert.equal(subagentStatus(item, thread("child", { activityRunStatus: "running" })), "running");
   assert.equal(subagentStatus(item, thread("child", { pendingRuntimeRequest: { id: "request", kind: "user_input", createdAt: "2026-10-06T00:00:00Z" } })), "input");
   assert.equal(subagentStatus(item), "completed");
+});
+
+test("A subagent whose parent drives the run reads as working in the sidebar, not just in its card", () => {
+  const running = { status: "idle", activityRunStatus: "running" } as const;
+  // The child's own status lags the parent-driven run, which is why the sidebar showed no badge.
+  assert.equal(threadIsWorking(running), true);
+  assert.equal(subagentStatus({ type: "subagent", status: "completed" } as never, thread("child", running)), "running");
+  for (const status of ["preparing", "running", "starting", "waiting"]) {
+    assert.equal(threadIsWorking({ status, activityRunStatus: null }), true, `${status} must read as working`);
+    assert.equal(threadIsWorking({ status: "idle", activityRunStatus: status }), true, `activity ${status} must read as working`);
+  }
+  for (const idle of ["idle", "completed", "failed", "cancelled"]) {
+    assert.equal(threadIsWorking({ status: idle, activityRunStatus: null }), false, `${idle} must not read as working`);
+    assert.equal(threadIsWorking({ status: idle, activityRunStatus: idle }), false, `activity ${idle} must not read as working`);
+  }
 });

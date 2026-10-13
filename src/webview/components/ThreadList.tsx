@@ -8,10 +8,9 @@ import { ThreadActionsMenu } from "./ThreadActionsMenu";
 import { ScheduledTaskRows } from "./ScheduledTaskList";
 import { ProviderIcon } from "./ProviderIcon";
 import { providerBrand } from "../../shared/usage";
-import { sessionTree, type SessionTreeNode } from "../../shared/sessionTree";
+import { sessionTree, threadIsWorking as working, type SessionTreeNode } from "../../shared/sessionTree";
 import { sessionActivityLabel } from "../../shared/sessionActivity";
 
-const working = (thread: ThreadSummary) => ["preparing", "running", "starting", "waiting"].includes(thread.status);
 function elapsedLabel(start: string | null | undefined, now: number): string {
   if (!start || !Number.isFinite(Date.parse(start))) return "";
   const seconds = Math.max(0, Math.floor((now - Date.parse(start)) / 1000));
@@ -56,9 +55,8 @@ export function ThreadList({ state, onAppearance, onSelect, compact = false }: {
     return <button key={thread.id} data-thread-id={thread.id} data-shelf-context={context || undefined} className={`thread${thread.id === state.activeThreadId ? " active" : ""}`} onClick={() => { if (onSelect) onSelect(thread.id); else void run("selectThread", { threadId: thread.id }).then((ok) => { if (ok) void run("openInTab"); }); }} onContextMenu={compact ? undefined : (event) => { event.preventDefault(); setMenu({ threadId: thread.id, x: event.clientX, y: event.clientY }); }} onKeyDown={(event) => {
       if (!compact && (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))) { event.preventDefault(); const box = event.currentTarget.getBoundingClientRect(); setMenu({ threadId: thread.id, x: box.left + 16, y: box.bottom }); }
     }} aria-label={thread.title || "Untitled"} aria-description={thread.pendingRuntimeRequest ? "Input needed" : working(thread) ? "Working" : undefined} aria-current={thread.id === state.activeThreadId ? "page" : undefined}>
-      {thread.pinned ? <PinIcon size={12} /> : thread.relationshipToParent === "subagent" ? <BotIcon size={12} /> : <MessageSquareIcon size={12} />}
-      <span className="thread-text"><span className="thread-title-line"><span className="thread-title">{thread.title || "Untitled"}</span>{thread.pendingRuntimeRequest ? <span className="thread-input" title={thread.pendingRuntimeRequest.kind === "user_input" ? "Input needed" : "Approval needed"} aria-label="Input needed"><MessageCircleQuestionIcon size={13} /><span>{thread.pendingRuntimeRequest.kind === "user_input" ? "Input" : "Approval"}</span></span> : working(thread) ? <span className="thread-working" aria-label="Working"><CircleDashedIcon size={13} /><span>Working</span><time title={thread.workingStartedAt ?? undefined}>{elapsedLabel(thread.workingStartedAt, now)}</time></span> : null}</span>
-      <span className="thread-meta">{match ? <small className="thread-match">{match.source === "user" ? "You" : "Assistant"}: {match.snippet}</small> : <small className="thread-branch">{context ? "Parent session" : thread.branch}</small>}{activity ? <time className="thread-age" dateTime={thread.lastActiveAt!} title={`Last active: ${exactActivity}`} aria-label={`Last active: ${exactActivity}`}>{activity}</time> : null}<ProviderIcon brand={providerBrand(provider?.driver ?? "", provider?.displayName)} /></span></span>
+      <span className="thread-title-line"><span className="thread-title" title={thread.title || "Untitled"}>{thread.title || "Untitled"}</span></span>
+      <span className="thread-meta">{thread.pendingRuntimeRequest ? <span className="thread-input" title={thread.pendingRuntimeRequest.kind === "user_input" ? "Input needed" : "Approval needed"} aria-label="Input needed"><MessageCircleQuestionIcon size={13} /><span>{thread.pendingRuntimeRequest.kind === "user_input" ? "Input" : "Approval"}</span></span> : working(thread) ? <span className="thread-working" aria-label="Working"><CircleDashedIcon size={13} /><span>Working</span><time title={thread.workingStartedAt ?? undefined}>{elapsedLabel(thread.workingStartedAt, now)}</time></span> : null}{match ? <small className="thread-match">{match.source === "user" ? "You" : "Assistant"}: {match.snippet}</small> : <small className="thread-branch">{context ? "Parent session" : thread.branch}</small>}{activity ? <time className="thread-age" dateTime={thread.lastActiveAt!} title={`Last active: ${exactActivity}`} aria-label={`Last active: ${exactActivity}`}>{activity}</time> : null}{thread.pinned ? <PinIcon size={12} /> : thread.relationshipToParent === "subagent" ? <BotIcon size={12} /> : <MessageSquareIcon size={12} />}<ProviderIcon brand={providerBrand(provider?.driver ?? "", provider?.displayName)} /></span>
     </button>;
   };
   const treeRow = (node: SessionTreeNode, members: ReadonlyArray<ThreadSummary>, section: string, depth = 0): ReactNode => {
@@ -75,8 +73,10 @@ export function ThreadList({ state, onAppearance, onSelect, compact = false }: {
     </div>;
   };
   return <aside className={compact ? "compact-history" : "projects-sidebar dedicated-sessions"} aria-label={compact ? "Conversation history" : "Sessions"}>
-    <div className="history-heading"><strong>{compact ? "History" : "SESSIONS"}</strong>{compact ? <span>Current workspace</span> : <button className="icon-button" aria-label="New thread" title="Open New Chat in Editor Tab" onClick={() => { void run("newChatTab"); }}><PlusIcon size={15} /></button>}</div>
-    <label className="thread-search"><SearchIcon size={14} /><input placeholder="Search conversations…" aria-label="Search threads" value={search} onChange={(event) => setSearch(event.target.value)} />{search ? <button className="icon-button" aria-label="Clear search" onClick={() => setSearch("")}><XIcon size={13} /></button> : null}</label>
+    {compact ? <div className="history-heading"><strong>History</strong><span>Current workspace</span></div> : null}
+    <div className="sidebar-search-row"><label className="thread-search"><SearchIcon size={14} /><input placeholder="Search conversations…" aria-label="Search threads" value={search} onChange={(event) => setSearch(event.target.value)} />{search ? <button className="icon-button" aria-label="Clear search" onClick={() => setSearch("")}><XIcon size={13} /></button> : null}</label>
+      {/* Each tab renders its own +, so the name follows the visible list instead of a shared button mutating behind it. */}
+      {compact ? null : <button className="icon-button sidebar-search-add" aria-label="New thread" title="Open New Chat in Editor Tab" onClick={() => { void run("newChatTab"); }}><PlusIcon size={15} /></button>}</div>
     {hits.pending ? <p className="search-status" role="status">Searching messages…</p> : hits.error ? <p className="search-status turn-error" role="status">{hits.error}</p> : null}
     <div className="thread-sections"><nav className="session-list" aria-label="Active conversations">
       {active.map((node) => treeRow(node, activeMatches, "active"))}
