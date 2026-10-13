@@ -13,7 +13,7 @@ function ReferenceRow({ reference, scope, threadId }: { readonly reference: Mess
   return <div className="message-reference" data-expanded={expanded} data-citation-key={key}>
     {/* A role, not a <button>: session search skips text inside buttons, and the path has to stay findable. */}
     <div className="message-reference-head" role="button" tabIndex={0} aria-expanded={expanded} aria-label={`${expanded ? "Collapse" : "Expand"} reference ${reference.label}`}
-      onClick={toggle} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); toggle(); } }}>
+      onClick={toggle} onKeyDown={(event) => { if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return; event.preventDefault(); toggle(); }}>
       <FileCode2Icon size={13} aria-hidden="true" />
       <span className="message-reference-path">{reference.label}</span>
       {/* Generated, so it is hidden from the search walker: counting it would shift every later match. */}

@@ -266,10 +266,10 @@ body.vscode-high-contrast .session-tree-row:has(> .thread.active), body.vscode-h
 .message-reference { border: 1px solid var(--border); border-radius: 8px; background: color-mix(in srgb, var(--foreground) 3%, transparent); overflow: hidden; }
 .message-reference-head { display: flex; align-items: center; gap: 6px; min-height: 27px; padding: 0 3px 0 9px; color: var(--muted-foreground); font-size: 0.75rem; cursor: pointer; }
 .message-reference-head:focus-visible { outline: 1px solid var(--ring); outline-offset: -1px; }
-.message-reference-path { color: var(--foreground); font-family: var(--vscode-editor-font-family, ui-monospace, monospace); white-space: nowrap; }
+.message-reference-path { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--foreground); font-family: var(--vscode-editor-font-family, ui-monospace, monospace); white-space: nowrap; }
 .message-reference-summary { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .message-reference-tool { width: 23px; height: 23px; }
-.message-reference-detail { margin: 0; padding: 7px 12px 0; color: var(--muted-foreground); font-size: 0.6875rem; }
+.markdown .message-reference-detail { margin: 0; padding: 7px 12px 0; color: var(--muted-foreground); font-size: 0.6875rem; }
 /* Collapsed by CSS, never unmounted: session search counts occurrences in the rendered DOM. */
 .message-reference[data-expanded="false"] .message-reference-body { display: none; }
 .message-reference[data-expanded="true"] .message-reference-summary { visibility: hidden; }

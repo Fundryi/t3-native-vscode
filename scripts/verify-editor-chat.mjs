@@ -63,7 +63,7 @@ export async function verifyEditorChat({ home, evidence, profile, workbench, sid
   await runCommand('T3 VSCode: Account & Usage');
   await sidebar.wait('document.querySelector(".account-usage").open');
   assert.equal(await sidebar.evaluate('document.querySelectorAll(".account-limit").length >= 3'), true);
-  await sidebar.evaluate(`document.querySelector('.account-usage-actions button').click()`);
+  await sidebar.evaluate(`document.querySelector('.account-usage [aria-label="Status meters"]').click()`);
   await workbench.locator('.quick-input-title').filter({ hasText: 'T3 VSCode: Configure Status Meters' }).waitFor();
   await workbench.keyboard.press('Escape');
   await sidebar.evaluate(`document.querySelector('[aria-label="T3 VSCode settings"]').click()`);

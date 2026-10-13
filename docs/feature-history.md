@@ -55,7 +55,7 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 | [Feature tracking and regression review](#feature-tracking-and-regression-review) | Maintains this history and requires an independent review before packaging. | v0.0.8 | v0.0.8 |
 | [Tab History](#tab-history) | Searchable conversation switching within each editor tab. | v0.1.13 | v0.1.13 |
 | [New chat editor actions](#new-chat-editor-actions) | Fresh chat tabs from the Command Palette, header and sidebar. | v0.1.13 | v0.1.13 |
-| [Markdown composer tools](#markdown-composer-tools) | Literal formatting, selection wrapping, automatic numbering, indentation and undo. | v0.1.13 | v0.1.13 |
+| [Markdown composer tools](#markdown-composer-tools) | Literal formatting, selection wrapping, automatic numbering, indentation and undo. | v0.1.13 | v0.1.21 |
 | [Dense transcript spacing](#dense-transcript-spacing) | Compact gaps, one author per run and unobtrusive message actions. | v0.1.13 | v0.1.13 |
 
 ## Sessions and navigation
@@ -352,6 +352,10 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 - Keep Send fixed at the bottom right, place the existing Stop immediately left, and put keyboard hints beside those buttons.
 - Wrap tool groups at narrow widths with the selected-state List assist toggle at the far right of the last toolbar row.
 
+#### v0.1.21
+
+- Keep native undo and redo working across programmatic edits. Pasting an image, inserting a quote, editing a quote's comment, picking a suggestion and adding an editor reference all replaced the whole message box, which destroyed its history; each is now replayed as a single edit the browser can undo.
+
 ### Markdown composer tools
 
 #### v0.1.13
@@ -363,6 +367,10 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 - Wrap selected text with quotes, brackets, backticks and dollar signs; keep colon and semicolon as ordinary punctuation.
 - Repair ordered-list numbering after structural edits, retaining list starts and nested sequences while excluding paste, fenced code and display math.
 - Make immediate Undo reverse numbering repair while keeping the new line and cursor, without immediately reapplying the repair.
+
+#### v0.1.21
+
+- Restore undo and redo after an insertion. See [Compact composer](#compact-composer) for the mechanism.
 
 ### Slash commands and file suggestions
 
@@ -379,9 +387,6 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 
 The [read-only file-reference investigation](file-reference-investigation.md) explains current directory-search limits and the proposed Tab/Enter split; those proposals are not implemented.
 
-#### v0.1.21
-
-- Show everything attached to a draft as one uniform chip in a single wrapping row — images, files, quotes and file references — instead of an image preview card four times the height of a quote pill. Hovering or keyboard-focusing an image chip enlarges it; clicking still opens the full preview.
 
 ### Queue and steer
 
@@ -433,6 +438,10 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 #### v0.1.13
 
 - Restore local thumbnail previews and file bytes after closing or restarting, reuploading saved bytes when needed without mixing concurrent drafts.
+
+#### v0.1.21
+
+- Show everything attached to a draft as one uniform chip in a single wrapping row — images, files, quotes and file references — instead of an image preview card four times the height of a quote pill. Hovering or keyboard-focusing an image chip enlarges it; clicking still opens the full preview.
 
 ### Clipboard paste and file picker
 
@@ -751,12 +760,13 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 - Treat a reconnect, or a meter reappearing, as a request a completing refresh cannot satisfy, so a hung refresh never swallows the next one. An ordinary interval tick that arrives mid-refresh is still satisfied by it and never runs back to back.
 - Verified against `7e19b2d` by three rounds of fresh-context regression review, which found nothing blocking; the third round reviewed the final state, including the reconnect and reappearing-meter handling, and its remaining notes are non-blocking. 222 deterministic tests, TypeScript checking and full builds pass.
 
-## VS Code integration
 
 #### v0.1.21
 
 - Raise the `t3-vscode.usage.refreshIntervalSeconds` default from 300 to 600 seconds; jitter makes the real gap 600 to 720.
 - Add **T3 VSCode: Refresh Usage Meters** to the command palette, which refreshes the figures now rather than waiting for the interval. It is distinct from Configure Status Meters, which only chooses which account the status bar shows.
+
+## VS Code integration
 
 ### Native file links
 
@@ -831,6 +841,10 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 - Label draft tokens and chips with a preview of the quoted text, and shorten quote reference ids so the draft stays readable. The chip no longer marks an attached comment except in its tooltip.
 - Collapse the runs of blank lines a quote carries when it spans blocks, and drop the leading filler a quote of a table, blockquote or loose list begins with. The collapsed card reads as one flowing paragraph so neither visible line is blank; the expanded card keeps one blank line per break and any code indentation. Done when the card renders rather than when the quote is captured: the capture is a faithful port of T3 Code's reader, and changing it stopped this client resolving whole-message quotes that the T3 app keeps producing.
 - Keep a quote expanded once opened, including while the virtualized transcript unmounts and remounts its row.
+
+#### v0.1.21
+
+- Expand a quote automatically when a session-search result inside it is opened, and preview a message in the navigation rail as the transcript renders it rather than as the stored text.
 
 ### Response forks
 

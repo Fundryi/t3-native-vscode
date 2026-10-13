@@ -24,7 +24,7 @@ Settings live in **Preferences → Settings → Extensions → T3 VSCode**, grou
 | Message Navigation | `t3-vscode.messageNavigation` | `left` | Rail placement: `left`, `right` or `off`. |
 | Usage: Follow Active Conversation | `t3-vscode.usage.followActiveConversation` | `true` | Status meters track the focused chat's provider. |
 | Usage: Pinned Accounts | `t3-vscode.usage.pinnedAccounts` | `[]` | Accounts always shown in the status bar. |
-| Usage: Refresh Interval Seconds | `t3-vscode.usage.refreshIntervalSeconds` | `300` | Seconds between automatic usage refreshes, plus up to 20% jitter. Values from 1 to 14 are raised to 15; `0` disables periodic refresh. |
+| Usage: Refresh Interval Seconds | `t3-vscode.usage.refreshIntervalSeconds` | `600` | Seconds between automatic usage refreshes, plus up to 20% jitter. Values from 1 to 14 are raised to 15; `0` disables periodic refresh. |
 | T3 Home | `t3-vscode.t3Home` | empty | Empty uses the default T3 home; set it to your server's data directory and reload VS Code. |
 
 Font size changes apply immediately to every view and preserve conversations and drafts. The settings button at the bottom of the session manager and the **T3 VSCode: Font Settings** command open that native settings page. Existing setting keys and saved values are preserved across versions.

@@ -2,7 +2,7 @@ import { createContext, useContext, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckIcon, ChevronRightIcon, CircleDashedIcon, CircleXIcon, MessageCircleQuestionIcon } from "lucide-react";
 import type { HostStateSnapshot, TranscriptItem, WireTurnItem } from "../../shared/bridge";
-import { subagentElapsed, subagentStatus } from "../../shared/sessionTree";
+import { statusIsWorking, subagentElapsed, subagentStatus } from "../../shared/sessionTree";
 import { providerBrand } from "../../shared/usage";
 import { useActions } from "../actions";
 import { ProviderIcon } from "./ProviderIcon";
@@ -19,7 +19,7 @@ export function SubagentCard({ row }: { readonly row: TranscriptItem & { readonl
   const model = child?.modelSelection.model;
   const modelLabel = provider?.models.find((entry) => entry.slug === model)?.name ?? model ?? provider?.displayName ?? item.driver;
   const status = subagentStatus(item, child);
-  const working = ["preparing", "running", "starting", "waiting", "in_progress", "pending"].includes(status);
+  const working = statusIsWorking(status);
   const failed = ["failed", "error"].includes(status);
   const label = status === "input" ? "Input needed" : working ? "Running" : status === "completed" ? "Completed" : status.replaceAll("_", " ");
   const StatusIcon = status === "input" ? MessageCircleQuestionIcon : failed ? CircleXIcon : status === "completed" ? CheckIcon : CircleDashedIcon;

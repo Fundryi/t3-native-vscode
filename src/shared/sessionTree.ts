@@ -30,13 +30,15 @@ export function sessionTree(threads: ReadonlyArray<ThreadSummary>, matches: Read
   return roots;
 }
 
-const RUNNING_STATUSES = ["preparing", "running", "starting", "waiting"];
+/** The card and the sidebar must agree, so every status either reads as working on both or neither. */
+const RUNNING_STATUSES = ["preparing", "running", "starting", "waiting", "in_progress", "pending"];
 /**
  * A subagent's own status lags the run its parent drives, so a working child can still read as idle.
  * `activityRunStatus` is the live signal, and the sidebar and the transcript card must agree on it.
  */
+export function statusIsWorking(status: string): boolean { return RUNNING_STATUSES.includes(status); }
 export function threadIsWorking(thread: Pick<ThreadSummary, "status" | "activityRunStatus">): boolean {
-  return RUNNING_STATUSES.includes(thread.activityRunStatus ?? "") || RUNNING_STATUSES.includes(thread.status);
+  return statusIsWorking(thread.activityRunStatus ?? "") || statusIsWorking(thread.status);
 }
 export function subagentStatus(item: Extract<WireTurnItem, { type: "subagent" }>, child?: ThreadSummary): string {
   if (child?.pendingRuntimeRequest) return "input";

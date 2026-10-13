@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sessionTree, subagentStatus, threadIsWorking } from "./sessionTree.js";
+import { sessionTree, statusIsWorking, subagentStatus, threadIsWorking } from "./sessionTree.js";
 import type { ThreadSummary, WireTurnItem } from "./bridge.js";
 
 const thread = (id: string, fields: Partial<ThreadSummary> = {}): ThreadSummary => ({ id, projectId: "project", title: id, status: "idle", modelSelection: { instanceId: "codex", model: "test" }, runtimeMode: "auto", interactionMode: "default", updatedAt: "2026-10-06T00:00:00Z", archived: false, pinned: false, activeRunId: null, ...fields });
@@ -45,4 +45,14 @@ test("A subagent whose parent drives the run reads as working in the sidebar, no
     assert.equal(threadIsWorking({ status: idle, activityRunStatus: null }), false, `${idle} must not read as working`);
     assert.equal(threadIsWorking({ status: idle, activityRunStatus: idle }), false, `activity ${idle} must not read as working`);
   }
+});
+
+test("The sidebar and the subagent card call the same statuses working", () => {
+  // The card treated in_progress and pending as running while the sidebar did not, so a subagent in
+  // either state showed Running in its card and no badge in the list — the bug this release closes.
+  for (const status of ["preparing", "running", "starting", "waiting", "in_progress", "pending"]) {
+    assert.equal(statusIsWorking(status), true, `${status} must read as working`);
+    assert.equal(threadIsWorking({ status: "idle", activityRunStatus: status }), true, `activity ${status} must read as working`);
+  }
+  for (const done of ["idle", "completed", "failed", "error", "cancelled"]) assert.equal(statusIsWorking(done), false, `${done} must not read as working`);
 });
