@@ -366,6 +366,9 @@ body.vscode-high-contrast .session-tree-row:has(> .thread.active), body.vscode-h
 .usage-account-choice select { flex: 1; min-width: 0; max-width: 100%; background: var(--vscode-dropdown-background, var(--card)); color: var(--vscode-dropdown-foreground, var(--foreground)); border: 1px solid var(--vscode-dropdown-border, var(--input)); padding: 3px; font-size: .75rem; }
 .account-limit { margin: 6px 0 0; }
 .account-limit > div:first-child { display: flex; justify-content: space-between; gap: 5px; min-width: 0; font-size: .6875rem; }
+/* A provider can name its own window, so the label has to yield rather than widen the panel. */
+.account-limit > div:first-child > span:first-child { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-limit-value { flex: none; }
 .account-limit-value { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
 .account-limit-missing { color: var(--muted-foreground); }
 .account-limit-bar { height: 4px; border-radius: 2px; background: var(--input); margin: 2px 0 0; overflow: hidden; }

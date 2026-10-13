@@ -76,7 +76,6 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 - Create Command Palette chats in the active editor group and header-triggered chats in their originating group.
 - Preserve existing tabs, drafts, attachment ownership and current-conversation links while removing untouched new chats when closed.
 
-
 ### Sessions sidebar
 
 #### v0.0.7
@@ -387,7 +386,6 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 
 The [read-only file-reference investigation](file-reference-investigation.md) explains current directory-search limits and the proposed Tab/Enter split; those proposals are not implemented.
 
-
 ### Queue and steer
 
 #### v0.0.6
@@ -442,6 +440,7 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 #### v0.1.21
 
 - Show everything attached to a draft as one uniform chip in a single wrapping row — images, files, quotes and file references — instead of an image preview card four times the height of a quote pill. Hovering or keyboard-focusing an image chip enlarges it; clicking still opens the full preview.
+- Collapse each attached file reference of a sent message into one row showing its path and a summary, expanding to the snapshot. The payload previously rendered at the same weight as the prose, so a message with two references looked several times longer than what was typed. A block is hidden only when the real send formatter reproduces it byte for byte, so nothing the user wrote can be swallowed.
 
 ### Clipboard paste and file picker
 
@@ -481,7 +480,6 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 - Place user Copy beside its bubble, assistant Copy beside each visible message, and supported Fork at the settled run’s end.
 - Display an assistant author once per run, keeping every assistant message visible between compact activity groups.
 - Retain internal code, math, image and interactive-visual spacing.
-
 
 ### Streaming and progressive history
 

@@ -31,7 +31,7 @@ Font size changes apply immediately to every view and preserve conversations and
 
 ## Sessions sidebar
 
-The sidebar has **Sessions** and **Tasks** tabs, each with its own **+** action. Sessions begin directly below search, with one **New Thread** button in the Sessions heading and no project-name row. **Settled** and **Archive** have separate lists. Session activity appears beside the provider: minutes, hours and days through 7 days, then a local date; hover for the exact time.
+The sidebar has **Sessions** and **Tasks** tabs, each with its own **+** action. Sessions begin directly below search, with one **New Thread** button beside the search field and no project-name row. **Settled** and **Archive** have separate lists. Session activity appears beside the provider: minutes, hours and days through 7 days, then a local date; hover for the exact time.
 
 Select a session to open its editor tab; if it is already open, the extension reveals that tab. Use VS Code's editor groups, group locking and tab/window movement to arrange chat beside your code. The globe opens the current session in your default browser, using localhost for a loopback server so it can reuse your paired browser session. Working sessions show a static icon and elapsed minutes; Input/Approval badges and VS Code notifications highlight sessions needing a response.
 
@@ -47,7 +47,7 @@ With a folder open, only projects whose workspace root matches that folder and t
 
 **Account & Usage** starts collapsed. Expand it to refresh limits and see the selected account's reported update time.
 
-The status bar shows a small provider icon followed by reported month/week/session percentages, such as `M 72% · W 77% · S 94%`. Unreported windows are omitted; a single window uses its full name, such as `Week 77%`, and no reported windows show `Usage unavailable`. Hover for all windows and reset times, or click to expand Account & Usage for that account. Use the Command Palette's **T3 VSCode: Configure Status Meters** command or **Status meters** in Account & Usage to follow the focused chat and/or pin individual accounts.
+The status bar shows a small provider icon followed by reported month/week/session percentages, such as `M 72% · W 77% · S 94%`. Unreported windows are omitted; a single window uses its full name, such as `Week 77%`, and no reported windows show `Usage unavailable`. Hover for all windows and reset times, or click to expand Account & Usage for that account. Use the Command Palette's **T3 VSCode: Configure Status Meters** command or **Status meters** in Account & Usage to follow the focused chat and/or pin individual accounts. **T3 VSCode: Refresh Usage Meters** refreshes the figures immediately rather than waiting for the interval.
 
 ### Automatic refresh
 
