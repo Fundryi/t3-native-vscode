@@ -18,17 +18,33 @@ export function rememberDraftSelection(key: string, selection: TextSelection): v
 export function takeEditorReferenceFocus(key: string): number | undefined { const cursor = editorFocus.get(key); editorFocus.delete(key); return cursor; }
 export function addEditorReference(key: string, reference: FileReference): number {
   let cursor = 0;
+  // The caller focuses the composer for this reference, so the insertion may take the focus it needs to stay undoable.
   updateDraft(key, draft => {
     const inserted = insertFileReference(draft.text, draft.contexts, reference, selections.get(key) ?? { start: draft.text.length, end: draft.text.length });
     cursor = inserted.cursor; rememberDraftSelection(key, { start: cursor, end: cursor });
     editorFocus.set(key, cursor);
     return { ...draft, text: inserted.text, contexts: inserted.contexts };
-  });
+  }, "take-focus");
   return cursor;
 }
-export function updateDraft(key: string, update: (draft: ComposerDraft) => ComposerDraft): void {
+/**
+ * How a programmatic text change reaches the live input, which owns its own undo stack: `keep-focus` edits it only
+ * while it already has focus, `take-focus` also for an action that moves focus into it anyway. Without a mode React
+ * assigns the new value, which discards the input's undo and redo history.
+ */
+export type DraftTextEdit = "keep-focus" | "take-focus";
+export type DraftTextEditor = (previous: string, next: string, mode: DraftTextEdit) => void;
+const editors = new Map<string, DraftTextEditor>();
+export function registerDraftTextEditor(key: string, editor: DraftTextEditor): () => void {
+  editors.set(key, editor); return () => { if (editors.get(key) === editor) editors.delete(key); };
+}
+export function updateDraft(key: string, update: (draft: ComposerDraft) => ComposerDraft, edit?: DraftTextEdit): void {
   if (!recovery.get(key)?.ready) { const queued = mutations.get(key) ?? []; queued.push(update); mutations.set(key, queued); }
-  drafts.set(key, update(readDraft(key))); notify(key); persist(key);
+  const previous = readDraft(key), next = update(previous);
+  // Store first: replaying the change into the input notifies React, which must already see the text it will read back.
+  drafts.set(key, next);
+  if (edit && next.text !== previous.text) editors.get(key)?.(previous.text, next.text, edit);
+  notify(key); persist(key);
 }
 export function addDraftContext(key: string, context: ComposerContext): void {
   updateDraft(key, (draft) => ({ ...draft, contexts: [...draft.contexts, context] }));

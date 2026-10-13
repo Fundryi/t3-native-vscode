@@ -246,7 +246,7 @@ try {
     await pages[index]!.getByRole("textbox", { name: "Message", exact: true }).fill(`Draft in ${name} tab`);
   }
   const [first, second, third] = pages; assert.ok(first && second && third);
-  await verifyComposerEditing(first, second, host, evidence);
+  await verifyComposerEditing(first, second, host, evidence, selectAssistantText);
   await selectInView(first, "third");
   await first.locator(".chat-heading strong").filter({ hasText: "third conversation" }).waitFor();
   assert.equal(await first.getByRole("textbox", { name: "Message", exact: true }).inputValue(), "");
@@ -334,7 +334,7 @@ try {
   await second.getByRole("button", { name: "Cite selection in composer" }).click();
   await second.getByRole("textbox", { name: "Comment on selected text" }).fill("Explain why this stays in the second tab.");
   await second.getByRole("button", { name: "Save", exact: true }).click();
-  await second.getByRole("button", { name: "❝ reply in second conversation", exact: true }).waitFor();
+  await second.getByRole("button", { name: "❝1 Explain why this stays in the second tab.", exact: true }).waitFor();
   const inlineText = await quoteInput.inputValue();
   const quoteReference = collectComposerContextReferences(inlineText)[0]!;
   assert.equal(quoteReference.kind, "assistant-quote");
@@ -351,13 +351,20 @@ try {
   await second.getByRole("textbox", { name: "Comment on selected text" }).fill("Changed comment");
   await second.getByRole("button", { name: "Cancel", exact: true }).click();
   assert.ok((await second.locator(".context-label").getAttribute("title"))?.includes("Explain why"));
-  await second.getByRole("button", { name: "❝ reply in second conversation", exact: true }).click();
+  await second.getByRole("button", { name: "❝1 Explain why this stays in the second tab.", exact: true }).click();
   await second.getByRole("textbox", { name: "Comment on selected text" }).fill("Updated comment");
   await second.getByRole("button", { name: "Save", exact: true }).click();
+  // The draft token's label shows the comment too, so saving rewrites it in place without moving the caret inside it.
+  await second.getByRole("button", { name: "❝1 Updated comment", exact: true }).waitFor();
+  const updatedText = await quoteInput.inputValue();
+  const updatedReference = collectComposerContextReferences(updatedText)[0]!;
+  assert.equal(updatedReference.label, "❝1 Updated comment"); assert.equal(updatedReference.contextId, quoteReference.contextId);
+  assert.equal(updatedText.slice(0, updatedReference.start), "Before "); assert.equal(updatedText.slice(updatedReference.end), " after.");
+  await second.waitForFunction(cursor => (document.querySelector('textarea[aria-label="Message"]') as HTMLTextAreaElement)?.selectionStart === cursor, updatedReference.end);
   await quoteInput.focus(); await quoteInput.press("Control+End");
   registry.postWhenReady("tab-two", Events.insertReference, { draftKey: "second", reference: { type: "file", uri: "file:///tmp/t3-vscode/example.ts", path: "/tmp/t3-vscode/example.ts", label: "example.ts", range: { start: { line: 5, column: 3 }, end: { line: 8, column: 1 } }, text: "unsaved selected text" } });
   await second.getByRole("button", { name: "@example.ts:5-7", exact: true }).waitFor();
-  assert.equal(await quoteInput.inputValue(), inlineText + " @example.ts:5-7 ");
+  assert.equal(await quoteInput.inputValue(), updatedText + " @example.ts:5-7 ");
   assert.equal(await first.locator(".context-chip").count(), 0); assert.equal(await third.locator(".context-chip").count(), 0);
   await second.getByRole("button", { name: "Send message", exact: true }).click();
   await second.waitForFunction(() => document.querySelectorAll(".context-chip").length === 0 && (document.querySelector('textarea[aria-label="Message"]') as HTMLTextAreaElement)?.value === "");

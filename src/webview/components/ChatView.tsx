@@ -7,7 +7,7 @@ import { TranscriptView } from "./TranscriptView";
 import type { AssistantCitation } from "@t3tools/contracts";
 import { withAssistantCitationComment } from "@t3tools/shared/assistantCitations";
 import { readDraft, updateDraft } from "../composerDrafts";
-import { insertAssistantQuote, type ComposerContext } from "../../shared/composerContext";
+import { insertAssistantQuote, syncAssistantQuoteLabels, type ComposerContext } from "../../shared/composerContext";
 import type { TextSelection } from "../../shared/composerAttachments";
 import { AssistantSelectionToolbar } from "./AssistantSelectionToolbar";
 import { CitationCommentEditor } from "./CitationCommentEditor";
@@ -93,14 +93,22 @@ export function ChatView({ state }: { readonly state: HostStateSnapshot }) {
       {commentTarget ? <CitationCommentEditor key={`${commentTarget.citation.messageId}:${commentTarget.citation.start}:${commentTarget.index ?? "new"}`} citation={commentTarget.citation} anchor={commentTarget.anchor} onClose={() => setCommentTarget(null)} onSave={(comment) => {
         const context = { type: "assistant" as const, citation: withAssistantCitationComment(commentTarget.citation, comment) };
         let cursor: number | undefined;
+        // Both branches hand the composer the focus the edit needs to stay in the textarea's undo history.
         if (commentTarget.index === undefined) {
           updateDraft(commentTarget.draftKey, (draft) => {
             const inlineContext = { ...context, contextId: quoteContextId(draft.contexts) };
             const inserted = insertAssistantQuote(draft.text, inlineContext, commentTarget.selection ?? { start: draft.text.length, end: draft.text.length });
             cursor = inserted.cursor;
             return { ...draft, text: inserted.text, contexts: [...draft.contexts, inlineContext] };
-          });
-        } else updateDraft(commentTarget.draftKey, (draft) => ({ ...draft, contexts: draft.contexts.map((item, index) => index === commentTarget.index ? { ...item, ...context } : item) }));
+          }, "take-focus");
+        } else updateDraft(commentTarget.draftKey, (draft) => {
+          // The edited comment is part of its token's label, so this rewrites it here rather than leaving it to the composer,
+          // which would reach the textarea once the comment editor had already taken the focus a native edit needs.
+          const contexts = draft.contexts.map((item, index) => index === commentTarget.index ? { ...item, ...context } : item);
+          const synced = syncAssistantQuoteLabels(draft.text, contexts);
+          if (synced) cursor = synced.map(composerSelection.current?.start ?? draft.text.length);
+          return { ...draft, contexts, ...(synced ? { text: synced.text } : {}) };
+        }, "take-focus");
         setCommentTarget(null); window.dispatchEvent(new CustomEvent("t3-focus-composer", { detail: { draftKey: commentTarget.draftKey, cursor } }));
       }} /> : null}
       </div></div>

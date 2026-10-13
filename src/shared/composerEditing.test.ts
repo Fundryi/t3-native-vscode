@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { changesListStructure, renumberMarkdownList, wrapMarkdownSelection, continueMarkdownList, formatMarkdown, indentMarkdown, protectMarkdownSelection, type MarkdownEdit } from "./composerEditing.js";
+import { changesListStructure, textReplacement, renumberMarkdownList, wrapMarkdownSelection, continueMarkdownList, formatMarkdown, indentMarkdown, protectMarkdownSelection, type MarkdownEdit } from "./composerEditing.js";
 
 const cursor = (text: string) => ({ start: text.length, end: text.length });
 const apply = (text: string, edit: MarkdownEdit | null) => { assert.ok(edit); return text.slice(0, edit.start) + edit.text + text.slice(edit.end); };
@@ -81,3 +81,35 @@ test("Numbering repairs nested sequences after structural edits, retaining start
   assert.equal(changesListStructure("1. a\n2. b", "1. a2. b", "deleteContentBackward"), true);
   assert.equal(changesListStructure("1. a", "1. ab", "insertText"), false);
 });
+
+test("A text replacement is the shortest edit between two values, on whole characters", () => {
+  const applied = (before: string, after: string) => { const edit = textReplacement(before, after); return before.slice(0, edit.start) + edit.text + before.slice(edit.end); };
+  const cases: Array<[string, string, { start: number; end: number; text: string }]> = [
+    // Replacement in the middle, as a rewritten quote label.
+    ["Before [\u275d1 Explain this](token) after.", "Before [\u275d1 Updated comment](token) after.", { start: 11, end: 23, text: "Updated comment" }],
+    // Pure insertion at a caret, as a pasted reference.
+    ["Compare here then explain.", "Compare here![image](uri) then explain.", { start: 12, end: 12, text: "![image](uri)" }],
+    // Pure deletion, as a removed reference.
+    ["Before [quote](token) after.", "Before  after.", { start: 7, end: 21, text: "" }],
+    ["head and tail", "new and tail", { start: 0, end: 4, text: "new" }],
+    ["head and tail", "head and new", { start: 9, end: 13, text: "new" }],
+    ["everything goes", "", { start: 0, end: 15, text: "" }],
+    ["", "everything arrives", { start: 0, end: 0, text: "everything arrives" }],
+    ["unchanged", "unchanged", { start: 9, end: 9, text: "" }],
+    // Repeated text: the prefix and suffix may not overlap, or the edit would delete what it also keeps.
+    ["ab", "aab", { start: 1, end: 1, text: "a" }],
+    ["aaa", "aa", { start: 2, end: 3, text: "" }],
+  ];
+  for (const [before, after, expected] of cases) {
+    assert.deepEqual(textReplacement(before, after), expected, `${JSON.stringify(before)} -> ${JSON.stringify(after)}`);
+    assert.equal(applied(before, after), after);
+  }
+  // Astral characters: an edit must never land between the halves of a surrogate pair.
+  for (const [before, after] of [["a\u{1f600}b", "a\u{1f601}b"], ["\u{1f600}tail", "\u{1f601}tail"], ["head\u{1f600}", "head\u{1f601}"], ["\u{1f600}\u{1f600}", "\u{1f600}\u{1f601}"], ["a\u{1f600}b", "ab"], ["ab", "a\u{1f600}b"]]) {
+    const edit = textReplacement(before!, after!);
+    assert.equal(applied(before!, after!), after, `${before} -> ${after}`);
+    for (const boundary of [edit.start, edit.end]) assert.ok(!lowSurrogateAt(before!, boundary), `${before} -> ${after} splits a pair at ${boundary}`);
+    assert.ok(!/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/.test(edit.text), "the replacement itself holds whole characters");
+  }
+});
+const lowSurrogateAt = (value: string, position: number) => { const code = value.charCodeAt(position); return code >= 0xdc00 && code <= 0xdfff; };

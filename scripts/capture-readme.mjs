@@ -188,7 +188,7 @@ export async function captureReadme({ home, workbench, sidebar, findWebview, run
   await review.evaluate('document.querySelector(".citation-comment .primary").click()');
   await review.wait('!document.querySelector(".citation-comment") && document.querySelector(".context-chip")');
   const prompt = await review.evaluate('document.querySelector("textarea[aria-label=Message]").value');
-  assert.ok(prompt.startsWith('About this: [❝ Keep the original logits'));
+  assert.ok(prompt.startsWith('About this: [❝1 Does this also apply when using label '));
   assert.ok(prompt.endsWith(' Could you expand on it?'));
   assert.ok(prompt.includes('t3-context://v1/assistant-quote/'));
   console.log('PASS: native README screenshots, themes, math/diagrams/HTML, session search, model catalog, saved-turn diff in the native diff editor, a disabled scheduled task, collapsed commands and citation insertion at the saved composer cursor; no provider turns');

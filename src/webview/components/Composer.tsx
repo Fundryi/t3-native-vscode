@@ -1,11 +1,11 @@
 import { bridge } from "../bridge-client";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowUpIcon, SquareIcon, ChevronDownIcon, MoreHorizontalIcon, FolderIcon, XIcon, FileIcon } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { ArrowUpIcon, SquareIcon, ChevronDownIcon, MoreHorizontalIcon, FolderIcon, XIcon, FileIcon, ImageIcon } from "lucide-react";
 import type { ComposerSuggestion, HostStateSnapshot } from "../../shared/bridge";
 import { useActions } from "../actions";
 import { PendingRequests } from "./PendingRequests";
-import { clearDraft, readDraftSelection, rememberDraftSelection, takeEditorReferenceFocus, updateDraft, useDraftRecovery, useComposerDraft } from "../composerDrafts";
-import { assistantQuoteLabel, contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, insertFileReference, removeContextReference, type FileReference } from "../../shared/composerContext";
+import { clearDraft, readDraftSelection, registerDraftTextEditor, rememberDraftSelection, takeEditorReferenceFocus, updateDraft, useDraftRecovery, useComposerDraft, type DraftTextEdit } from "../composerDrafts";
+import { assistantQuoteLabel, assistantQuoteNumbers, contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, insertFileReference, removeContextReference, syncAssistantQuoteLabels, type FileReference } from "../../shared/composerContext";
 import type { AssistantCitation } from "@t3tools/contracts";
 import { applyClaudePromptEffortPrefix, getProviderOptionCurrentValue, isClaudeUltrathinkPrompt } from "@t3tools/shared/model";
 import { effortDescriptor } from "../../shared/modelOptions";
@@ -22,12 +22,17 @@ import { formatAttachmentSize } from "@t3tools/client-runtime/state/attachments"
 import { openVisual } from "./ChatMedia";
 import { collectComposerContextReferences } from "@t3tools/shared/composerContextReferences";
 import { collectAssistantCitations } from "@t3tools/shared/assistantCitations";
-import { changesListStructure, continueMarkdownList, formatMarkdown, indentMarkdown, protectMarkdownSelection, renumberMarkdownList, wrapMarkdownSelection, type MarkdownEdit, type MarkdownFormat } from "../../shared/composerEditing";
+import { changesListStructure, continueMarkdownList, formatMarkdown, indentMarkdown, protectMarkdownSelection, renumberMarkdownList, textReplacement, wrapMarkdownSelection, type MarkdownEdit, type MarkdownFormat } from "../../shared/composerEditing";
 import { useComposerPreferences } from "../composerPreferences";
 import { ComposerFormatting } from "./ComposerFormatting";
 
 const runtimeLabels: Record<string, string> = { "approval-required": "Ask permission", "auto-accept-edits": "Auto-accept edits", auto: "Auto", "full-access": "Full access" };
 const steerShortcut = navigator.userAgent.includes("Mac") ? "Cmd+Enter" : "Ctrl+Enter";
+/** Native editing commands keep a programmatic change in the focused input's own undo stack; `setRangeText` is the last resort and does not. */
+function insertNatively(input: HTMLTextAreaElement, start: number, end: number, value: string): void {
+  const before = input.value; input.setSelectionRange(start, end);
+  if (!document.execCommand(value ? "insertText" : "delete", false, value) && input.value === before) input.setRangeText(value, start, end, "end");
+}
 export function Composer({ state, onEditCitation, onUsage, onSelectionChange: notifySelection }: { readonly state: HostStateSnapshot; readonly onEditCitation: (citation: AssistantCitation, index: number) => void; readonly onUsage: () => void; readonly onSelectionChange: (selection: TextSelection) => void }) {
   const draftKey = state.activeThreadId ?? "new";
   const [editingPreferences, setEditingPreferences] = useComposerPreferences();
@@ -35,12 +40,14 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
   const recovery = useDraftRecovery(draftKey);
   const { text, contexts, attachments = [] } = useComposerDraft(draftKey);
   const visibleContexts = contexts.map((context, index) => ({ context, index })).filter(({ context }) => contextIsReferenced(text, context));
+  const quoteNumbers = useMemo(() => assistantQuoteNumbers(text, contexts), [text, contexts]);
+  const [peekDismissed, setPeekDismissed] = useState<string | null>(null);
   const touched = useRef(false);
   const markTouched = () => {
     if (touched.current || !state.activeThreadId) return;
     touched.current = true; void bridge.request("composerState", { threadId: state.activeThreadId, touched: true }).catch(() => undefined);
   };
-  const setText = (value: string) => { if (value.length) markTouched(); updateDraft(draftKey, (draft) => ({ ...draft, text: value })); };
+  const setText = (value: string, edit: DraftTextEdit = "keep-focus") => { if (value.length) markTouched(); updateDraft(draftKey, (draft) => ({ ...draft, text: value }), edit); };
   useEffect(() => {
     const threadId = state.activeThreadId; if (!threadId) return;
     void bridge.request("composerState", { threadId, active: true }).catch(() => undefined);
@@ -79,6 +86,7 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
   const inputSelection = (): TextSelection => ({ start: textarea.current?.selectionStart ?? text.length, end: textarea.current?.selectionEnd ?? text.length });
   const editing = useRef(false);
   const numberingUndo = useRef<{ before: string; after: string; selection: TextSelection } | null>(null);
+  const historyText = useRef<string | null>(null);
   const repairNumbering = () => {
     const input = textarea.current;
     if (!input || !editingPreferences.listAssist) return;
@@ -88,15 +96,28 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
   const applyEdit = (edit: MarkdownEdit | null, structural = false) => {
     const input = textarea.current;
     if (!edit || !input || disabled || picking) return;
-    input.focus(); input.setSelectionRange(edit.start, edit.end);
-    // Native insertion keeps formatting/indentation in the textarea's normal undo stack.
-    const before = input.value; editing.current = true;
-    if (!document.execCommand("insertText", false, edit.text) && input.value === before) input.setRangeText(edit.text, edit.start, edit.end, "end");
+    input.focus(); editing.current = true;
+    insertNatively(input, edit.start, edit.end, edit.text);
     setText(input.value); setCursor(edit.selection.start); setDismissedTrigger(null);
     input.setSelectionRange(edit.selection.start, edit.selection.end); onSelectionChange(edit.selection);
     editing.current = false;
     if (structural) repairNumbering();
   };
+  // A draft write React applies by assigning `value` discards the undo history of this textarea, so every
+  // programmatic change is replayed into it as an edit instead. Unfocused or unmounted, the store write still stands.
+  const editText = useCallback((previous: string, next: string, mode: DraftTextEdit) => {
+    const input = textarea.current;
+    if (!input || input.disabled || !input.isConnected || input.value !== previous) return;
+    if (document.activeElement !== input) {
+      if (mode !== "take-focus") return;
+      input.focus(); if (document.activeElement !== input) return;
+    }
+    const edit = textReplacement(previous, next);
+    editing.current = true;
+    insertNatively(input, edit.start, edit.end, edit.text);
+    editing.current = false;
+  }, []);
+  useEffect(() => registerDraftTextEditor(draftKey, editText), [draftKey, editText]);
   const applyFormat = (format: MarkdownFormat) => {
     const protectedSelection = protectMarkdownSelection(text, inputSelection(), [...collectComposerContextReferences(text), ...collectAssistantCitations(text), ...fileReferenceOccurrences(text, contexts)]);
     applyEdit(formatMarkdown(text, protectedSelection, format));
@@ -113,15 +134,27 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
   useEffect(() => { if (suggestionsOpen) document.getElementById(`composer-suggestion-${highlighted}`)?.scrollIntoView({ block: "nearest" }); }, [highlighted, suggestionsOpen]);
   // Committing a new value drops the textarea's selection. Restoring it before the browser paints,
   // rather than a frame later, keeps a keystroke in that frame from landing back at the old caret.
-  const pendingCaret = useRef<{ position: number; focus: boolean } | null>(null);
+  const pendingCaret = useRef<{ position: number; end?: number; focus: boolean } | null>(null);
   useLayoutEffect(() => {
     const pending = pendingCaret.current; const input = textarea.current;
     if (!pending || !input) return;
     pendingCaret.current = null;
     if (pending.focus) input.focus();
     const position = Math.min(input.value.length, pending.position);
-    input.setSelectionRange(position, position);
+    input.setSelectionRange(position, Math.min(input.value.length, pending.end ?? position));
   });
+  // A quote's token carries its number and comment, which change when quotes are added, removed or edited.
+  // Declared after the effect above, which would otherwise consume the caret before the new text lands.
+  useLayoutEffect(() => {
+    // Rewriting what an undo just restored would queue a fresh edit for the next undo to reach, so history wins and the label settles on the next edit.
+    if (!recovery.ready || text === historyText.current) return;
+    const synced = syncAssistantQuoteLabels(text, contexts); if (!synced) return;
+    const input = textarea.current;
+    const caret = { start: synced.map(input?.selectionStart ?? text.length), end: synced.map(input?.selectionEnd ?? text.length) };
+    updateDraft(draftKey, (draft) => draft.text === text ? { ...draft, text: synced.text } : draft, "keep-focus");
+    pendingCaret.current = { position: caret.start, end: caret.end, focus: false };
+    setCursor(caret.start); onSelectionChange(caret);
+  }, [text, contexts, recovery.ready, draftKey, onSelectionChange]);
   const placeCursor = (position: number, focus = false) => { pendingCaret.current = { position, focus }; };
   const focusCursor = (position: number) => placeCursor(position, true);
   const chooseSuggestion = (item: ComposerSuggestion) => {
@@ -130,11 +163,11 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
       // The relative path is the label, so three different `index.ts` stay distinguishable in the chips.
       const reference: FileReference = { type: "file", uri: item.uri ?? item.value, path: item.value, label: item.value };
       const inserted = insertFileReference(text, contexts, reference, { start: trigger.rangeStart, end: trigger.rangeEnd });
-      markTouched(); updateDraft(draftKey, (draft) => ({ ...draft, text: inserted.text, contexts: inserted.contexts }));
+      markTouched(); updateDraft(draftKey, (draft) => ({ ...draft, text: inserted.text, contexts: inserted.contexts }), "take-focus");
       setCursor(inserted.cursor); setDismissedTrigger(triggerKey); focusCursor(inserted.cursor); return;
     }
     const next = replaceTextRange(text, trigger.rangeStart, trigger.rangeEnd, item.value);
-    setText(next.text); setCursor(next.cursor); setDismissedTrigger(triggerKey);
+    setText(next.text, item.kind === "model" || item.kind === "usage" ? "keep-focus" : "take-focus"); setCursor(next.cursor); setDismissedTrigger(triggerKey);
     if (item.kind === "model") setModelsOpen(true);
     else if (item.kind === "usage") onUsage();
     else focusCursor(next.cursor);
@@ -257,22 +290,31 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
     <div className="composer-box" onDragOver={(event) => { if (event.dataTransfer.types.includes("Files")) event.preventDefault(); }} onDrop={(event) => { if (event.dataTransfer.files.length) { event.preventDefault(); addFiles([...event.dataTransfer.files]); } }}>
       <ComposerFormatting disabled={disabled || picking} listAssist={editingPreferences.listAssist} onListAssist={() => setEditingPreferences({ listAssist: !editingPreferences.listAssist })} onAttach={pickFiles} onFormat={applyFormat} onIndent={(outdent) => applyEdit(indentMarkdown(text, inputSelection(), outdent, true), true)} />
       {suggestionsOpen ? <ComposerSuggestions items={items} selected={highlighted} pending={suggestions.pending} error={suggestions.error} onSelect={chooseSuggestion} onHighlight={setSuggestionIndex} /> : null}
-      {attachments.length ? <div className="composer-attachments" aria-label="Message attachments">{attachments.map((file) => <div className={`composer-attachment${file.error ? " attachment-failed" : ""}`} key={file.key} title={`${file.name} · ${formatAttachmentSize(file.sizeBytes)}${file.error ? `\n${file.error}` : ""}`}>
-        <button className="attachment-preview" aria-label={`Preview ${file.name}`} disabled={!file.previewUrl} onClick={() => { if (file.previewUrl) openVisual({ title: file.name, src: file.previewUrl }); }}>{file.previewUrl ? <img src={file.previewUrl} alt={file.name} /> : <FileIcon size={20} />}</button>
-        <span className="attachment-name">{file.name}</span><span className="attachment-state">{file.pending ? "Uploading…" : file.error ? "Upload failed" : formatAttachmentSize(file.sizeBytes)}</span>
-        <button className="icon-button remove-attachment" aria-label={`Remove ${file.name}`} disabled={busy} onClick={() => { void removeDraftAttachment(draftKey, file.key).catch((cause) => setAttachmentError(String(cause))); }}><XIcon size={12} /></button>
-      </div>)}</div> : null}
+      {attachments.length || visibleContexts.length ? <div className="composer-chips" role="group" aria-label="Message attachments and references">
+        {attachments.map((file) => {
+          const lead = <>{file.previewUrl ? <img className="attachment-thumb" src={file.previewUrl} alt="" /> : file.mimeType.startsWith("image/") ? <ImageIcon size={12} /> : <FileIcon size={12} />}<span className="attachment-name">{file.name}</span></>;
+          return <div className={`composer-chip composer-attachment${file.error ? " attachment-failed" : ""}`} key={file.key} data-peek={peekDismissed === file.key ? "off" : undefined} title={`${file.name} · ${formatAttachmentSize(file.sizeBytes)}${file.error ? `\n${file.error}` : ""}`}
+            onKeyDown={(event) => { if (event.key === "Escape" && file.previewUrl) setPeekDismissed(file.key); }} onMouseLeave={() => setPeekDismissed(null)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setPeekDismissed(null); }}>
+            {file.previewUrl ? <button className="attachment-preview" aria-label={`Preview ${file.name}`} onClick={() => openVisual({ title: file.name, src: file.previewUrl! })}>{lead}</button> : <span className="attachment-preview">{lead}</span>}
+            <span className="attachment-state">{file.pending ? "Uploading…" : file.error ? "Upload failed" : formatAttachmentSize(file.sizeBytes)}</span>
+            {file.previewUrl ? <span className="attachment-peek" aria-hidden="true"><img src={file.previewUrl} alt="" /></span> : null}
+            <button className="icon-button remove-attachment" aria-label={`Remove ${file.name}`} disabled={busy} onClick={() => { void removeDraftAttachment(draftKey, file.key).catch((cause) => setAttachmentError(String(cause))); }}><XIcon size={12} /></button>
+          </div>;
+        })}
+        {visibleContexts.map(({ context, index }) => <div className="composer-chip context-chip" key={index}>
+          <button className="context-label" data-quoted={context.type === "assistant" && context.citation.comment === undefined} title={context.type === "file" ? context.text || context.path : `${context.citation.text}${context.citation.comment ? `\nComment: ${context.citation.comment}` : ""}`} onClick={() => {
+            if (context.type === "assistant") onEditCitation(context.citation, index);
+            else void openFileReference(context);
+          }}>{context.type === "file" ? `@${fileReferenceLabel(context)}` : assistantQuoteLabel(context.citation, quoteNumbers[index] ?? index + 1)}</button>
+          <button className="icon-button" aria-label={`Remove reference ${index + 1}`} onClick={() => updateDraft(draftKey, (draft) => ({ ...draft, text: removeContextReference(draft.text, context), contexts: draft.contexts.filter((_, position) => position !== index) }), "keep-focus")}><XIcon size={12} /></button>
+        </div>)}
+      </div> : null}
       {attachmentError ? <div className="composer-attachment-error" role="alert">{attachmentError}</div> : null}
-      {visibleContexts.length ? <div className="composer-contexts" aria-label="Message references">{visibleContexts.map(({ context, index }) => <div className="context-chip" key={index}>
-        <button className="context-label" title={context.type === "file" ? context.text || context.path : `${context.citation.text}${context.citation.comment ? `\nComment: ${context.citation.comment}` : ""}`} onClick={() => {
-          if (context.type === "assistant") onEditCitation(context.citation, index);
-          else void openFileReference(context);
-        }}>{context.type === "file" ? `@${fileReferenceLabel(context)}` : assistantQuoteLabel(context.citation)}</button>
-        <button className="icon-button" aria-label={`Remove reference ${index + 1}`} onClick={() => updateDraft(draftKey, (draft) => ({ ...draft, text: removeContextReference(draft.text, context), contexts: draft.contexts.filter((_, position) => position !== index) }))}><XIcon size={12} /></button>
-      </div>)}</div> : null}
       <textarea ref={textarea} value={text} placeholder={running ? "Send a follow-up…" : "Ask anything, or describe a task…"} aria-label="Message" title={shortcutHint} aria-description="Click a file reference to open its source, an image reference to preview it or a quote reference to edit its comment; Alt+Enter opens the reference at the cursor." disabled={disabled || picking} rows={2}
         onBlur={(event) => onSelectionChange({ start: event.currentTarget.selectionStart, end: event.currentTarget.selectionEnd })}
         onClick={(event) => {
+          // Opening a reference moves the focus away, so the caret it was opened from is remembered here rather than on blur.
+          onSelectionChange({ start: event.currentTarget.selectionStart, end: event.currentTarget.selectionEnd });
           if (event.currentTarget.selectionStart !== event.currentTarget.selectionEnd) return;
           activateInlineReference(event.currentTarget.selectionStart);
         }}
@@ -286,6 +328,7 @@ export function Composer({ state, onEditCitation, onUsage, onSelectionChange: no
           const repair = !editing.current && editingPreferences.listAssist && changesListStructure(text, value, type);
           const automatic = numberingUndo.current;
           if (automatic && (type === "historyUndo" && value === automatic.before || type === "historyRedo" && value === automatic.after)) event.target.setSelectionRange(automatic.selection.start, automatic.selection.end);
+          if (type === "historyUndo" || type === "historyRedo") historyText.current = value;
           setText(value); setCursor(event.target.selectionStart); onSelectionChange({ start: event.target.selectionStart, end: event.target.selectionEnd }); setDismissedTrigger(null);
           if (repair) requestAnimationFrame(() => { if (textarea.current?.value === value) repairNumbering(); });
         }} onKeyDown={(event) => {

@@ -14,16 +14,18 @@ export async function settleDraftAttachments(draftKey: string): Promise<void> { 
 export function addDraftAttachments(draftKey: string, attachments: ReadonlyArray<DraftAttachment>, selection?: TextSelection, options?: AttachmentInsertionOptions): number | undefined {
   const added = attachments.map((file) => ({ ...file, contextId: file.contextId ?? `${file.mimeType.startsWith("image/") ? "image" : "file"}_${crypto.randomUUID()}` }));
   let cursor: number | undefined;
+  // A paste or drop happens in the focused textarea, so its reference is inserted there and stays undoable; a file
+  // picked through the dialog lands while the textarea is still disabled, and keeps the plain draft write.
   updateDraft(draftKey, (draft) => {
     const inserted = selection ? insertAttachmentReferences(draft.text, added, selection, options) : undefined;
     cursor = inserted?.cursor;
     return { ...draft, ...(inserted ? { text: inserted.text } : {}), attachments: [...(draft.attachments ?? []), ...added] };
-  });
+  }, "keep-focus");
   return cursor;
 }
 export async function removeDraftAttachment(draftKey: string, key: string): Promise<void> {
   const attachment = readDraft(draftKey).attachments?.find((file) => file.key === key);
-  updateDraft(draftKey, (draft) => ({ ...draft, text: attachment?.contextId ? replaceComposerContextReferences(draft.text, (ref) => ref.contextId === attachment.contextId ? "" : ref.source) : draft.text, attachments: (draft.attachments ?? []).filter((file) => file.key !== key) }));
+  updateDraft(draftKey, (draft) => ({ ...draft, text: attachment?.contextId ? replaceComposerContextReferences(draft.text, (ref) => ref.contextId === attachment.contextId ? "" : ref.source) : draft.text, attachments: (draft.attachments ?? []).filter((file) => file.key !== key) }), "keep-focus");
   if (attachment?.attachment) await bridge.request("releaseAttachment", { attachmentId: attachment.attachment.id });
 }
 const dataUrl = (file: File): Promise<string> => new Promise((resolve, reject) => {

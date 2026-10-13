@@ -157,13 +157,27 @@ export function wrapMarkdownSelection(text: string, selection: TextSelection, ch
   return insert(start, end, character + text.slice(start, end) + closing, { start: start + 1, end: end + 1 });
 }
 
+const highSurrogate = (code: number) => code >= 0xd800 && code <= 0xdbff;
+const lowSurrogate = (code: number) => code >= 0xdc00 && code <= 0xdfff;
+/**
+ * The one range `before` replaces to become `after`, as the shortest edit around their common prefix and suffix.
+ * Both halves of a surrogate pair are ordinary code units, so a scan can settle between them; the range retreats to
+ * the character boundary rather than leaving a lone surrogate behind. Identical inputs give an empty edit at the end.
+ */
+export function textReplacement(before: string, after: string): { readonly start: number; readonly end: number; readonly text: string } {
+  let start = 0;
+  while (start < before.length && start < after.length && before[start] === after[start]) start++;
+  if (start > 0 && highSurrogate(before.charCodeAt(start - 1))) start--;
+  let tail = 0;
+  while (tail < before.length - start && tail < after.length - start && before[before.length - 1 - tail] === after[after.length - 1 - tail]) tail++;
+  if (tail > 0 && lowSurrogate(before.charCodeAt(before.length - tail))) tail--;
+  return { start, end: before.length - tail, text: after.slice(start, after.length - tail) };
+}
 /** Paste, undo and ordinary typing retain their source; only structural edits trigger numbering. */
 export function changesListStructure(before: string, after: string, inputType: string): boolean {
   if (/paste|drop|history|composition/i.test(inputType)) return false;
-  let start = 0, oldEnd = before.length, newEnd = after.length;
-  while (start < oldEnd && start < newEnd && before[start] === after[start]) start++;
-  while (oldEnd > start && newEnd > start && before[oldEnd - 1] === after[newEnd - 1]) { oldEnd--; newEnd--; }
-  return before.slice(start, oldEnd).includes("\n") || after.slice(start, newEnd).includes("\n");
+  const edit = textReplacement(before, after);
+  return before.slice(edit.start, edit.end).includes("\n") || edit.text.includes("\n");
 }
 
 /** Repair the edited list while retaining the start and delimiter of each nested sequence. */

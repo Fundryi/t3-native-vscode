@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import type { Page } from "playwright-core";
 import type { HostState } from "../src/host/hostState.js";
 
-export async function verifyComposerEditing(page: Page, other: Page, host: HostState, evidence: string) {
+export async function verifyComposerEditing(page: Page, other: Page, host: HostState, evidence: string, selectAssistantText: (page: Page, text: string) => Promise<void>) {
   const message = page.getByRole("textbox", { name: "Message", exact: true });
   const original = await message.inputValue(), otherDraft = await other.getByRole("textbox", { name: "Message", exact: true }).inputValue();
   const sidebarSelection = host.snapshot().activeThreadId;
@@ -65,6 +65,62 @@ export async function verifyComposerEditing(page: Page, other: Page, host: HostS
   await message.press("Control+z"); await expected("term");
   await message.press("Control+a"); await message.press(":"); await expected(":");
   await message.fill("term"); await message.press("Control+a"); await page.getByRole("button", { name: "Underline", exact: true }).click(); await expected("<u>term</u>");
+  // Programmatic insertions must stay in the same undo stack as typing: a draft write React applies by assigning
+  // `value` would silently discard the history, which is how a paste or a quote used to make undo and redo unavailable.
+  const focused = () => page.waitForFunction(() => document.activeElement === document.querySelector('textarea[aria-label="Message"]'));
+  const caretAt = (position: number) => page.waitForFunction(at => (document.querySelector('textarea[aria-label="Message"]') as HTMLTextAreaElement)?.selectionStart === at, position);
+  await message.fill(""); await message.focus();
+  await message.pressSequentially("Compare here then explain.");
+  await message.evaluate((element: HTMLTextAreaElement) => element.setSelectionRange(12, 12));
+  // The bytes a browser hands over for a pasted screenshot.
+  const png = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a53sAAAAASUVORK5CYII=";
+  await message.evaluate((element, bytes) => {
+    const transfer = new DataTransfer(); transfer.items.add(new File([Uint8Array.from(atob(bytes), character => character.charCodeAt(0))], "clipboard.png", { type: "image/png" }));
+    element.dispatchEvent(new ClipboardEvent("paste", { clipboardData: transfer, bubbles: true, cancelable: true }));
+  }, png);
+  await page.getByRole("button", { name: "Preview clipboard.png", exact: true }).waitFor();
+  const pasted = await message.inputValue();
+  assert.match(pasted, /^Compare here!\[clipboard\.png\]\(t3-context:\/\/v1\/image\/image_[a-z0-9_-]+\) then explain\.$/);
+  await caretAt(pasted.indexOf(")") + 1);
+  await message.press("Control+z"); await expected("Compare here then explain.");
+  await message.press("Control+y"); await expected(pasted);
+  await message.press("Control+z"); await expected("Compare here then explain.");
+  await message.press("Control+z");
+  const typing = await message.inputValue();
+  assert.ok(typing.length < 26 && "Compare here then explain.".startsWith(typing), `undo continues into the typing before the paste, not ${JSON.stringify(typing)}`);
+  await page.getByRole("button", { name: "Remove clipboard.png", exact: true }).click();
+  await page.waitForFunction(() => !document.querySelector(".composer-attachment"));
+
+  // A quote replaces the selection it was cited from, and its label is rewritten in place when the comment changes.
+  await message.fill("Before replace after."); await message.focus();
+  await message.evaluate((element: HTMLTextAreaElement) => element.setSelectionRange(7, 14));
+  await selectAssistantText(page, "reply in first conversation");
+  await page.getByRole("button", { name: "Cite selection in composer" }).click();
+  await page.getByRole("textbox", { name: "Comment on selected text" }).fill("Explain this");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("button", { name: "\u275d1 Explain this", exact: true }).waitFor();
+  const quoted = await message.inputValue();
+  assert.ok(quoted.startsWith("Before ") && quoted.endsWith(" after."), quoted);
+  await focused(); await caretAt(quoted.indexOf(")") + 1);
+  await message.press("Control+z"); await expected("Before replace after.");
+  assert.equal(await page.locator(".composer-chip.context-chip").count(), 0, "a chip follows its token out of the draft");
+  await message.press("Control+y"); await expected(quoted);
+  await page.getByRole("button", { name: "\u275d1 Explain this", exact: true }).click();
+  await page.getByRole("textbox", { name: "Comment on selected text" }).fill("Updated comment");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("button", { name: "\u275d1 Updated comment", exact: true }).waitFor();
+  const relabelled = await message.inputValue();
+  assert.equal(relabelled, quoted.replace("\u275d1 Explain this", "\u275d1 Updated comment"));
+  await focused(); await caretAt(relabelled.indexOf(")") + 1);
+  // The label sync leaves undone text alone, so history reaches the insertion rather than rewriting the label forever.
+  await message.press("Control+z"); await expected(quoted);
+  await message.press("Control+z"); await expected("Before replace after.");
+  await message.press("Control+y"); await expected(quoted);
+  await message.press("Control+y"); await expected(relabelled);
+  await page.getByRole("button", { name: "Remove reference 1", exact: true }).click();
+  await page.waitForFunction(() => !document.querySelector(".composer-chip"));
+  await expected("Before  after.");
+
   const viewport = page.viewportSize()!;
   await page.setViewportSize({ width: 360, height: 720 });
   await page.getByRole("button", { name: "History", exact: true }).click();
@@ -80,5 +136,5 @@ export async function verifyComposerEditing(page: Page, other: Page, host: HostS
   assert.equal(await page.locator(".message").first().evaluate(el => getComputedStyle(el).marginBottom), "8px");
   await page.screenshot({ path: `${evidence}/dense-conversation.png` });
   await message.fill(original);
-  console.log("PASS: tab-local History, independent drafts, formatting and native undo, list continuation/indentation, helper preference, IME, literal Markdown, dense spacing and narrow layouts.");
+  console.log("PASS: tab-local History, independent drafts, formatting and native undo, undo and redo across a pasted image, an inserted quote and a rewritten quote label, list continuation/indentation, helper preference, IME, literal Markdown, dense spacing and narrow layouts.");
 }

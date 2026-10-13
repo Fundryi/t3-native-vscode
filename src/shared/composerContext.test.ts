@@ -3,11 +3,12 @@ import assert from "node:assert/strict";
 import { EnvironmentId, MessageId, ThreadId } from "@t3tools/contracts";
 import { collectAssistantCitations, withAssistantCitationComment } from "@t3tools/shared/assistantCitations";
 import { createAssistantTextSelector, findAssistantCitationText } from "../webview/components/t3/assistantTextSelection.js";
-import { assistantQuoteLabel, contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, insertAssistantQuote, insertFileReference, removeContextReference, type FileReference } from "./composerContext.js";
+import { assistantQuoteLabel, assistantQuoteNumbers, syncAssistantQuoteLabels, contextIsReferenced, fileReferenceLabel, fileReferenceOccurrences, formatComposerMessage, insertAssistantQuote, insertFileReference, removeContextReference, type FileReference } from "./composerContext.js";
 import { stripRenderedAssistantQuotes } from "./assistantQuoteText.js";
 import { insertAttachmentReferences } from "./composerAttachments.js";
 import { collectComposerContextReferences } from "@t3tools/shared/composerContextReferences";
 import { parseDraftTransfer } from "./viewDraft.js";
+import { citationKey } from "../webview/components/AssistantCitationLink.js";
 
 test("Quotes preserve code whitespace, rendered UTF-16 offsets and exact text through T3 citation encoding", () => {
   const text = "Before 😀\n\nconst  value = 42;\nAfter.";
@@ -155,7 +156,7 @@ test("Referenced quotes send one citation link and one verbatim readable block t
   const second = { type: "assistant" as const, contextId: "quote_bbbb2222", citation: plain };
   const one = insertAssistantQuote("Fix ", first, { start: 4, end: 4 });
   const two = insertAssistantQuote(`${one.text} and `, second, { start: one.text.length + 5, end: one.text.length + 5 });
-  assert.ok(one.text.includes(assistantQuoteLabel(tricky)));
+  assert.ok(one.text.includes(assistantQuoteLabel(tricky, 1)));
   const sent = formatComposerMessage(two.text, [first, second]);
   const citations = collectAssistantCitations(sent);
   assert.deepEqual(citations.map((match) => match.citation), [tricky, plain]);
@@ -211,4 +212,114 @@ test("Quote blocks strip whatever the comment or the quoted text looks like", ()
   const both = formatComposerMessage(`Fix ${insertAssistantQuote("", short, { start: 0, end: 0 }).text} and ${insertAssistantQuote("", long, { start: 0, end: 0 }).text}`, [short, long]);
   const links = collectAssistantCitations(both);
   assert.equal(stripRenderedAssistantQuotes(both), `Fix ${links[0]!.source} and ${links[1]!.source}`);
+});
+
+const quoteContext = (id: string, text: string, comment?: string) => ({ type: "assistant" as const, contextId: id, citation: quoteCitation(text, comment) });
+const draftOf = (quotes: ReadonlyArray<ReturnType<typeof quoteContext>>, joiner = " and ") => {
+  let text = "", contexts: ReturnType<typeof quoteContext>[] = [];
+  for (const quote of quotes) { text = insertAssistantQuote(text ? text + joiner : "Fix ", quote, { start: text.length + (text ? joiner.length : 4), end: text.length + (text ? joiner.length : 4) }, contexts).text; contexts = [...contexts, quote]; }
+  return { text, contexts };
+};
+const labelsIn = (text: string) => collectComposerContextReferences(text).map((reference) => reference.label);
+
+test("A quote label leads with its number, then the comment, falling back to the quoted text", () => {
+  assert.equal(assistantQuoteLabel(quoteCitation("quoted text", "so are you making these chagnes already?"), 1), "❝1 so are you making these chagnes already?");
+  assert.equal(assistantQuoteLabel(quoteCitation("Ctrl+click to open; plain click edits; points at the file"), 2), "❝2 “Ctrl+click to open; plain click edits; poi…”");
+  assert.equal(assistantQuoteLabel(quoteCitation("quoted text", "   \n\t "), 3), "❝3 “quoted text”");
+  assert.equal(assistantQuoteLabel(quoteCitation("quoted text", ""), 3), "❝3 “quoted text”");
+  assert.equal(assistantQuoteLabel(quoteCitation("   "), 5), "❝5");
+});
+
+test("A long or multi-line comment collapses to a one-line bounded preview that survives a markdown link", () => {
+  const long = assistantQuoteLabel(quoteCitation("q", "word ".repeat(50_000)), 1);
+  assert.ok(long.endsWith("…") && Array.from(long).length === "❝1 ".length + 42 + 1, long);
+  const lines = assistantQuoteLabel(quoteCitation("q", "first line\n\n  second\r\nthird"), 1);
+  assert.equal(lines, "❝1 first line second third");
+  assert.equal(assistantQuoteLabel(quoteCitation("q", `${"a".repeat(41)}😀😀😀`), 1), `❝1 ${"a".repeat(41)}😀…`);
+  assert.equal(assistantQuoteLabel(quoteCitation("q", "x".repeat(42)), 1), `❝1 ${"x".repeat(42)}`);
+  assert.equal(assistantQuoteLabel(quoteCitation("q", "x".repeat(43)), 1), `❝1 ${"x".repeat(42)}…`);
+  // Brackets and backslashes would end the link label early; the chip and the token must show the same text.
+  const awkward = quoteCitation("q", "see [1] and \\path");
+  assert.equal(assistantQuoteLabel(awkward, 1), "❝1 see 1 and path");
+  const context = { type: "assistant" as const, contextId: "quote_awk1", citation: awkward };
+  const inserted = insertAssistantQuote("", context, { start: 0, end: 0 });
+  assert.deepEqual(labelsIn(inserted.text), [assistantQuoteLabel(awkward, 1)]);
+  assert.equal(syncAssistantQuoteLabels(inserted.text, [context]), null);
+});
+
+test("Quote numbers follow order of appearance in the draft and match the transcript's badges", () => {
+  const [a, b, c] = [quoteContext("quote_a", "alpha", "first"), quoteContext("quote_b", "beta"), quoteContext("quote_c", "gamma", "third")] as const;
+  const all = draftOf([a, b, c]);
+  assert.deepEqual(assistantQuoteNumbers(all.text, all.contexts), [1, 2, 3]);
+  assert.deepEqual(labelsIn(all.text), ["❝1 first", "❝2 “beta”", "❝3 third"]);
+  // The transcript numbers distinct citations by first appearance in the sent text; the draft must agree.
+  const transcript = (text: string, contexts: typeof all.contexts) => {
+    const numbers = new Map<string, number>();
+    for (const { citation } of collectAssistantCitations(formatComposerMessage(text, contexts))) if (!numbers.has(citationKey(citation))) numbers.set(citationKey(citation), numbers.size + 1);
+    return contexts.map((context) => numbers.get(citationKey(context.citation)));
+  };
+  assert.deepEqual(assistantQuoteNumbers(all.text, all.contexts), transcript(all.text, all.contexts));
+  // Removing the middle quote renumbers the one after it, in the text and in the numbers.
+  const without = { text: removeContextReference(all.text, b), contexts: [a, c] };
+  assert.deepEqual(assistantQuoteNumbers(without.text, without.contexts), [1, 2]);
+  assert.deepEqual(assistantQuoteNumbers(without.text, without.contexts), transcript(without.text, without.contexts));
+  assert.deepEqual(labelsIn(syncAssistantQuoteLabels(without.text, without.contexts)!.text), ["❝1 first", "❝2 third"]);
+  // Inserting before the others pushes them down, and a quote added out of order still counts by position.
+  const d = quoteContext("quote_d", "delta", "inserted first");
+  const front = insertAssistantQuote(all.text, d, { start: 0, end: 0 }, all.contexts);
+  assert.equal(labelsIn(front.text)[0], "❝1 inserted first");
+  const frontContexts = [...all.contexts, d];
+  assert.deepEqual(assistantQuoteNumbers(front.text, frontContexts), [2, 3, 4, 1]);
+  assert.deepEqual(assistantQuoteNumbers(front.text, frontContexts), transcript(front.text, frontContexts));
+  assert.deepEqual(labelsIn(syncAssistantQuoteLabels(front.text, frontContexts)!.text), ["❝1 inserted first", "❝2 first", "❝3 “beta”", "❝4 third"]);
+  // Without the draft's contexts the other tokens are unknown, but still count as distinct quotes before this one.
+  assert.equal(labelsIn(insertAssistantQuote(all.text, d, { start: all.text.length, end: all.text.length }).text).at(-1), "❝4 inserted first");
+  // An unreferenced quote has no number and the same quote cited twice keeps one.
+  assert.deepEqual(assistantQuoteNumbers("no tokens", [a]), [undefined]);
+  const twice = { text: `${all.text} again ${collectComposerContextReferences(all.text)[0]!.source}`, contexts: all.contexts };
+  assert.deepEqual(assistantQuoteNumbers(twice.text, twice.contexts), [1, 2, 3]);
+  assert.deepEqual(assistantQuoteNumbers(twice.text, twice.contexts), transcript(twice.text, twice.contexts));
+});
+
+test("Chip-only legacy quotes number after the inline ones, as they are sent", () => {
+  const inline = quoteContext("quote_a", "alpha");
+  const legacy = { type: "assistant" as const, citation: quoteCitation("legacy") };
+  const draft = draftOf([inline]);
+  const contexts = [legacy, ...draft.contexts];
+  assert.deepEqual(assistantQuoteNumbers(draft.text, contexts), [2, 1]);
+  const numbers = new Map<string, number>();
+  for (const { citation } of collectAssistantCitations(formatComposerMessage(draft.text, contexts))) if (!numbers.has(citationKey(citation))) numbers.set(citationKey(citation), numbers.size + 1);
+  assert.deepEqual(contexts.map((context) => numbers.get(citationKey(context.citation))), [2, 1]);
+});
+
+test("Editing a comment rewrites only that token's label and carries the caret through it", () => {
+  const [a, b] = [quoteContext("quote_a", "alpha", "old comment"), quoteContext("quote_b", "beta", "keep")] as const;
+  const draft = draftOf([a, b]);
+  assert.equal(syncAssistantQuoteLabels(draft.text, draft.contexts), null);
+  const edited = [{ ...a, citation: { ...a.citation, comment: "a rather different comment" } }, b];
+  const synced = syncAssistantQuoteLabels(draft.text, edited)!;
+  assert.deepEqual(labelsIn(synced.text), ["❝1 a rather different comment", "❝2 keep"]);
+  assert.deepEqual(collectComposerContextReferences(synced.text).map((reference) => reference.contextId), ["quote_a", "quote_b"]);
+  assert.equal(synced.text.slice(0, 4), "Fix ");
+  assert.equal(syncAssistantQuoteLabels(synced.text, edited), null);
+  const [first, second] = collectComposerContextReferences(draft.text);
+  const [newFirst, newSecond] = collectComposerContextReferences(synced.text);
+  assert.equal(synced.map(2), 2);
+  assert.equal(synced.map(first!.start), newFirst!.start);
+  assert.equal(synced.map(first!.start + 3), newFirst!.end);
+  assert.equal(synced.map(first!.end), newFirst!.end);
+  assert.equal(synced.map(second!.start), newSecond!.start);
+  assert.equal(synced.map(draft.text.length), synced.text.length);
+  // The token's href is untouched and the rest of the text is byte-for-byte as it was.
+  assert.equal(synced.text.slice(newFirst!.end), draft.text.slice(first!.end));
+  assert.equal(formatComposerMessage(synced.text, edited).includes("a rather different comment"), true);
+});
+
+test("Label sync settles for any comment, so a draft can never rewrite itself forever", () => {
+  for (const comment of ["[x](y)", "back\\slash", "line\nbreak", "😀".repeat(500), "x".repeat(10_000), " ", "]](t3-context://v1/assistant-quote/other)"]) {
+    const quote = quoteContext("quote_a", "alpha", comment);
+    const draft = draftOf([quote, quoteContext("quote_b", "beta")]);
+    assert.equal(syncAssistantQuoteLabels(draft.text, draft.contexts), null, JSON.stringify(comment).slice(0, 40));
+    assert.equal(collectComposerContextReferences(draft.text).length, 2);
+  }
 });

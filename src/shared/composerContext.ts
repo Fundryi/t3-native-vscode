@@ -1,6 +1,6 @@
 import { ComposerContextId, type AssistantCitation } from "@t3tools/contracts";
 import { collectAssistantCitations, serializeAssistantCitation } from "@t3tools/shared/assistantCitations";
-import { collectComposerContextReferences, formatComposerContextReference, replaceComposerContextReferences } from "@t3tools/shared/composerContextReferences";
+import { collectComposerContextReferences, formatComposerContextReference, replaceComposerContextReferences, sanitizeComposerContextLabel } from "@t3tools/shared/composerContextReferences";
 import { insertComposerReferenceText, type TextSelection } from "./composerAttachments.js";
 import { renderAssistantQuoteBlock } from "./assistantQuoteText.js";
 
@@ -19,15 +19,80 @@ export interface AssistantQuoteContext { readonly type: "assistant"; readonly ci
 export type ComposerContext = FileReference | AssistantQuoteContext;
 export interface InsertReferenceEvent { readonly draftKey: string; readonly reference: FileReference }
 
-/** Draft-only quote references keep their payload out of the input; sending expands them to T3's portable citation format. */
-export function insertAssistantQuote(text: string, context: AssistantQuoteContext & { contextId: string }, selection: TextSelection) {
-  const reference = formatComposerContextReference({ kind: "assistant-quote", contextId: ComposerContextId.make(context.contextId), label: assistantQuoteLabel(context.citation) });
-  return insertComposerReferenceText(text, reference, selection);
+/** Draft-only quote references keep their payload out of the input; sending expands them to T3's portable citation format. `contexts` lets the new quote count the ones already in the draft; unknown tokens in `text` count as distinct. */
+export function insertAssistantQuote(text: string, context: AssistantQuoteContext & { contextId: string }, selection: TextSelection, contexts: ReadonlyArray<ComposerContext> = []) {
+  const insert = (number: number) => insertComposerReferenceText(text, formatComposerContextReference({ kind: "assistant-quote", contextId: ComposerContextId.make(context.contextId), label: assistantQuoteLabel(context.citation, number) }), selection);
+  // Only the new token's own label depends on its number, so the second pass cannot move anything the first measured.
+  const number = assistantQuoteNumbers(insert(1).text, [...contexts, context]).at(-1) ?? 1;
+  return insert(number);
 }
-/** Draft tokens and chips share one preview, so several quotes in a message stay distinguishable. */
-export function assistantQuoteLabel(citation: AssistantCitation): string {
-  const quote = citation.text.replace(/\s+/g, " ").trim();
-  return `❝ ${quote.length > 36 ? `${quote.slice(0, 36)}…` : quote}`;
+const QUOTE_PREVIEW_CHARS = 42;
+/** Bounded before collapsing, so a quote of many thousands of characters costs no more than a short one. */
+function quotePreview(value: string): string {
+  const head = value.slice(0, QUOTE_PREVIEW_CHARS * 8), chars = Array.from(head.replace(/\s+/g, " ").trim());
+  return chars.length > QUOTE_PREVIEW_CHARS || value.trimEnd().length > head.length ? `${chars.slice(0, QUOTE_PREVIEW_CHARS).join("")}…` : chars.join("");
+}
+/** The comment says what the user wants, so it leads; the quoted text is the fallback. Chips and draft tokens share this, sanitising included, so they never differ. */
+export function assistantQuoteLabel(citation: AssistantCitation, number: number): string {
+  // The textarea cannot slant one token, so quotation marks carry what italics carry on the chip:
+  // a comment is the user's own voice, the fallback is the assistant's words.
+  const comment = quotePreview(citation.comment ?? "");
+  const preview = comment || (quotePreview(citation.text) && `“${quotePreview(citation.text)}”`);
+  return sanitizeComposerContextLabel(`❝${number}${preview ? ` ${preview}` : ""}`, "assistant-quote");
+}
+/** Must match `citationKey` in AssistantCitationLink: the transcript numbers quotes by this identity, comment excluded. */
+const citationIdentity = (citation: AssistantCitation) => [citation.environmentId, citation.threadId, citation.messageId, citation.start, citation.end, citation.text].join("\u0000");
+/**
+ * Each quote's number, aligned with `contexts`, exactly as the transcript will badge it once sent: by order of
+ * appearance in the message, one number per distinct citation, chip-only legacy quotes after the inline ones.
+ * Derived from the draft rather than stored, so removing or moving a quote renumbers the rest.
+ */
+export function assistantQuoteNumbers(text: string, contexts: ReadonlyArray<ComposerContext>): Array<number | undefined> {
+  const indexById = new Map<string, number>();
+  contexts.forEach((context, index) => { if (context.type === "assistant" && context.contextId) indexById.set(context.contextId, index); });
+  const numbers = new Map<string, number>();
+  const claim = (key: string) => { let number = numbers.get(key); if (number === undefined) { number = numbers.size + 1; numbers.set(key, number); } return number; };
+  const result: Array<number | undefined> = contexts.map(() => undefined);
+  const keyOf = (index: number) => { const context = contexts[index]; return context?.type === "assistant" ? citationIdentity(context.citation) : ""; };
+  const inline = [
+    ...collectComposerContextReferences(text).flatMap((reference) => reference.kind === "assistant-quote" ? [{ start: reference.start, id: reference.contextId as string, citation: undefined }] : []),
+    ...(text.includes("t3-citation:") ? collectAssistantCitations(text).map(({ start, citation }) => ({ start, id: "", citation })) : []),
+  ].sort((a, b) => a.start - b.start);
+  for (const item of inline) {
+    const index = indexById.get(item.id);
+    const number = claim(item.citation ? citationIdentity(item.citation) : index === undefined ? `token:${item.id}` : keyOf(index));
+    if (index !== undefined) result[index] = number;
+  }
+  contexts.forEach((context, index) => { if (context.type === "assistant" && !context.contextId) result[index] = claim(citationIdentity(context.citation)); });
+  return result;
+}
+/**
+ * Rewrites draft tokens whose label has gone stale (comment edited, quote added or removed before them).
+ * `map` carries a caret through the rewrite: a caret inside a rewritten token lands after it.
+ * Null when nothing is stale, so applying it repeatedly settles.
+ */
+export function syncAssistantQuoteLabels(text: string, contexts: ReadonlyArray<ComposerContext>): { readonly text: string; readonly map: (position: number) => number } | null {
+  const numbers = assistantQuoteNumbers(text, contexts);
+  const edits: Array<{ start: number; end: number; source: string }> = [];
+  for (const reference of collectComposerContextReferences(text)) {
+    if (reference.kind !== "assistant-quote") continue;
+    const index = contexts.findIndex((context) => context.type === "assistant" && context.contextId === reference.contextId);
+    const context = contexts[index], number = numbers[index];
+    if (context?.type !== "assistant" || number === undefined) continue;
+    const source = formatComposerContextReference({ kind: "assistant-quote", contextId: reference.contextId, label: assistantQuoteLabel(context.citation, number) });
+    if (source !== reference.source) edits.push({ start: reference.start, end: reference.end, source });
+  }
+  if (!edits.length) return null;
+  let result = "", at = 0;
+  for (const edit of edits) { result += text.slice(at, edit.start) + edit.source; at = edit.end; }
+  return { text: result + text.slice(at), map: (position) => {
+    let shift = 0;
+    for (const edit of edits) {
+      if (position >= edit.end) shift += edit.source.length - (edit.end - edit.start);
+      else return position > edit.start ? edit.start + shift + edit.source.length : position + shift;
+    }
+    return position + shift;
+  } };
 }
 export function contextIsReferenced(text: string, context: ComposerContext): boolean {
   if (context.type === "file") return !context.inlineText || fileReferenceOccurrences(text, [context]).length > 0;
