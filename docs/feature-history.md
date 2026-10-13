@@ -8,8 +8,8 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 
 | Feature name | Description | Introduced in | Last changed in |
 | --- | --- | --- | --- |
-| [Sessions sidebar](#sessions-sidebar) | Session manager with compact last-active times and chat in editor tabs. | v0.0.7 | v0.1.16 |
-| [Scheduled task management](#scheduled-task-management) | Compact project/session task lists, a multi-project selector and an independent model/effort editor in the sidebar. | v0.1.16 | v0.1.16 |
+| [Sessions sidebar](#sessions-sidebar) | Session manager with compact last-active times and chat in editor tabs. | v0.0.7 | v0.1.21 |
+| [Scheduled task management](#scheduled-task-management) | Compact project/session task lists, a multi-project selector and an independent model/effort editor in the sidebar. | v0.1.16 | v0.1.21 |
 | [Workspace scope](#workspace-scope) | Shows conversations belonging to opened workspace folders. | v0.0.2 | v0.0.8 |
 | [Independent chat views](#independent-chat-views) | Independent tab drafts with local recovery for text, references and attachments. | v0.0.2 | v0.1.13 |
 | [Conversation management](#conversation-management) | Rename, pin, archive, restore and delete conversations. | v0.0.1 | v0.1.13 |
@@ -18,7 +18,7 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 | [Find in session](#find-in-session) | Full-history occurrence search, persistent filters and collapsible Above/Side results. | v0.1.13 | v0.1.20 |
 | [Conversation status and notifications](#conversation-status-and-notifications) | Immediate accepted-send status, pinned Working header and input notifications. | v0.0.1 | v0.1.13 |
 | [Message navigation rail](#message-navigation-rail) | Previews and jumps between exchanges in the current conversation. | v0.0.8 | v0.0.8 |
-| [Subagent conversations](#subagent-conversations) | Opens child conversations with status previews and a route back to the parent. | v0.0.1 | v0.0.8 |
+| [Subagent conversations](#subagent-conversations) | Opens child conversations with status previews and a route back to the parent. | v0.0.1 | v0.1.21 |
 | [Untouched chat cleanup](#untouched-chat-cleanup) | Removes untouched new chats and rejected first-send threads. | v0.0.8 | v0.1.13 |
 | [Compact composer](#compact-composer) | Permanent toolbar and compact controls inside the message box. | v0.0.1 | v0.1.21 |
 | [Slash commands and file suggestions](#slash-commands-and-file-suggestions) | Offers provider commands, skills and workspace files while typing. | v0.0.6 | v0.1.20 |
@@ -36,7 +36,7 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 | [Models and provider instances](#models-and-provider-instances) | Server catalogs with per-instance visibility and drag ordering saved in VS Code. | v0.0.1 | v0.1.16 |
 | [Model search and favorites](#model-search-and-favorites) | Searches visible models and saves favorites independently in VS Code. | v0.0.4 | v0.1.16 |
 | [Effort and permission controls](#effort-and-permission-controls) | Advertised model options and runtime modes inside the composer. | v0.0.1 | v0.1.13 |
-| [Account usage](#account-usage) | Collapsed sidebar limits, refresh time and Status meters action. | v0.0.6 | v0.1.13 |
+| [Account usage](#account-usage) | Collapsed sidebar limits, refresh time and Status meters action. | v0.0.6 | v0.1.21 |
 | [Status bar meters](#status-bar-meters) | Shows provider/account usage with configurable account selection and automatic refresh. | v0.0.7 | v0.1.21 |
 | [Native file links](#native-file-links) | Opens chat-linked files and ranges in VS Code's editor. | v0.0.1 | v0.1.21 |
 | [Editor references](#editor-references) | Inserts selected file ranges at the last-used chat's prompt cursor with Ctrl/Cmd+K or Alt+K. | v0.0.4 | v0.1.20 |
@@ -108,6 +108,12 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 - Use message/run timestamps, excluding visits and metadata changes; empty sessions use creation and unknown historical activity stays blank. Refresh every minute and on visibility changes.
 - Show minutes, hours and days through 7 days, then a local date (with year when needed); expose exact local time to hover and assistive technology. Boundary and timestamp-source tests cover metadata changes, unknown/future dates and older years.
 
+#### v0.1.21
+
+- Reclaim 56px above the first conversation: drop the section-label band that repeated the selected tab, move its `+` beside the search field, and take the padding off the Account & Usage header and the tab bar. The `+` acts on the open tab, and only that tab's button is in the accessibility tree.
+- Give each row two lines — a title that wraps to two and owns the full width, then run status, branch or match, age and icons — with the expand chevron spanning both so it never shortens the title. Titles read about 40px wider.
+- Separate rows with a hairline instead of whitespace, at padding relative to the interface font size, and run the selection as a full-width band. Rows drop from about 50px to 35px. The separator is derived from the foreground because `--border` matches the sidebar background in several light themes, and joins the other explicit boundaries under high contrast, where the selection also gains an outline because the platform paints its background the same colour as the list.
+
 ### Scheduled task management
 
 #### v0.1.16 — local source revision
@@ -136,6 +142,11 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 - Remove the repeated project-name row above Tasks when the workspace exposes one project, so the heading, count and New task action begin the list directly.
 - Retain the project selector when multiple projects are available, without changing task scope, session ownership or independent creation.
 - Verify the single-project layout in the existing scheduled-task browser fixture; record final review and local installer verification below before packaging.
+
+#### v0.1.21
+
+- Match the conversation rows: two lines, hairline separators and the same relative padding, dropping a task row from up to 122px to about 34px.
+- Drop the origin column from the project list, where it read "Independent task" for almost every row, and fold it into the schedule tooltip.
 
 ### Workspace scope
 
@@ -286,6 +297,10 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 - Retain separate Active, Settled and Archive trees with parent context for children in a different section.
 - Keep provider-native child conversations read-only while app-owned children accept follow-up messages.
 
+
+#### v0.1.21
+
+- Show the working badge for a subagent whose run is driven by its parent. Its own status lags that run, so the sidebar read it as idle while the transcript card showed it running; both now share one predicate.
 
 ### Untouched chat cleanup
 
@@ -697,6 +712,11 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 #### v0.1.13
 
 - Label the existing configuration action **Status meters** without an ellipsis, preserving refresh and last-update information.
+
+#### v0.1.21
+
+- Halve the panel to about 186px: each meter is two lines, with the reset time as a dim suffix on the value and the bar beneath, and a window the account does not report is one line rather than two.
+- Move Status meters out of its own row into an icon beside Refresh, with a deliberately different shape because it opens another view rather than acting in place.
 
 ### Status bar meters
 

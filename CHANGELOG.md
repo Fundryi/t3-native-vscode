@@ -7,6 +7,10 @@
 - Show every attached item as one uniform chip in a single wrapping row: images, files, quotes and file references share a height instead of an image being a preview card four times the size of a quote pill. Hovering or focusing an image chip enlarges it.
 - Label a quote with its number and your comment, falling back to the quoted text in quotation marks when there is no comment; the chip slants and dims that fallback, so your words read upright and the assistant's lean. Numbers are derived from the draft and match the badges the sent message renders.
 - Stop a web link in a response opening the browser before the host's prompt is answered. The link carried both a real href and a handler that called openExternal, so the page loaded whether or not you confirmed, and Cancel did nothing.
+- Reclaim the wasted space in the side panel. The section-label band that repeated the selected tab is gone and its `+` sits beside the search field, which with the tighter header saves 56px above the first conversation. Rows give the title its own wrapping line and move status, age and icons below it, separated by a hairline at padding that follows the interface font size: a conversation row drops from about 50px to 35px and a scheduled task from up to 122px to 34px, while titles read about 40px wider.
+- Halve the Account & Usage panel to about 186px: the reset time joins the value line with the bar beneath it, an unreported window is one line, and Status meters becomes an icon beside Refresh.
+- Show the working badge in the sidebar for a subagent whose run is driven by its parent. Its own status lags that run, so the row read as idle while the transcript card showed it running.
+- Make the list separator visible in light themes, where it was derived from a token that matches the sidebar background, and give the selected row an outline under high contrast, where the platform paints the selection background the same colour as the list.
 - Raise the usage refresh interval default from 300 to 600 seconds.
 - Carries everything listed under 0.1.20, which was packaged but never reached the Marketplace.
 
