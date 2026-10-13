@@ -20,14 +20,14 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 | [Message navigation rail](#message-navigation-rail) | Previews and jumps between exchanges in the current conversation. | v0.0.8 | v0.0.8 |
 | [Subagent conversations](#subagent-conversations) | Opens child conversations with status previews and a route back to the parent. | v0.0.1 | v0.0.8 |
 | [Untouched chat cleanup](#untouched-chat-cleanup) | Removes untouched new chats and rejected first-send threads. | v0.0.8 | v0.1.13 |
-| [Compact composer](#compact-composer) | Permanent toolbar and compact controls inside the message box. | v0.0.1 | v0.1.13 |
+| [Compact composer](#compact-composer) | Permanent toolbar and compact controls inside the message box. | v0.0.1 | v0.1.21 |
 | [Slash commands and file suggestions](#slash-commands-and-file-suggestions) | Offers provider commands, skills and workspace files while typing. | v0.0.6 | v0.1.20 |
 | [Queue and steer](#queue-and-steer) | Enter queues follow-ups; Ctrl/Cmd+Enter steers supported active runs. | v0.0.6 | v0.0.8 |
 | [Queue controls and task progress](#queue-controls-and-task-progress) | Edits queued text at the prompt font size; reorders follow-ups and shows current tasks. | v0.0.6 | v0.1.16 |
-| [Attachment presentation](#attachment-presentation) | Draft and sent previews with local recovery after closure. | v0.0.1 | v0.1.13 |
+| [Attachment presentation](#attachment-presentation) | Draft and sent previews with local recovery after closure. | v0.0.1 | v0.1.21 |
 | [Clipboard paste and file picker](#clipboard-paste-and-file-picker) | Image paste uses selected words as its description; local uploads survive tab closure. | v0.0.8 | v0.1.20 |
 | [Streaming and progressive history](#streaming-and-progressive-history) | Streams replies, loads older history and keeps rows separate as rich content settles. | v0.0.1 | v0.1.18 |
-| [Markdown and media](#markdown-and-media) | Formatted text, code, underline, tables, images, video and audio. | v0.0.1 | v0.1.20 |
+| [Markdown and media](#markdown-and-media) | Formatted text, code, underline, tables, images, video and audio. | v0.0.1 | v0.1.21 |
 | [Collapsed activity](#collapsed-activity) | Timed thought/tool groups separated by visible assistant messages and steers. | v0.0.1 | v0.1.13 |
 | [Interactive HTML graphics](#interactive-html-graphics) | Displays T3's inline HTML visualizations and mockups. | v0.0.8 | v0.0.8 |
 | [Mermaid diagrams](#mermaid-diagrams) | Renders diagrams with native theme colors and an expanded preview. | v0.0.8 | v0.0.8 |
@@ -37,10 +37,10 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 | [Model search and favorites](#model-search-and-favorites) | Searches visible models and saves favorites independently in VS Code. | v0.0.4 | v0.1.16 |
 | [Effort and permission controls](#effort-and-permission-controls) | Advertised model options and runtime modes inside the composer. | v0.0.1 | v0.1.13 |
 | [Account usage](#account-usage) | Collapsed sidebar limits, refresh time and Status meters action. | v0.0.6 | v0.1.13 |
-| [Status bar meters](#status-bar-meters) | Shows provider/account usage with configurable account selection and automatic refresh. | v0.0.7 | v0.1.19 |
-| [Native file links](#native-file-links) | Opens chat-linked files and ranges in VS Code's editor. | v0.0.1 | v0.1.20 |
+| [Status bar meters](#status-bar-meters) | Shows provider/account usage with configurable account selection and automatic refresh. | v0.0.7 | v0.1.21 |
+| [Native file links](#native-file-links) | Opens chat-linked files and ranges in VS Code's editor. | v0.0.1 | v0.1.21 |
 | [Editor references](#editor-references) | Inserts selected file ranges at the last-used chat's prompt cursor with Ctrl/Cmd+K or Alt+K. | v0.0.4 | v0.1.20 |
-| [Assistant citations](#assistant-citations) | Inserts assistant quotes at the prompt cursor with comments and source links. | v0.0.4 | v0.1.20 |
+| [Assistant citations](#assistant-citations) | Inserts assistant quotes at the prompt cursor with comments and source links. | v0.0.4 | v0.1.21 |
 | [Response forks](#response-forks) | One supported fork at the end of each settled assistant run. | v0.0.5 | v0.1.13 |
 | [Saved turn diffs](#saved-turn-diffs) | Shows one nonempty agent-only response diff; hides manual edits. | v0.0.6 | v0.1.17 |
 | [Conversation tab titles](#conversation-tab-titles) | Names editor tabs after their active conversations. | v0.0.2 | v0.0.8 |
@@ -364,6 +364,10 @@ The published v0.1.16 includes selected-text image descriptions, local model man
 
 The [read-only file-reference investigation](file-reference-investigation.md) explains current directory-search limits and the proposed Tab/Enter split; those proposals are not implemented.
 
+#### v0.1.21
+
+- Show everything attached to a draft as one uniform chip in a single wrapping row — images, files, quotes and file references — instead of an image preview card four times the height of a quote pill. Hovering or keyboard-focusing an image chip enlarges it; clicking still opens the full preview.
+
 ### Queue and steer
 
 #### v0.0.6
@@ -518,6 +522,11 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 #### v0.1.20
 
 - Draw thematic breaks (`---`), which previously rendered as an unstyled browser default.
+
+#### v0.1.21
+
+- Render fenced code with a line-number gutter, an optional soft wrap and a copy button. One grid row per logical line keeps a wrapped line's single number and starts the next line below the whole wrapped block, with nothing measured; the gutter is generated content, so copying or quoting code never picks up the numbers.
+- Keep each block's wrap choice while the virtualized transcript unmounts and remounts its row, and name the language in full, or Plain text for an unnamed fence.
 
 ### Collapsed activity
 
@@ -724,6 +733,10 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 
 ## VS Code integration
 
+#### v0.1.21
+
+- Raise the `t3-vscode.usage.refreshIntervalSeconds` default from 300 to 600 seconds; jitter makes the real gap 600 to 720.
+
 ### Native file links
 
 #### v0.0.1
@@ -737,6 +750,10 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 #### v0.1.20
 
 - Reveal a linked directory in the Explorer instead of failing to open it as a document. A link that names a line keeps its previous path and pays for no extra lookup.
+
+#### v0.1.21
+
+- Leave a web link to the webview host, which prompts before opening. The link carried both a real href and a handler calling `openExternal`, so the browser opened immediately whether or not the prompt was answered, and Cancel did nothing.
 
 ### Editor references
 

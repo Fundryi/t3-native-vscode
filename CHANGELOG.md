@@ -2,6 +2,12 @@
 
 ## 0.1.21 — Unpublished
 
+- Render fenced code with a line-number gutter, optional soft wrap and a copy button. A wrapped line keeps its single number and the next line starts below the whole wrapped block, as a text editor does; wrap is per block, defaults on, and survives scrolling the block out of view. The header names the language in full — Python, TypeScript, LaTeX — or says Plain text for an unnamed fence.
+- Collapse a sent message's attached file references into one row each, showing the path and a summary and expanding to the snapshot, so the words you typed are no longer buried in payload rendered at the same weight.
+- Show every attached item as one uniform chip in a single wrapping row: images, files, quotes and file references share a height instead of an image being a preview card four times the size of a quote pill. Hovering or focusing an image chip enlarges it.
+- Label a quote with its number and your comment, falling back to the quoted text in quotation marks when there is no comment; the chip slants and dims that fallback, so your words read upright and the assistant's lean. Numbers are derived from the draft and match the badges the sent message renders.
+- Stop a web link in a response opening the browser before the host's prompt is answered. The link carried both a real href and a handler that called openExternal, so the page loaded whether or not you confirmed, and Cancel did nothing.
+- Raise the usage refresh interval default from 300 to 600 seconds.
 - Carries everything listed under 0.1.20, which was packaged but never reached the Marketplace.
 
 ## 0.1.20 — Packaged, never published
