@@ -11,6 +11,7 @@
 - Halve the Account & Usage panel to about 186px: the reset time joins the value line with the bar beneath it, an unreported window is one line, and Status meters becomes an icon beside Refresh.
 - Show the working badge in the sidebar for a subagent whose run is driven by its parent. Its own status lags that run, so the row read as idle while the transcript card showed it running.
 - Make the list separator visible in light themes, where it was derived from a token that matches the sidebar background, and give the selected row an outline under high contrast, where the platform paints the selection background the same colour as the list.
+- Add **T3 VSCode: Refresh Usage Meters** to the command palette, which refreshes the meter figures on demand instead of waiting for the interval. Configure Status Meters still only chooses which account the status bar shows.
 - Raise the usage refresh interval default from 300 to 600 seconds.
 - Carries everything listed under 0.1.20, which was packaged but never reached the Marketplace.
 

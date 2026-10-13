@@ -87,6 +87,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand("t3-vscode.newThread", () => provider.createNewPanel()),
     vscode.commands.registerCommand("t3-vscode.showThreads", () => provider.showThreads()),
     vscode.commands.registerCommand("t3-vscode.showUsage", (accountKey?: string) => provider.showUsage(accountKey)),
+    // Refreshes every provider's figures now, rather than waiting for the interval or a connect.
+    vscode.commands.registerCommand("t3-vscode.refreshUsage", async () => {
+      if (!hostState) { await vscode.window.showInformationMessage("T3 VSCode is not connected yet."); return; }
+      try { await hostState.refreshUsage(); }
+      catch (cause) { await vscode.window.showWarningMessage(`Could not refresh usage: ${cause instanceof Error ? cause.message : String(cause)}`); }
+    }),
     vscode.commands.registerCommand("t3-vscode.configureUsage", () => meters.configure()),
     vscode.commands.registerCommand("t3-vscode.openWebUi", async () => {
       try { await vscode.env.openExternal(vscode.Uri.parse(hostState!.webUiUrl(SIDEBAR_VIEW_ID))); }

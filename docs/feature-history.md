@@ -756,6 +756,7 @@ The [read-only file-reference investigation](file-reference-investigation.md) ex
 #### v0.1.21
 
 - Raise the `t3-vscode.usage.refreshIntervalSeconds` default from 300 to 600 seconds; jitter makes the real gap 600 to 720.
+- Add **T3 VSCode: Refresh Usage Meters** to the command palette, which refreshes the figures now rather than waiting for the interval. It is distinct from Configure Status Meters, which only chooses which account the status bar shows.
 
 ### Native file links
 

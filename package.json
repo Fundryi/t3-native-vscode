@@ -97,6 +97,12 @@
         "icon": "$(globe)"
       },
       {
+        "command": "t3-vscode.refreshUsage",
+        "title": "Refresh Usage Meters",
+        "category": "T3 VSCode",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "t3-vscode.configureUsage",
         "title": "Configure Status Meters",
         "category": "T3 VSCode",
