@@ -1,12 +1,13 @@
 /**
  * I drop, webview side (chat views only: a panel, or the sidebar while K layout shows a chat there).
- * Facts (docs/ours/FORK-FEATURES.md I): a drag that started in the workbench (Explorer, a tab) never reaches this
- * document. Shift lifts only VS Code's pointer-events block; Chromium then refuses the cross-origin frame as a drop
- * target (crbug.com/59081). An OS file drag (items all of kind "file") does arrive, and is blocked by VS Code's webview
- * wrapper unless this page preventDefaults its dragenter and keeps its dragover from the wrapper, as Codex does.
- * Window capture listeners run before his composer handler and before the wrapper's own listeners. VS Code drags are
- * claimed here for the day a VS Code build lets them through (the host parses the strings, dropParse.ts); OS file
- * drops stay with his composer. Every trusted dragenter and drop goes to the host log as one "Drag trace" line.
+ * Facts (docs/ours/FORK-FEATURES.md I): a drag that started in the workbench (Explorer, a tab) reaches this document
+ * only while Shift is held (VS Code's pointer-events block), and since VS Code 1.140.0 not at all: Electron 43.7.0
+ * re-enabled Chromium's rule against drags between cross-site frames of one page (crbug.com/59081). The listeners
+ * stay for VS Code 1.139.1 and for a fix. An OS file drag (items all of kind "file") does arrive, and is blocked by
+ * VS Code's webview wrapper unless this page preventDefaults its dragenter and keeps its dragover from the wrapper, as
+ * Codex does. Window capture listeners run before his composer handler and before the wrapper's own listeners. VS Code
+ * drags are claimed here (the host parses the strings, dropParse.ts); OS file drops stay with his composer. Every
+ * trusted dragenter and drop goes to the host log as one "Drag trace" line.
  * A paste without text and without files asks the host for the paths of the last Explorer Ctrl+C (pasteCopied).
  */
 import { oursRequest, failed } from "./channel";

@@ -1,10 +1,12 @@
 /**
  * I drop: files dragged from VS Code's Explorer or a tab go into a chat, images T3 can send as attachments, the rest as
  * whole-file references. Two ways in: the "Drop files here" view, and Ctrl+C in the Explorer then Ctrl+V in a chat (the
- * drop.copy keybinding remembers the paths, pasteCopied inserts them). A drag from the Explorer or a tab can never land
- * on the chat itself, Shift or not: Chromium refuses a drag between cross-origin frames of one page (crbug.com/59081,
- * since Chromium 104), and the workbench and the webview frame are such frames (docs/ours/FORK-FEATURES.md I). Files
- * from Windows Explorer do land (the drag starts outside). dragTrace logs every drag that does reach a chat.
+ * drop.copy keybinding remembers the paths, pasteCopied inserts them). A Shift-drag from the Explorer or a tab onto the
+ * chat itself worked up to VS Code 1.139.1 and is blocked since 1.140.0 (2026-09-30): Electron 43.7.0 re-enabled
+ * Chromium's rule against drags between cross-site frames of one page (electron/electron#53669, crbug.com/59081),
+ * and the workbench and the webview frame are such frames (docs/ours/FORK-FEATURES.md I). The webview listeners stay
+ * for 1.139.1 and for the day it is fixed. Files from Windows Explorer land (the drag starts outside). dragTrace logs
+ * every drag that does reach a chat.
  */
 import * as vscode from "vscode";
 import { toastWithLogs } from "./logs.js";
@@ -84,14 +86,14 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
   });
   const offHint = registerOursRpc("dropHint", (params) => {
     log.info(`Drag left the chat at once, types ${typesText(params.types)}; hint shown.`);
-    void vscode.window.showInformationMessage("VS Code cannot drop a file from its Explorer or a tab into a chat. Drop it on \"Drop files here\" in the T3 side bar, or select it in the Explorer, press Ctrl+C, then Ctrl+V in the chat.");
+    void vscode.window.showInformationMessage("VS Code 1.140 and newer block a drop from the Explorer or a tab into any chat (Electron 43.7). Drop it on \"Drop files here\" in the T3 side bar, or select it in the Explorer, press Ctrl+C, then Ctrl+V in the chat.");
   });
 
   // One item, not an empty tree: VS Code hides an empty tree behind its welcome text, and the drop target is the tree.
   const item = new vscode.TreeItem("Drop files here");
   item.iconPath = new vscode.ThemeIcon("cloud-upload");
   item.description = "drag from the Explorer or a tab";
-  item.tooltip = "Drag files from the Explorer or a tab here to add them to the focused T3 chat. Images go in as attachments. A drag onto the chat itself never lands (Chromium blocks it, with or without Shift); Ctrl+C in the Explorer and Ctrl+V in the chat also works.";
+  item.tooltip = "Drag files from the Explorer or a tab here to add them to the focused T3 chat. Images go in as attachments. A Shift-drag onto the chat itself is blocked by VS Code 1.140 and newer (Electron 43.7); Ctrl+C in the Explorer and Ctrl+V in the chat also works.";
   const view = vscode.window.createTreeView<vscode.TreeItem>("t3-vscode.ours.drop.view", {
     treeDataProvider: { getChildren: (element) => element ? [] : [item], getTreeItem: (element) => element },
     dragAndDropController: {
