@@ -93,13 +93,16 @@ Note for the terminal entries: the terminal right-click menu only appears when t
 
 ## I. Drag and drop (drop)
 
+Three ways to put files into a chat: hold Shift while dragging them from the Explorer or a tab onto the chat (VS Code blocks a webview drop without Shift and we cannot change that); select them in the Explorer, press Ctrl+C, then Ctrl+V in the chat; or drag them without Shift onto the "Drop files here" view, which adds them to the focused chat.
+
 - Hold Shift and drag files from the VS Code Explorer or an editor tab onto a chat panel: each file goes into the composer. A gif, jpeg, png or webp up to 10 MiB becomes an attachment chip; everything else (also folders and larger images) a whole-file reference. A Windows Explorer file drop works as before (his composer handles it).
 - A VS Code drag without Shift bounces off the chat (VS Code blocks it); then a hint says "Hold Shift while dragging files into T3 Code." (at most once per 5 s).
 - "Drop files here" view under the T3 VSCode sidebar: takes a drag without Shift and puts the files into the focused chat panel (a new panel for the sidebar's thread when none is focused).
-- Settings: none. Commands: none. View: `t3-vscode.ours.drop.view`.
-- Log: every drop on a chat panel, and every view drop, writes one line with the drag types and the file count to the output channel "T3 VSCode (fork)".
-- Files: src/webview/ours/drop.ts (capture listeners, hint), src/host/ours/drop.ts (requests dropUris and dropHint, the view), src/host/ours/dropParse.ts (the parser, tested).
-- Live test: hold Shift, drag README.md from the Explorer onto the chat box, release: a reference shows. Do the same with a png: an attachment chip. Drag README.md without Shift onto "Drop files here": the same reference in the focused chat.
+- Ctrl+C in the Explorer runs `t3-vscode.ours.drop.copy` (hidden from the palette): it remembers the selected paths, then runs VS Code's own copy, so the clipboard ends as before (VS Code writes only its private "CodeFiles" format, which nobody else can read). A Ctrl+V in a chat with no text and no file on the clipboard inserts the remembered files, if the copy is under 10 minutes old. If another app puts a non-text format on the clipboard after the copy, the old list can still come in.
+- Settings: none. Commands: `t3-vscode.ours.drop.copy` (keybinding only). View: `t3-vscode.ours.drop.view`.
+- Log: every drop on a chat panel (an OS file drop too), every view drop, every Explorer copy and every text-less paste writes one line (drag types, file count, or "nothing remembered") to the output channel "T3 VSCode (fork)".
+- Files: src/webview/ours/drop.ts (capture listeners, hint, paste), src/host/ours/drop.ts (requests dropUris, dropHint and pasteCopied, the copy command, the view), src/host/ours/dropParse.ts (the parser, tested).
+- Live test: hold Shift, drag README.md from the Explorer onto the chat box, release: a reference shows. Do the same with a png: an attachment chip. Drag README.md without Shift onto "Drop files here": the same reference in the focused chat. Select README.md in the Explorer, Ctrl+C, click the chat box, Ctrl+V: the same reference.
 
 ## J. Re-vendor (T3 nightly packages)
 

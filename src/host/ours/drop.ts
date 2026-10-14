@@ -1,7 +1,8 @@
 /**
  * I drop: files dragged from VS Code's Explorer or a tab go into a chat, images T3 can send as attachments, the rest as
- * whole-file references. Two ways in: a Shift-drag onto a chat panel (src/webview/ours/drop.ts asks dropUris, and
- * dropHint when a drag bounced off without Shift) and the "Drop files here" view, which takes a drag without Shift.
+ * whole-file references. Three ways in: a Shift-drag onto a chat panel (src/webview/ours/drop.ts asks dropUris, and
+ * dropHint when a drag bounced off without Shift), the "Drop files here" view, which takes a drag without Shift, and
+ * Ctrl+C in the Explorer then Ctrl+V in a chat (the drop.copy keybinding remembers the paths, pasteCopied inserts them).
  */
 import * as vscode from "vscode";
 import { stat } from "node:fs/promises";
@@ -14,6 +15,7 @@ import { registerOursRpc } from "./rpc.js";
 import type { OursDeps } from "./types.js";
 
 const MAX_INPUT_CHARS = 1_000_000;
+const PASTE_MAX_AGE_MS = 10 * 60_000;
 
 /** Webview input: an absent field is "", anything else must be a string within the cap. */
 function dropString(params: Readonly<Record<string, unknown>>, key: string): string {
@@ -51,6 +53,29 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
     if (lines.length) await addDropped(deps, viewId, lines);
     return lines.length;
   });
+  // VS Code's Explorer copy writes only its private "CodeFiles" clipboard format, which no webview or extension can read.
+  let copied: { lines: string[]; at: number } | undefined;
+  const copy = vscode.commands.registerCommand("t3-vscode.ours.drop.copy", async () => {
+    try {
+      await vscode.commands.executeCommand("copyFilePath");
+      // One path per line; as file: uris, so parseDrop also takes POSIX paths.
+      const uris = (await vscode.env.clipboard.readText()).split(/\r?\n/).filter((line) => line.trim()).map((line) => vscode.Uri.file(line.trim()).toString());
+      copied = { lines: parseDrop(uris.join("\n"), ""), at: Date.now() };
+      log.info(`Explorer copy: ${copied.lines.length} file(s) remembered for a paste into a chat.`);
+    } catch (cause) { log.error("Explorer copy: remembering the paths failed.", cause); }
+    // Always VS Code's own copy last, so the clipboard ends exactly as without the fork (its buffer replaces our text).
+    finally { await Promise.resolve(vscode.commands.executeCommand("filesExplorer.copy")).catch((cause) => log.error("Explorer copy: filesExplorer.copy failed.", cause)); }
+  });
+  // shortcut: the remembered list goes stale if another app writes a non-text clipboard format after the copy; upgrade when VS Code exposes clipboard resources
+  const offPaste = registerOursRpc("pasteCopied", async (_params, viewId) => {
+    if (!copied || Date.now() - copied.at >= PASTE_MAX_AGE_MS || await vscode.env.clipboard.readText()) {
+      log.info(`Paste on ${viewId} without text: nothing remembered from an Explorer copy.`);
+      return 0;
+    }
+    log.info(`Paste on ${viewId}: ${copied.lines.length} file(s) from the last Explorer copy.`);
+    await addDropped(deps, viewId, copied.lines);
+    return copied.lines.length;
+  });
   const offHint = registerOursRpc("dropHint", (params) => {
     log.info(`Drag left the chat at once (no Shift held?), types ${typesText(params.types)}; hint shown.`);
     void vscode.window.showInformationMessage("Hold Shift while dragging files into T3 Code.");
@@ -59,7 +84,8 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
   // One item, not an empty tree: VS Code hides an empty tree behind its welcome text, and the drop target is the tree.
   const item = new vscode.TreeItem("Drop files here");
   item.iconPath = new vscode.ThemeIcon("cloud-upload");
-  item.tooltip = "Drop files from the Explorer or a tab here to add them to the T3 prompt. Images go in as attachments.";
+  item.description = "or hold Shift to drop into the chat";
+  item.tooltip = "Drag files from the Explorer or a tab here to add them to the focused T3 chat, or hold Shift while dragging onto the chat box itself (VS Code blocks a webview drop without Shift). Images go in as attachments.";
   const view = vscode.window.createTreeView<vscode.TreeItem>("t3-vscode.ours.drop.view", {
     treeDataProvider: { getChildren: (element) => element ? [] : [item], getTreeItem: (element) => element },
     dragAndDropController: {
@@ -78,5 +104,5 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
       },
     },
   });
-  return vscode.Disposable.from(view, { dispose: offDrop }, { dispose: offHint });
+  return vscode.Disposable.from(view, copy, { dispose: offDrop }, { dispose: offPaste }, { dispose: offHint });
 }

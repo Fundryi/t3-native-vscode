@@ -46,6 +46,11 @@
     },
     "commands": [
       {
+        "command": "t3-vscode.ours.drop.copy",
+        "title": "Copy Files for a Paste into T3 Code",
+        "category": "T3 VSCode"
+      },
+      {
         "command": "t3-vscode.ours.mcp.setup",
         "title": "Set Up the VS Code Context Server",
         "category": "T3 VSCode",
@@ -188,6 +193,12 @@
     ],
     "keybindings": [
       {
+        "command": "t3-vscode.ours.drop.copy",
+        "key": "ctrl+c",
+        "mac": "cmd+c",
+        "when": "filesExplorerFocus && foldersViewVisible && !inputFocus"
+      },
+      {
         "command": "t3-vscode.insertReference",
         "key": "ctrl+k",
         "mac": "cmd+k",
@@ -241,6 +252,10 @@
       ],
       "view/item/context": [],
       "commandPalette": [
+        {
+          "command": "t3-vscode.ours.drop.copy",
+          "when": "false"
+        },
         {
           "command": "t3-vscode.ours.mcp.nudge",
           "when": "false"

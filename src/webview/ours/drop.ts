@@ -2,6 +2,7 @@
  * I drop, webview side (chat panels only; the sidebar has no composer). VS Code lets a drag from its Explorer or a tab
  * into a webview only while Shift is held. Window capture listeners claim those drags before his composer handler;
  * OS file drops (type Files without VS Code's types) stay with his composer. The host parses the strings (dropParse.ts).
+ * A paste without text and without files asks the host for the paths of the last Explorer Ctrl+C (pasteCopied).
  */
 import { oursRequest } from "./channel";
 
@@ -35,8 +36,7 @@ if (document.body.dataset.surface !== "sidebar") {
     const text = data.getData("text/plain") || data.getData("text/uri-list");
     const claim = fromCode(types) || (mayClaim(types) && DRIVE_PATH.test(text.trimStart()));
     if (claim) { event.preventDefault(); event.stopPropagation(); } // his composer handler never sees it
-    else if (types.includes("files")) return; // an OS file drop: his composer attaches it
-    // Unclaimed drops still go to the host log, so a drop that did nothing shows what it carried.
+    // Unclaimed drops (an OS file drop too, which his composer attaches) still go to the host log, to show what arrived.
     void oursRequest("dropUris", claim ? { types, uriList: data.getData("application/vnd.code.uri-list"), text } : { types }).catch(report);
   }, true);
   // A VS Code drag without Shift bounces off the webview: in and out within 500 ms. Hint at most once per 5 s.
@@ -48,5 +48,12 @@ if (document.body.dataset.surface !== "sidebar") {
     const now = Date.now();
     if (entered && now - entered < 500 && now - hinted >= 5000) { hinted = now; void oursRequest("dropHint", { types: typesOf(event) }).catch(report); }
     entered = 0;
+  }, true);
+  // No isTrusted check: Ctrl+V reaches a webview through VS Code's paste plumbing, and a fake paste only re-adds copied paths.
+  window.addEventListener("paste", (event) => {
+    const data = event.clipboardData;
+    if (!data || data.files.length || data.getData("text/plain")) return; // his handlers paste text and images
+    event.preventDefault();
+    void oursRequest("pasteCopied").catch(report);
   }, true);
 }
