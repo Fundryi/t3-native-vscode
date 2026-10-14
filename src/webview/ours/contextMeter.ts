@@ -15,7 +15,8 @@ const report = failed("context meter");
 const style = document.createElement("style");
 style.textContent = `
 .ours-context-chip { font-size: .6875rem; color: var(--muted-foreground); white-space: nowrap; padding: 1px 6px; border: 1px solid var(--border); border-radius: 9px; }
-.ours-context-chip[data-level="high"] { color: var(--foreground); border-color: var(--foreground); }
+.ours-context-chip[data-level="high"] { color: var(--vscode-editorWarning-foreground, var(--foreground)); border-color: currentColor; }
+.ours-context-chip[data-level="full"] { color: var(--vscode-editorError-foreground, var(--foreground)); border-color: currentColor; }
 .ours-plan-actions { display: flex; gap: 10px; font-size: .75rem; }
 @container (max-width: 570px) { .ours-context-word { display: none; } }`;
 document.head.append(style);
@@ -30,6 +31,7 @@ document.head.append(style);
       chip?.remove();
       chip = document.createElement("span");
       chip.className = "ours-context-chip";
+      chip.tabIndex = 0;
       controls.prepend(chip);
     }
     // "62% context": the word hides in a narrow composer, as his shortcut hints do.
@@ -39,7 +41,20 @@ document.head.append(style);
     word.textContent = rest.length ? ` ${rest.join(" ")}` : "";
     chip.replaceChildren(value, word);
     chip.title = meter.title;
-    chip.dataset.level = meter.percent !== null && meter.percent >= 80 ? "high" : "normal";
+    const percent = typeof meter.percent === "number" ? Math.round(meter.percent) : null;
+    chip.dataset.level = percent === null ? "normal" : percent >= 95 ? "full" : percent >= 80 ? "high" : "normal";
+    // R15: a meter for screen readers; a tokens-only label (no window size) has no value, so it gets no meter role.
+    if (percent === null) {
+      for (const name of ["role", "aria-valuenow", "aria-valuemin", "aria-valuemax", "aria-valuetext"]) chip.removeAttribute(name);
+      chip.setAttribute("aria-label", `Context used: ${meter.title}`);
+    } else {
+      chip.setAttribute("role", "meter");
+      chip.setAttribute("aria-label", "Context used");
+      chip.setAttribute("aria-valuemin", "0");
+      chip.setAttribute("aria-valuemax", "100");
+      chip.setAttribute("aria-valuenow", String(percent));
+      chip.setAttribute("aria-valuetext", `${percent}%, ${meter.title}`);
+    }
   };
   let timer: ReturnType<typeof setTimeout> | undefined;
   let threadId: string | undefined;
@@ -52,7 +67,8 @@ document.head.append(style);
 
   const button = (label: string, title: string, kind: string) => {
     const element = document.createElement("button");
-    element.className = "text-button";
+    // R15: Implement is the card's main action, so it looks like one.
+    element.className = kind === "planImplement" ? "btn primary" : "text-button";
     element.textContent = label;
     element.title = title;
     element.addEventListener("click", () => {

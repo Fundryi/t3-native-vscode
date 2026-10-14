@@ -358,3 +358,107 @@ The thread menu (right-click a session, or the chevron in a chat header) gets th
 - T3 itself shows this action in its thread menu (threadActionMenu.logic.ts, "Regenerate title"); the header button is the fork's shortcut to it.
 - Settings: none.
 - Live test: open a chat, click the sparkle next to its title: it spins and a few seconds later the title changes. The T3 view's "..." menu has "Regenerate Title" in its last group, after "More Thread Actions".
+
+## R4 working: Live "what and how long", and "done" is announced
+
+- While T3 works, his "Working" label in the chat header (also the sticky copy at the top and the footer one) is followed by the time since the run started and the step it is on, for example "Working 1m 12s - npm test". It counts once a second. The step is the newest running step of the active run, with the same label his rows show.
+- At the end of a finished response, "Worked 2m 14s" stands in front of Copy and Fork: the run's first start to its last finish.
+- While his stop button shows, the composer hint reads "Enter to queue - Esc to stop" (Q5 makes Escape stop the turn).
+- A screen reader hears "Response finished" (or "Response failed", "Response stopped") when the shown chat stops working, after 2 s without new work, as the finished toast waits. A chat switch is never announced.
+- Status bar: one running chat reads "T3: running 3m"; the hover lists each running chat with its minutes. It repaints every 30 s while something runs.
+- How: no line of his changed. src/webview/ours/working.ts adds a sibling span after his `.working-label` (that label is a live region; a ticking clock inside it would be read out every second), a span in `.response-end`, one CSS rule on `.composer-shortcuts` and a hidden polite live region. The pure parts (clock, run total, current step, end phrase) are in src/shared/ours/working.ts (tested). src/host/ours/activity.ts and statusbar.ts add the minutes. A new webview file instead of latest.ts, so R5 and R9 merge without conflicts there.
+- Settings and commands: none.
+- Live test: send a prompt that runs a command: the header counts up and names the command; at the end "Worked ..." shows next to Copy; with NVDA on, it says "Response finished". The status bar shows "T3: running 1m" during a long turn.
+
+## R5 scroll: Sending jumps down, switching chats keeps my place
+
+- Send: when this chat starts sending while the agent is idle, a chat scrolled up jumps to the latest message at once (through Latest, so his "follow the end" resumes). While the agent works, a steer jumps down when the new message lands in the conversation; a queued message does not move the view, because it shows next to the composer anyway.
+- Switch: each chat's scroll place (the first visible row and its offset) is remembered per tab while you read. Going back to a chat in the same tab, or Sessions then the chat again in the side panel, puts it back over about one second instead of his jump to the end. A chat left at the end still opens at the end. Wheel, click or a key during that second hands control back to you; a search or citation jump that moves the list stops the restore.
+- The list is virtual, so the restored place is approximate when the remembered row is far from the rendered part. The memory lives in the webview: closing the tab or reloading the window forgets it.
+- Settings and commands: none. No line of his changed.
+- Files: src/webview/ours/scroll.ts.
+- Live test: scroll up in a chat, send: the view jumps down. Open chat A, scroll up, switch to chat B, back to A: A is where you left it.
+
+## R7 diffcard: A changes card for every turn that edited files
+
+- What: his "N changed files / Open diff" card needs a snapshot taken right before the turn, which he only takes for a fresh send from VS Code. Queued, steered, T3-app and older turns showed no card. Now they show one from the turn's checkpoint range (the previous turn's checkpoint to this one), with the note "May include your own edits" (owner default). Open diff and the all-changes view (Q16) use the same range.
+- How: no line of his changed. A wrap of `hostState.prepareTurnDiff` catches only his "Agent-only diff unavailable" error, builds the range with his `turnCheckpointRange` and `turnDiffFiles` and `client.getSavedTurnDiff`, and posts `diffcard.mixed` with the checkpoint id; the webview appends the note to that `.turn-changes` card. Any other failure gives his original error back (logged at info in the fork log).
+- Not built: interrupted runs. His `turnCheckpointRange` (turnDiff.ts) and `TurnChanges.tsx` both require a completed run; relaxing that needs his files.
+- Settings and commands: none.
+- Files: src/host/ours/diffcard.ts, src/webview/ours/diffcard.ts.
+- Live test: while a turn runs, queue a second message that edits a file; when it finishes, its card shows "N changed files", Open diff, and "May include your own edits".
+
+## R8 errors: Errors I can read
+
+- What: a turn error gets a heading line above it: the kind of failure ("Connection error", "Usage limit reached", "Provider error", "Permission denied", "Invalid request", else "Error"), then the retry state and the code: "Retrying 2/5 in 4s" (a live countdown) while the run still waits on that retry, "Attempt 2/5" on an older error, "Will not retry" when the provider says so, and "resets 14:05" for a usage limit with a reset time. On the right: "Show more" (only when the text is longer than 4 lines; the error is clamped to 4 lines and keeps its line breaks), "Copy error" (heading, state and message to the clipboard) and "Show Logs" (writes the error into the "T3 VSCode (fork)" log, then opens it). His Retry button under the error (Q11) stays.
+- "N failed" on a collapsed group of steps is a link now: a click opens the group (it never closes it) and every failed step in it.
+- A session row (sessions list, History) whose last run failed gets a red dot before its title (`thread.status === "failed"`).
+- How: no line of his changed. The webview adds the heading as the sibling before his `.turn-error` (reprompt.ts owns the sibling after it) and only data-ours-* attributes on his elements; failure class and retry come from the newest state snapshot by row key. A window capture click handles "N failed".
+- Settings and commands: none. RPC kind `errors.showLogs` (runs `t3-vscode.ours.log.show`).
+- Files: src/webview/ours/errors.ts, src/host/ours/errors.ts, src/shared/ours/errors.ts (the wording, tested).
+- Live test: make a command fail on purpose (ask the agent to run a command that exits with 1; if T3 does not mark that step failed, any step T3 marks failed works): its group shows "1 failed"; a click opens the group and the failed row. Make a turn fail (stop the T3 server mid-turn, or hit a usage limit): the error has a heading, Copy error copies it, Show Logs opens the fork log with the error in it. The chat's row in Sessions shows a red dot.
+
+## R9 openline: Open the edited file at the change
+
+A click on an edited file's name in a chat opens the file at its first changed line, not at the top. While the agent is editing a file, the "Editing X" step on a collapsed work group is a link that opens X.
+
+- File names: his file row sends the bare name; ours adds `:N`, where N is the first added or removed line of the row's diff (the hunk header's start plus its leading context lines). A diff without a hunk header opens at the top as before. Only Codex threads carry a unified diff with a hunk header (CodexAdapterV2.ts: `diffStr: firstChange.diff`); a Claude thread's edit carries the tool's result text instead (ClaudeAdapterV2.ts: `diffStr: outputText`), so in a Claude thread every file opens at the top. His request, thread and error banner stay his.
+- "Editing X": the Q10 label for a running file edit becomes a real span; a click opens X (at the change when the diff is already known) and does not fold the group open. Other running steps keep the Q10 text.
+- How: src/webview/ours/openline.ts (a capture click listener notes the line, a bridge.request wrapper puts it on his openLink; the span on the work group header); src/shared/ours/openline.ts finds the line (tested); src/shared/ours/latest.ts exports `runningSteps` for it. Relies on his class names `.file-change`, `.file-change-heading .text-button`, `pre.diff`, `.work-group-toggle` and `data-message-key`; re-check them on each upstream merge.
+- Settings and commands: none.
+- Live test: in a finished turn of a Codex thread open a work group, expand an "Edited x.ts" row and click the file name: the editor opens at the first changed line. During a turn that edits a file, click "Editing x.ts" on the collapsed group: the file opens.
+
+## R10 dropview: The "Drop files here" view is hidden unless you turn it on
+
+- What: the empty "Drop files here" view (from I) no longer sits under the side panel chat. It shows only with the setting `t3-vscode.ours.drop.showView` (section "Fork: Drop files view", default off). Turn it on and it comes back, collapsed on a profile that never showed it; a drag without Shift onto it still adds the files to the focused chat.
+- Who loses something: a user who dropped files on that view must turn the setting on. Without it, hold Shift while dragging onto the chat (Q21 shows a hint) or select files in the Explorer, Ctrl+C, then Ctrl+V in the chat.
+- How: package.json only. The view entry gets `"when": "config.t3-vscode.ours.drop.showView"` (a `"visibility": "collapsed"` alone would not help a profile that already showed the view expanded) and `"visibility": "collapsed"`. src/host/ours/drop.ts still creates the tree view; VS Code keeps it registered while hidden. No line of his changed.
+- Settings: `t3-vscode.ours.drop.showView`. Commands: none new.
+- Live test: on the existing profile the view is gone under the T3 sidebar. Set `t3-vscode.ours.drop.showView` to true: the view comes back; drag README.md from the Explorer onto it without Shift: a reference lands in the focused chat.
+
+## R12 setup: Pairing works with only the T3 app, and connects by itself the first time
+
+- What: a Windows user with only the T3 desktop app (no `t3` on PATH) pairs anyway, also when the 30-day token runs out: when `t3` is not found, pairing runs the app's own launcher `<T3 home>/bin/t3.cmd` (`bin/t3` on macOS and Linux), which the installed app keeps up to date on every start (T3's DesktopCliShim.ts). If neither exists, the "t3 command could not be found" screen stays as before.
+- First run without a click: with nothing paired yet and VS Code started before T3, the reconnect watcher (Q4) now pairs once as soon as T3 writes its server-runtime.json and answers, or when the VS Code window gets focus while T3 runs. At most one such pairing until a connection succeeds; a failed pairing ends on his pairing screen (Pair again), so it never loops. The 10 s poll still never runs the CLI.
+- Wording: "Pairing with T3 Code..." gets a line "can take up to 45 seconds". On Windows his setup screen also says: install and open the T3 Code app (`winget install T3Tools.T3Code`), the app keeps the server running and VS Code connects by itself, the t3 command line is the alternative (missing or stopped server, not with a custom startup hint); on "t3 command could not be found": T3 Settings -> General -> About, Install the t3 command, then quit VS Code fully. The Q4 button reads "Open T3 app (new chat)".
+- His file touched: src/host/pairing.ts `runPairingCommand` (an optional `command` parameter and three lines in its catch; upstream candidate). Everything else is ours: src/host/ours/reconnect.ts, src/webview/ours/reconnect.ts (DOM notes inside his setup heading and status card), test src/host/ours/pairingLauncher.test.ts.
+- Settings and commands: none.
+- Live test: isolated T3 home with no `t3` on PATH but `<home>/bin/t3.cmd`: pairing succeeds. Start VS Code first, then the T3 app: the view connects without a click.
+
+## R15 announce: Screen readers hear new cards, and Alt+1 hits the right one
+
+- What: when an approval, question or secret card appears, a hidden polite status line says what it is and which keys answer it, for example "Approval needed: Command approval, pnpm run test. Alt+1 Decline, Alt+2 Allow this session, Alt+3 Approve." A question says its first question (and how many there are) and its options; a secret request says its label. A card is announced once, by its text: an unchanged card that re-renders (his "1/N" count, "Sending...") stays quiet. The line empties after 7 s. No Alt hints on macOS, where Alt+N does not exist.
+- Alt+N fix: the secret card sits first in the composer column and also carries `.pending-requests .approval-card`, so Alt+1 used to press its Decline while an approval showed. Now Alt+N goes to his approval card, else his question card, and only then to the first secret card; the "Alt+N" hints on the secret buttons hide while one of his cards shows, and those on question options hide while his approval shows. A card that Alt+N does not reach is announced without keys; when its reachability changes it is announced again: with its keys once the approval was answered, and without keys when an approval arrives over a question or one of his cards over a secret card.
+- Also: the secret container is a region named "Secret request"; the context chip is a `meter` named "Context used" (value 0 to 100, focusable, warning colour from 80%, error colour from 95%; a tokens-only label gets no meter role); the Plan/Build toggle has the fixed name "Plan mode" with `aria-pressed`; the plan card's "Implement" is a primary button.
+- Settings and commands: none.
+- Files: src/webview/ours/approvalKeys.ts (routing, live region), src/shared/ours/announce.ts (the sentence, tested), src/webview/ours/secrets.ts, contextMeter.ts, planMode.ts. No line of his changed.
+- Live test: NVDA on, trigger an approval and a secret request together: both are read with their keys; Alt+1 answers the approval (Decline), not the secret card. With only the secret card, Alt+2 opens the password box. Also an approval and a question together: the question is read without keys, Alt+1 answers the approval, and then the question is read again with its keys.
+
+## R16 output: Long output opens in an editor, and copy works by keyboard
+
+- Open in editor: next to the Copy button on a command box or an output box (Q18) a second button opens the whole box in a new untitled editor tab, output as `log`, the command as plain text. Search, scroll and save it like any file.
+- Keyboard: the command and output boxes are focusable (Tab). Focus shows the two buttons and the row times as hover does. Enter on a focused box opens it in an editor; Ctrl+C on a focused box with no selection inside it copies the whole box (the button shows the check mark). With a selection inside the box Ctrl+C copies the selection as before. The box has a focus ring and a screen reader label that names both keys.
+- Settings and commands: none.
+- How: no line of his changed. The webview code is in src/webview/ours/rowCopy.ts (one floating bar for both buttons, a focusin listener next to the mouseover one, a capture keydown listener, a MutationObserver that sets tabindex, role and aria-label on his `pre.command-input` and `pre.tool-output`). The host request `outputOpen` (src/host/ours/output.ts) takes the box text from the webview, as his copyText does; it only opens an untitled document.
+- Live test: run a long `npm test` in a chat, hover its output: "Open output in editor" shows all of it in a tab. Tab to the output box, press Ctrl+C, paste somewhere: the whole output arrives.
+
+## R17 hunks: Undo one hunk with VS Code's own revert arrow
+
+Undo a single change of a turn, not the whole file, and edit right inside the diff.
+
+- All changes view ("Open diff" with two or more files): a file whose text (open buffer included) is still exactly what the turn left (line endings do not count) is shown with the real file on the right. VS Code then shows its own revert arrow on each hunk, and the right side can be edited in place. The file is changed in the editor, not saved: Ctrl+Z undoes, Save keeps it. A file that changed after the turn, is missing, or was deleted by the turn stays read-only, as before (owner default).
+- His single file diff: a new editor title button "Compare with Current File" opens the same diff with the real file on the right, under the same rule; if the file changed after the turn it says so and opens nothing.
+- Open File and "Revert File to Before This Turn" keep working on such a live side (right-click inside the diff); the whole-file revert then refuses once a hunk was undone, because the file no longer matches the turn.
+- A file the turn created: the arrow empties it, it does not delete it (Revert File deletes it).
+- Settings: none. Command: `t3-vscode.ours.diffs.compare` (palette only while his turn diff is focused).
+- How: src/host/ours/diffs.ts `rightSide` swaps the right URI of each `vscode.changes` triple (and of the compare diff) for the `file:` URI when `lf(buffer) === lf(after)`, and keeps a map from that file URI to the virtual after side, so `pairOf` still finds the turn (the latest diff of a file wins). The arrow is VS Code's `DiffEditorHunkToolbar` revert, shown when the modified side is writable (checked in the VS Code 7baac39ec3 bundle). No line of his changed.
+- Live test: after a turn that changed several files, click "Open diff", hover a hunk of an unchanged file and click its arrow: the file changes, Ctrl+Z restores it. Edit a file the turn changed and open the view again: that file has no arrows. On a one-file turn, click "Compare with Current File" in his diff's title: the arrows show.
+
+## R18 substop: Stop a running subagent from its card
+
+- What: a subagent card in the parent chat gets a square Stop button (before its Details chevron) while the subagent works. Stop runs Q19's "Stop subagent" on the child: a provider-native child stops through its parent run (`subagent.stop`), any other by interrupting its own run, as T3's web app does. The button greys out after the click and leaves once the child reads as idle.
+- Shown only where Q19's thread menu offers "Stop subagent": the child thread is in this workspace's list, is a subagent with a parent, and works (`threadIsWorking`). A card whose child is not listed (its Open button is disabled too) gets no Stop.
+- Settings and commands: none. Host: none (reuses the `threadActions.run` request).
+- How: no line of his changed. His card carries no child thread id, so the webview reads its row key (`data-search-row`, TranscriptView.tsx) and finds the subagent item's `childThreadId` in the last state snapshot; an editor tab whose first snapshot was a reply asks for the state once.
+- Files: src/webview/ours/substop.ts.
+- Live test: start a subagent from a chat; its card shows Stop next to the chevron; click it: the card turns to stopped or interrupted and the button goes away.

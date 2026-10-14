@@ -44,6 +44,8 @@ function render(): void {
     if (!button) {
       button = document.createElement("button");
       button.type = "button"; button.className = "ours-plan-toggle";
+      // R15: a fixed name, so aria-pressed alone says whether plan mode is on (the text flips Plan/Build).
+      button.setAttribute("aria-label", "Plan mode");
       button.addEventListener("click", () => { const mode = current()?.mode; if (mode) setMode(mode === "plan" ? "default" : "plan"); });
       traits.append(button);
     }

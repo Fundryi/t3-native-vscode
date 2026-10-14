@@ -2,15 +2,28 @@
  * Q17 approval keys, webview side. Alt+1..9 answers the docked approval card (his PendingRequests.tsx) or picks an
  * option on the question card, and after any answer focus returns to the chat box (his card drops it to the body).
  * No line of his changes: window capture listeners click his own buttons and inputs.
+ * R15 announce: his cards come first, our secret card (src/webview/ours/secrets.ts, also a .pending-requests) gets
+ * Alt+N only when none of his shows, and a hidden status line tells a screen reader about every new card.
  */
+import { announcementText, type CardAnnouncement } from "../../shared/ours/announce";
+import { failed } from "./channel";
+
 const FOCUS_WATCH_MS = 30_000;
 const ACTIONS = ".pending-requests .request-actions button";
+/** His docked cards; our secret container is excluded so Alt+1 never answers it while an approval or question shows. */
+const HIS = ".pending-requests:not(.ours-secret-requests)";
+const SECRET = ".ours-secret-requests .approval-card";
+const MAC = /Mac/.test(navigator.platform);
+const hisCardShows = () => !!document.querySelector(`${HIS} :is(.approval-card, .question-card)`);
 
 const style = document.createElement("style");
 style.textContent = `
 .approval-card .request-actions button:nth-child(-n+9)::after { counter-increment: ours-key; content: "Alt+" counter(ours-key); margin-left: 6px; font-size: 0.85em; opacity: 0.6; }
 .approval-card .request-actions, .question-options { counter-reset: ours-key; }
-.question-option:nth-child(-n+9) strong::after { counter-increment: ours-key; content: "Alt+" counter(ours-key); margin-left: 6px; font-weight: normal; opacity: 0.6; }`;
+.question-option:nth-child(-n+9) strong::after { counter-increment: ours-key; content: "Alt+" counter(ours-key); margin-left: 6px; font-weight: normal; opacity: 0.6; }
+body:has(${HIS} :is(.approval-card, .question-card)) .ours-secret-requests button::after { content: none; }
+body:has(${HIS} .approval-card) .question-option strong::after { content: none; }
+.ours-announce { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }`;
 document.head.append(style);
 
 /** The question group Alt+N acts on: the one holding focus, else the first unanswered, else the last. */
@@ -23,7 +36,7 @@ function questionGroup(card: Element): HTMLFieldSetElement | undefined {
 
 /** Returns the Nth button or option (clicked unless busy), or undefined when there is none (VS Code then keeps the key). */
 function pick(index: number): HTMLElement | undefined {
-  const approval = document.querySelector(".pending-requests .approval-card");
+  const approval = document.querySelector(`${HIS} .approval-card`) ?? (hisCardShows() ? null : document.querySelector(SECRET));
   if (approval) {
     const button = approval.querySelectorAll<HTMLButtonElement>(".request-actions button")[index];
     // A busy button still swallows the key, so a second press while sending never flips the editor tab.
@@ -53,7 +66,7 @@ let swallowed = false;
 window.addEventListener("keydown", (event) => {
   swallowed = false;
   // macOS: Option+digit types symbols, so the shortcut is Windows and Linux only.
-  if (/Mac/.test(navigator.platform)) return;
+  if (MAC) return;
   const digit = /^Digit([1-9])$/.exec(event.code);
   // Ctrl+Alt is AltGr on German and similar layouts, where it types { [ ] }.
   if (!digit || !event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.isComposing) return;
@@ -104,3 +117,63 @@ window.addEventListener("submit", (event) => {
   const submit = form?.querySelector<HTMLButtonElement>("button[type=submit]");
   if (submit) refocusAfter(submit);
 }, true);
+
+// R15: a polite status line, present before any card so the first change is read. Cards are told apart by their text,
+// not their element: React reuses his approval div when the next approval replaces the current one.
+{
+  const report = failed("card announcement");
+  const region = document.createElement("div");
+  region.className = "ours-announce";
+  region.setAttribute("role", "status");
+  document.body.append(region);
+  const text = (node: Element | null | undefined) => node?.textContent?.trim() ?? "";
+  const labels = (nodes: Iterable<Element>) => [...nodes].map(text);
+  const keys = (list: string[]) => MAC ? [] : list;
+
+  const cards = (): Map<string, CardAnnouncement> => {
+    const found = new Map<string, CardAnnouncement>();
+    const approval = document.querySelector(`${HIS} .approval-card`);
+    if (approval) {
+      // Not the whole card text: his "1/N" count and the busy button labels would re-announce an unchanged card.
+      const group = approval.querySelector("[role=group]")?.getAttribute("aria-label") ?? "Approval";
+      const title = `${group}, ${text(approval.querySelector("[data-approval-detail]"))}`;
+      found.set(`approval|${title}`, { kind: "Approval needed", title, keys: keys(labels(approval.querySelectorAll(".request-actions button"))) });
+    }
+    const question = document.querySelector(`${HIS} .question-card`);
+    if (question) {
+      const legends = labels(question.querySelectorAll("legend"));
+      const title = legends.length > 1 ? `${legends[0]} (${legends.length} questions)` : legends[0] || "Agent needs your input";
+      const options = question.querySelector("fieldset")?.querySelectorAll(".question-option strong") ?? [];
+      // Alt+N goes to his approval card while one shows. The key carries that, so the question is read again with its keys once the approval is gone.
+      found.set(`question|${!approval}|${legends.join("|")}`, { kind: "Question", title, keys: approval ? [] : keys(labels(options)) });
+    }
+    document.querySelectorAll(SECRET).forEach((card, index) => {
+      const title = text(card.querySelector("strong"));
+      // Alt+N reaches only the first secret card, and only while none of his cards shows.
+      const reachable = index === 0 && !approval && !question;
+      found.set(`secret|${reachable}|${index}|${title}`, { kind: "Secret requested", title, keys: reachable ? keys(labels(card.querySelectorAll(".request-actions button"))) : [] });
+    });
+    return found;
+  };
+
+  let seen = new Set<string>();
+  let clear: ReturnType<typeof setTimeout> | undefined;
+  const scan = () => {
+    const now = cards();
+    const fresh = [...now].filter(([key]) => !seen.has(key)).map(([, card]) => announcementText(card));
+    seen = new Set(now.keys());
+    if (!fresh.length) return;
+    // Empty first, then the text on the next frame, so the same sentence twice is read twice.
+    region.textContent = "";
+    clearTimeout(clear);
+    requestAnimationFrame(() => { region.textContent = fresh.join(" "); });
+    // Gone after a while, so it does not linger in browse mode.
+    clear = setTimeout(() => { region.textContent = ""; }, 7_000);
+  };
+  let queued = false;
+  new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; try { scan(); } catch (cause) { report(cause); } });
+  }).observe(document.body, { childList: true, subtree: true, characterData: true });
+}

@@ -6,6 +6,8 @@
  */
 
 import { exec, execFile } from "node:child_process";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { promisify } from "node:util";
 import * as RemoteAuth from "@t3tools/client-runtime/authorization";
 import { resolveRemotePairingTarget } from "@t3tools/shared/remote";
@@ -53,10 +55,10 @@ const pairingCommandRuntime: PairingCommandRuntime = {
   direct: execFileAsync,
 };
 
-export const runPairingCommand = async (home: string, runtime = pairingCommandRuntime): Promise<string> => {
+export const runPairingCommand = async (home: string, runtime = pairingCommandRuntime, command = "t3"): Promise<string> => {
   const baseArgs = ["pair", "--label", "VS Code"];
   try {
-    const launch = runtime.resolve("t3", [...baseArgs, "--base-dir", home]);
+    const launch = runtime.resolve(command, [...baseArgs, "--base-dir", home]);
     const options = { timeout: PAIR_TIMEOUT_MS, windowsHide: true };
     // The resolver escapes both the command and arguments for Windows batch
     // launchers. Passing one prepared string also avoids Node's deprecated
@@ -68,6 +70,9 @@ export const runPairingCommand = async (home: string, runtime = pairingCommandRu
   } catch (cause) {
     const stderr = (cause as { stderr?: string }).stderr ?? "";
     const missing = (cause as { code?: string }).code === "ENOENT";
+    // Fork R12: the T3 desktop app keeps its launcher off PATH, in <home>/bin (DesktopCliShim.ts launcherPath).
+    const launcher = join(home, "bin", process.platform === "win32" ? "t3.cmd" : "t3");
+    if (missing && command === "t3" && existsSync(launcher)) return runPairingCommand(home, runtime, launcher);
     throw new PairingError(`\`t3 pair\` failed: ${stderr || String(cause)}`, missing ? "cli-missing" : "pairing");
   }
 };

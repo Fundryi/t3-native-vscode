@@ -4,8 +4,9 @@
  */
 import type { HostStateSnapshot, ThreadSummary } from "../../shared/bridge.js";
 import { threadIsWorking } from "../../shared/sessionTree.js";
+import { minutes, since } from "../../shared/ours/working.js";
 
-type Thread = Pick<ThreadSummary, "id" | "title" | "status" | "activityRunStatus" | "archived" | "providerNativeSubagent" | "pendingRuntimeRequest">;
+type Thread = Pick<ThreadSummary, "id" | "title" | "status" | "activityRunStatus" | "archived" | "providerNativeSubagent" | "pendingRuntimeRequest" | "workingStartedAt">;
 
 export interface Activity {
   readonly wait: ReadonlyArray<Thread>;
@@ -23,7 +24,10 @@ const titleOf = (thread: Thread) => thread.title.trim() || "Untitled session";
 
 const OPEN = "t3.webview.focus";
 
-export function activity(state: { readonly phase: HostStateSnapshot["phase"]; readonly notice?: string; readonly threads: ReadonlyArray<Thread> }): Activity {
+/** R4: " 3m" since the run started, or nothing without a start. */
+const ran = (thread: Thread, now: number) => { const elapsed = since(thread.workingStartedAt, now); return elapsed === undefined ? "" : ` ${minutes(elapsed)}`; };
+
+export function activity(state: { readonly phase: HostStateSnapshot["phase"]; readonly notice?: string; readonly threads: ReadonlyArray<Thread> }, now = Date.now()): Activity {
   // Owner default (map question 8): provider subagents do not count, "queued" counts as running.
   const live = state.threads.filter((thread) => !thread.archived && !thread.providerNativeSubagent);
   const wait = live.filter((thread) => thread.pendingRuntimeRequest);
@@ -36,10 +40,10 @@ export function activity(state: { readonly phase: HostStateSnapshot["phase"]; re
   if (state.phase === "error") return { ...base, text: "T3: connection problem", command: OPEN, lines: why("T3 VSCode could not connect to T3 Code. Click to open it and retry.") };
   if (state.phase === "pairing") return { ...base, text: "$(sync~spin) T3: pairing", command: undefined, lines: why("Pairing VS Code with T3 Code.") };
   if (state.phase !== "ready") return { ...base, text: "$(sync~spin) T3: connecting", command: OPEN, lines: why("Connecting to T3 Code.") };
-  const lines = [...wait.map((thread) => `${titleOf(thread)}: waits for you`), ...run.map((thread) => `${titleOf(thread)}: running`)];
+  const lines = [...wait.map((thread) => `${titleOf(thread)}: waits for you`), ...run.map((thread) => `${titleOf(thread)}: running${ran(thread, now)}`)];
   const [only] = wait;
   if (only && wait.length === 1) return { wait, run, text: "$(warning) T3: needs you", warning: true, command: "t3-vscode.ours.statusbar.open", args: [only.id], lines };
   if (!wait.length && !run.length) return { ...base, text: "T3", command: OPEN, lines: ["No T3 thread of this window is running. Click to open T3 VSCode."] };
-  const text = wait.length ? "$(warning) T3: needs you" : run.length > 1 ? `$(sync~spin) T3: ${run.length} running` : "$(sync~spin) T3: running";
+  const text = wait.length ? "$(warning) T3: needs you" : run.length > 1 ? `$(sync~spin) T3: ${run.length} running` : `$(sync~spin) T3: running${ran(run[0]!, now)}`;
   return { wait, run, text, warning: wait.length > 0, command: "t3-vscode.showThreads", args: [], lines };
 }

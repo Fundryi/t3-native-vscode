@@ -28,3 +28,11 @@ test("Status bar activity: each connection phase says what it is, pairing has no
   assert.equal(activity({ phase: "discovering", threads: [] }).text, "$(sync~spin) T3: connecting");
   assert.deepEqual(activity({ phase: "connecting", notice: "Connection lost.", threads: [] }).lines[0], "Connection lost.");
 });
+
+test("Status bar activity: one running thread shows its minutes, in the text and the hover", () => {
+  const now = Date.parse("2026-10-14T12:03:30.000Z");
+  const state = activity({ phase: "ready", threads: [thread("build", { status: "running", workingStartedAt: "2026-10-14T12:00:00.000Z" })] }, now);
+  assert.equal(state.text, "$(sync~spin) T3: running 3m");
+  assert.deepEqual(state.lines, ["build: running 3m"]);
+  assert.equal(activity({ phase: "ready", threads: [thread("build", { status: "running" })] }, now).text, "$(sync~spin) T3: running");
+});

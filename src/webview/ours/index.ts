@@ -79,17 +79,17 @@ import "./titleButton";
 
 // R3 viewbar
 
-// R4 working
+import "./working";
 
-// R5 scroll
+import "./scroll";
 
-// R7 diffcard
+import "./diffcard";
 
-// R8 errors
+import "./errors";
 
-// R9 openline
+import "./openline";
 
-// R10 dropview
+// R10 dropview: package.json only (the drop view gets a when clause on t3-vscode.ours.drop.showView), no code here.
 
 // R11 actions
 
@@ -101,11 +101,11 @@ import "./titleButton";
 
 // R15 announce
 
-// R16 output
+// R16 output: built into ./rowCopy (Open in editor, keyboard focus and Ctrl+C on the command and output boxes)
 
 // R17 hunks
 
-// R18 substop
+import "./substop";
 
 // R19 emptylist
 

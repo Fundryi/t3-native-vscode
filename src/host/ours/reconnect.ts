@@ -3,6 +3,9 @@
  * (hostState.ts recoverConnection); then the view stays on his setup screen until a click.
  * While that screen shows a server problem (never pairing or cli-missing), this retries on a change of
  * <home>/userdata/server-runtime.json, every 10 s and on window focus, through his own hostState.reconnect().
+ * R12: without a stored credential (first run, nothing paired yet) one real signal (file or focus) may pair once when T3
+ * answers, so a user who starts VS Code before the T3 app needs no click. A failed pairing lands on `pairing` or
+ * `cli-missing`, outside AUTO_KINDS, so it never loops.
  */
 import * as vscode from "vscode";
 import { join } from "node:path";
@@ -21,6 +24,7 @@ export function activateReconnect({ context, hostState }: OursDeps): vscode.Disp
   let home: string | undefined;
   let dead = false, ready = false, busy = false, disposed = false;
   let failures = 0, lastTry = 0;
+  let kind = "", pairTried = false;
 
   const attempt = async (force: boolean): Promise<void> => {
     if (!dead || busy || disposed || !home) return;
@@ -30,11 +34,14 @@ export function activateReconnect({ context, hostState }: OursDeps): vscode.Disp
     try {
       // Without a stored credential for this server his connect(false) runs `t3 pair`; a poll must never run the CLI.
       const stored = await credentials.get();
-      if (!stored) return;
+      const mayPair = force && !pairTried && (kind === "missing-runtime" || kind === "server-stopped");
+      if (!stored && !mayPair) return;
       // Probe first, so his setup screen does not blink to "Connecting" every tick while T3 is down.
       const found = await discoverServer(home);
-      if (!found.ok || found.server.descriptor.environmentId !== stored.environmentId || !dead || disposed) return;
-      log.info("Reconnect: T3 answers again, reconnecting.");
+      if (!found.ok || (stored && found.server.descriptor.environmentId !== stored.environmentId) || !dead || disposed) return;
+      // The watcher fires twice per change (and focus may follow): pair at most once until a connection succeeds.
+      if (!stored) { pairTried = true; log.info("Reconnect: T3 started and nothing is paired yet, pairing."); }
+      else log.info("Reconnect: T3 answers again, reconnecting.");
       await hostState.reconnect();
       if (!ready) failures += 1;
     } catch (cause) { log.error("Reconnect attempt failed:", cause); }
@@ -52,8 +59,9 @@ export function activateReconnect({ context, hostState }: OursDeps): vscode.Disp
   const unlisten = hostState.onDidChangeState((state) => {
     try {
       ready = state.phase === "ready";
-      if (ready) failures = 0;
-      dead = (state.phase === "no-server" || state.phase === "error") && AUTO_KINDS.has(state.connectionSetup?.problem?.kind ?? "");
+      if (ready) { failures = 0; pairTried = false; }
+      kind = state.connectionSetup?.problem?.kind ?? "";
+      dead = (state.phase === "no-server" || state.phase === "error") && AUTO_KINDS.has(kind);
       if (home === undefined) { home = state.home; watch(join(home, "userdata")); }
     } catch (cause) { log.error("Reconnect state listener failed:", cause); }
   });

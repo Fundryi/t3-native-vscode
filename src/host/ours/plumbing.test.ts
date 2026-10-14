@@ -35,3 +35,10 @@ test("A wrapper runs first, keeps his method bound to its instance, and unwraps 
   wrap(failing, "send", (original) => (text) => { original(text); throw new Error("ours broke later"); });
   assert.deepEqual(failing.send("e"), ["d", "e"]);
 });
+test("His async rejection stays his: rethrown as is, and still his when our replacement fails after it", async () => {
+  const his = { async load(): Promise<string> { throw new Error("his"); } };
+  wrap(his, "load", (original) => () => original());
+  await assert.rejects(his.load(), /^Error: his$/);
+  wrap(his, "load", (original) => async () => { await original().catch(() => undefined); throw new Error("ours"); });
+  await assert.rejects(his.load(), /^Error: his$/);
+});

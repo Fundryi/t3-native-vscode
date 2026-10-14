@@ -18,13 +18,18 @@ export function stepLabel(row: TranscriptItem): string {
   }
 }
 
-/** Display row key (his `data-message-key`) to the label of that group's newest running step. */
-export function runningStepLabels(transcript: ReadonlyArray<TranscriptItem>): Map<string, string> {
-  const labels = new Map<string, string>();
+/** Display row key (his `data-message-key`) to that group's newest running step. */
+export function runningSteps(transcript: ReadonlyArray<TranscriptItem>): Map<string, TranscriptItem> {
+  const steps = new Map<string, TranscriptItem>();
   for (const group of transcriptRows(finalResponseCheckpoints(transcript))) {
     if (!isWorkItem(group.rows[0]!)) continue;
     const step = group.rows.findLast(running);
-    if (step) labels.set(group.key, stepLabel(step).trim() || "Working");
+    if (step) steps.set(group.key, step);
   }
-  return labels;
+  return steps;
+}
+
+/** Display row key (his `data-message-key`) to the label of that group's newest running step. */
+export function runningStepLabels(transcript: ReadonlyArray<TranscriptItem>): Map<string, string> {
+  return new Map([...runningSteps(transcript)].map(([key, step]) => [key, stepLabel(step).trim() || "Working"]));
 }

@@ -80,13 +80,13 @@ export { activateChatlook as chatlook } from "./chatlook.js";
 
 // R5 scroll
 
-// R7 diffcard
+export { activateDiffcard as diffcard } from "./diffcard.js";
 
-// R8 errors
+export { activateErrors as errors } from "./errors.js";
 
 // R9 openline
 
-// R10 dropview
+// R10 dropview: package.json only (the drop view gets a when clause on t3-vscode.ours.drop.showView), no code here.
 
 // R11 actions
 
@@ -98,7 +98,7 @@ export { activateChatlook as chatlook } from "./chatlook.js";
 
 // R15 announce
 
-// R16 output
+export { activateOutput as output } from "./output.js";
 
 // R17 hunks
 

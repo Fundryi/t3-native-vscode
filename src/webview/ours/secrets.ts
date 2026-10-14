@@ -14,6 +14,8 @@ import { oursRequest, failed } from "./channel";
 const report = failed("secret request");
 const container = document.createElement("div");
 container.className = "pending-requests ours-secret-requests";
+container.setAttribute("role", "region");
+container.setAttribute("aria-label", "Secret request");
 const busy = new Set<string>();
 let rows: SecretRequestRow[] = [];
 

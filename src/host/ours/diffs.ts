@@ -32,8 +32,11 @@ const parse = (uri: vscode.Uri) => {
 const folders = () => (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.uri);
 const exists = async (uri: vscode.Uri) => { try { await vscode.workspace.fs.stat(uri); return true; } catch { return false; } };
 const GONE = "This diff is no longer available. Open it again from the chat.";
+/** R17: a real file shown as a diff's right side, mapped to that diff's virtual after side (the latest diff wins). */
+const live = new Map<string, vscode.Uri>();
 
 async function pairOf(uri: vscode.Uri): Promise<Pair> {
+  if (uri.scheme === "file") uri = live.get(uri.toString()) ?? uri;
   const part = parse(uri);
   if (!part || (uri.scheme !== SCHEME && uri.scheme !== HIS_SCHEME)) throw new Error("This is not a T3 turn diff.");
   if (uri.scheme === SCHEME) {
@@ -61,12 +64,45 @@ async function pairOf(uri: vscode.Uri): Promise<Pair> {
 }
 
 /** The real file of a diff: the first root where it exists (cwd first; git paths are repo-root relative), else the cwd. */
-async function locate(pair: Pair): Promise<{ readonly uri: vscode.Uri; readonly found: boolean } | undefined> {
+async function locate(pair: Pick<Pair, "roots" | "newPath">): Promise<{ readonly uri: vscode.Uri; readonly found: boolean } | undefined> {
   const candidates = pair.roots.map((root) => ({ root, uri: vscode.Uri.joinPath(root, ...pair.newPath.split("/")) }))
     // A patch path is data from T3: never leave the root through "..".
     .filter(({ root, uri }) => uri.path.toLowerCase().startsWith(root.path.toLowerCase().replace(/\/?$/, "/")));
   for (const { uri } of candidates) if (await exists(uri)) return { uri, found: true };
   return candidates[0] && { uri: candidates[0].uri, found: false };
+}
+
+/**
+ * R17: the real file when its text (open buffer included) is exactly what the turn left, else the virtual side.
+ * A writable right side gives VS Code's own per-hunk revert arrow; undo is the editor's Ctrl+Z.
+ */
+async function rightSide(roots: vscode.Uri[], newPath: string, after: string, virtual: vscode.Uri): Promise<vscode.Uri> {
+  try {
+    const file = await locate({ roots, newPath });
+    if (!file?.found) return virtual;
+    const doc = await vscode.workspace.openTextDocument(file.uri);
+    if (lf(doc.getText()) !== lf(after)) return virtual;
+    live.set(file.uri.toString(), virtual);
+    return file.uri;
+  } catch (cause) {
+    log.info(`Diffs: ${newPath} shown read-only: ${String(cause)}`);
+    return virtual;
+  }
+}
+
+/** R17: his single diff again, with the real file on the right, so single hunks can be undone in place. */
+async function compare(arg: unknown) {
+  const uri = target(arg);
+  if (!uri) return;
+  const pair = await pairOf(uri);
+  const key = randomUUID();
+  const before = sideUri(key, "before", pair.oldPath), after = sideUri(key, "after", pair.newPath);
+  const right = await rightSide(pair.roots, pair.newPath, pair.after, after);
+  if (right === after) { void vscode.window.showWarningMessage(`${pair.newPath} is not on disk or changed after this turn, so it cannot be edited from this diff.`); return; }
+  const file = { oldPath: pair.oldPath, newPath: pair.newPath, changeType: pair.changeType as TurnDiffFile["changeType"], additions: 0, deletions: 0 };
+  turns.set(key, { cwd: pair.roots[0]!.fsPath, files: [file], texts: new Map([[before.toString(), pair.before], [after.toString(), pair.after]]) });
+  for (const old of [...turns.keys()].slice(0, -KEEP)) turns.delete(old);
+  await vscode.commands.executeCommand("vscode.diff", before, right, `${pair.newPath} (before this turn vs current file)`, { preview: true });
 }
 
 const target = (arg: unknown) => arg instanceof vscode.Uri ? arg : vscode.window.activeTextEditor?.document.uri;
@@ -142,13 +178,15 @@ export function activateDiffs({ hostState }: OursDeps): vscode.Disposable {
       return [[vscode.Uri.joinPath(vscode.Uri.file(diff.cwd), ...file.newPath.split("/")), before, after]];
     });
     if (!triples.length) throw new Error("No file of this turn can be shown as text.");
+    const roots = [vscode.Uri.file(diff.cwd), ...folders()];
+    const shown = await Promise.all(triples.map(async ([file, before, after]) => [file, before, await rightSide(roots, parse(after!)!.path, turn.texts.get(after!.toString())!, after!)]));
     turns.set(key, turn);
     for (const old of [...turns.keys()].slice(0, -KEEP)) turns.delete(old);
-    await vscode.commands.executeCommand("vscode.changes", `Turn ${diff.turnNumber}: ${triples.length} changed files`, triples);
+    await vscode.commands.executeCommand("vscode.changes", `Turn ${diff.turnNumber}: ${triples.length} changed files`, shown);
     return { files: triples.length };
   });
   return vscode.Disposable.from(
-    { dispose: () => { unwrap(); unregister(); turns.clear(); loadedFiles.length = 0; } },
+    { dispose: () => { unwrap(); unregister(); turns.clear(); loadedFiles.length = 0; live.clear(); } },
     vscode.workspace.registerTextDocumentContentProvider(SCHEME, {
       provideTextDocumentContent(uri) {
         const text = turns.get(parse(uri)?.key ?? "")?.texts.get(uri.toString());
@@ -158,5 +196,6 @@ export function activateDiffs({ hostState }: OursDeps): vscode.Disposable {
     }),
     vscode.commands.registerCommand("t3-vscode.ours.diffs.openFile", guarded("Open File", openFile)),
     vscode.commands.registerCommand("t3-vscode.ours.diffs.revert", guarded("Revert", revert)),
+    vscode.commands.registerCommand("t3-vscode.ours.diffs.compare", guarded("Compare with Current File", compare)),
   );
 }

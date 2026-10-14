@@ -40,11 +40,25 @@
         },
         {
           "id": "t3-vscode.ours.drop.view",
-          "name": "Drop files here"
+          "name": "Drop files here",
+          "when": "config.t3-vscode.ours.drop.showView",
+          "visibility": "collapsed"
+        },
+        {
+          "id": "t3-vscode.ours.drop.view",
+          "name": "Drop files here",
+          "when": "config.t3-vscode.ours.drop.showView",
+          "visibility": "collapsed"
         }
       ]
     },
     "commands": [
+      {
+        "command": "t3-vscode.ours.diffs.compare",
+        "title": "Compare with Current File",
+        "category": "T3 VSCode",
+        "icon": "$(git-compare)"
+      },
       {
         "command": "t3-vscode.ours.threadActions.regenerateTitle",
         "title": "Regenerate Title",
@@ -288,6 +302,11 @@
       ],
       "editor/title": [
         {
+          "command": "t3-vscode.ours.diffs.compare",
+          "when": "resourceScheme == t3-turn-diff",
+          "group": "navigation"
+        },
+        {
           "command": "t3-vscode.ours.diffs.openFile",
           "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff",
           "group": "navigation"
@@ -346,16 +365,28 @@
       "view/item/context": [],
       "commandPalette": [
         {
+          "command": "t3-vscode.ours.diffs.compare",
+          "when": "resourceScheme == t3-turn-diff"
+        },
+        {
+          "command": "t3-vscode.ours.diffs.openFile",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/"
+        },
+        {
+          "command": "t3-vscode.ours.diffs.revert",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/"
+        },
+        {
           "command": "t3-vscode.ours.threadActions.regenerateTitle",
           "when": "t3-vscode.ours.hasThread"
         },
         {
           "command": "t3-vscode.ours.diffs.openFile",
-          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/"
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/"
         },
         {
           "command": "t3-vscode.ours.diffs.revert",
-          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/"
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/"
         },
         {
           "command": "t3-vscode.openWebUi",
@@ -401,12 +432,22 @@
       "editor/context": [
         {
           "command": "t3-vscode.ours.diffs.openFile",
-          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/",
           "group": "t3ours"
         },
         {
           "command": "t3-vscode.ours.diffs.revert",
-          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.ours.diffs.openFile",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.ours.diffs.revert",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/",
           "group": "t3ours"
         },
         {
@@ -464,6 +505,18 @@
       ]
     },
     "configuration": [
+      {
+        "title": "Fork: Drop files view",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.drop.showView": {
+            "type": "boolean",
+            "default": false,
+            "scope": "window",
+            "description": "Show the \"Drop files here\" view under the T3 VSCode sidebar. It takes a drag without Shift and adds the files to the focused chat. Without it, hold Shift while dragging onto the chat, or select files in the Explorer, press Ctrl+C, and paste them into the chat with Ctrl+V."
+          }
+        }
+      },
       {
         "title": "Fork: Chat look",
         "order": 10,

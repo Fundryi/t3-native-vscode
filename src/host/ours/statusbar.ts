@@ -32,9 +32,13 @@ export function activateStatusbar({ hostState, provider }: OursDeps): vscode.Dis
       else await vscode.commands.executeCommand("t3-vscode.showThreads");
     } catch (cause) { toastWithLogs("error", String(cause), cause); }
   });
+  // R4: "T3: running 3m" keeps counting between state changes, so repaint while something runs.
+  let last: Parameters<typeof activity>[0] | undefined;
+  let tick: ReturnType<typeof setInterval> | undefined;
   // Runs inside his emit loop (and his connect); never let it throw.
-  const unlisten = hostState.onDidChangeState((state) => {
+  const paint = (state: Parameters<typeof activity>[0]) => {
     try {
+      last = state;
       const now = activity(state);
       if (now.wait.length !== waiting) { waiting = now.wait.length; paintBadge(); }
       item.text = now.text;
@@ -44,10 +48,13 @@ export function activateStatusbar({ hostState, provider }: OursDeps): vscode.Dis
       tooltip.isTrusted = { enabledCommands: ["t3-vscode.ours.log.show"] };
       item.tooltip = tooltip;
       item.show();
+      if (now.run.length && !tick) tick = setInterval(() => { if (last) paint(last); }, 30_000);
+      else if (!now.run.length && tick) { clearInterval(tick); tick = undefined; }
     } catch (cause) { log.error("Fork status bar update failed.", cause); }
-  });
+  };
+  const unlisten = hostState.onDidChangeState(paint);
   return vscode.Disposable.from(
-    { dispose: () => { unwrap(); unlisten(); waiting = 0; paintBadge(); view = undefined; } },
+    { dispose: () => { clearInterval(tick); unwrap(); unlisten(); waiting = 0; paintBadge(); view = undefined; } },
     command, item,
   );
 }

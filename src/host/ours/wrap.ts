@@ -21,7 +21,12 @@ export function wrap<T extends object, K extends keyof T>(target: T, key: K, rep
   const wrapped = (...args: unknown[]): unknown => {
     let his: His | undefined;
     const original = (...callArgs: unknown[]) => {
-      try { const value = bound(...callArgs); his = { value }; return value; }
+      try {
+        const value = bound(...callArgs); his = { value };
+        // His async rejection is his error too: recorded before our replacement can rethrow it, so it passes unlogged.
+        if (isThenable(value)) value.then(undefined, (error: unknown) => { his = { error }; });
+        return value;
+      }
       catch (error) { his = { error }; throw error; }
     };
     const fallback = (cause: unknown): unknown => {
