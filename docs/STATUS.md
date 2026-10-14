@@ -43,13 +43,14 @@ The progress file of this fork. Read it first after a restart, a compaction or a
 
 - Phase 1 (running): Windows test fixes, vendor drift report. Builder plus reviewer each, worktrees wintests and vendor.
 - Phase 2 (running in parallel, read-only): 7 Opus scouts map his code and our legacy code per feature; one synthesis agent writes docs/ours/PORT-MAP.md: per feature the files to create, the smallest hook into his files, package.json contributions, acceptance criteria, the owner's live test. The lead reviews the map.
-- Phase 3: 9 builders at once, one worktree each (mcp-bridge, approvals, statusbar, add-to-prompt, tasks, desktop-app, deep-links, save-on-send, drag-drop), each followed by an adversarial reviewer and one fix round. All our code under src/host/ours/ and src/webview/ours/; his files get one-line hooks only.
+- Phase 2b (running 09:25): slice 0, one Opus builder in worktree slice0: every hook into his files landed once (activateOurs in src/extension.ts, the ours channel, the composer insert helper, log channel, terminalRuns, test globs, commands.test.mjs scanning src/host/ours, onStartupFinished). Merged before the feature builders start; they git merge main first.
+- Phase 3: 10 builders at once (the 9 below plus revendor), one worktree each (mcp-bridge, approvals, statusbar, add-to-prompt, tasks, desktop-app, deep-links, save-on-send, drag-drop), each followed by an adversarial reviewer and one fix round. All our code under src/host/ours/ and src/webview/ours/; his files get one-line hooks only.
 - Phase 4: the lead merges small items first (patch + 3-way), runs build, typecheck, test after each, resolves package.json by hand, packages one VSIX, installs it, hands the owner live tests one at a time.
 - Phase 5: re-vendor if the drift report says so; upstream merge routine; backlog.
 
 ## Now
 
-- 08:40: phase 1 and phase 2 run. Pairing result still open.
+- 09:25: phase 1 merged (85f5846). Map docs/ours/PORT-MAP.md being written; slice 0 building. Lesson: workflow subagents have no StructuredOutput tool here, so agents return plain text and the script parses a VERDICT line. Pairing result still open.
 
 ## Log
 
