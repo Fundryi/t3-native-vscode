@@ -6,15 +6,15 @@ A VS Code client for a separately running [T3 Code](https://github.com/pingdotgg
 
 ## This fork
 
-This is [Fundryi/t3-native-vscode](https://github.com/Fundryi/t3-native-vscode), a fork of [busFred/t3-vscode](https://github.com/busFred/t3-vscode) (the text below this section is his README). It replaces the author's older extension [Fundryi/t3-vscode](https://github.com/Fundryi/t3-vscode), which embedded T3's web page in a VS Code panel and is archived. Three things, side by side:
+This is [Fundryi/t3-native-vscode](https://github.com/Fundryi/t3-native-vscode), a fork of [busFred/t3-vscode](https://github.com/busFred/t3-vscode) (the text below this section is his README). Upstream and this fork, side by side:
 
-| | Old: Fundryi/t3-vscode (archived) | Upstream: busFred/t3-vscode | This fork |
-|---|---|---|---|
-| Chat UI | T3's web page in an iframe | Native React chat in VS Code | Upstream's native chat, in the side bar by default |
-| Agents see VS Code | MCP bridge | No | MCP bridge (workspace, tabs, selection, problems, git, terminal; open file, reveal, diff) |
-| Approvals | Notifications | In the chat only | Notifications with buttons, keyboard answers |
-| Files into the chat | Drag and drop, Ctrl+C / Ctrl+V | Attach button, Alt+K inserts a selection | "Add to prompt" menu, Shift+Alt+K for a selection, Ctrl+C in the Explorer then Ctrl+V, a drop view |
-| Upstream merges | n/a | n/a | Our code lives in `src/*/ours/`; his files get the smallest hooks; `git merge upstream/main` works |
+| | Upstream: busFred/t3-vscode | This fork |
+|---|---|---|
+| Chat UI | Native React chat in VS Code | Upstream's native chat, in the side bar by default |
+| Agents see VS Code | No | MCP bridge (workspace, tabs, selection, problems, git, terminal; open file, reveal, diff) |
+| Approvals | In the chat only | Notifications with buttons, keyboard answers |
+| Files into the chat | Attach button, Alt+K inserts a selection | "Add to prompt" menu, Shift+Alt+K for a selection, Ctrl+C in the Explorer then Ctrl+V, a drop view |
+| Upstream merges | n/a | Our code lives in `src/*/ours/`; his files get the smallest hooks; `git merge upstream/main` works |
 
 What the fork adds on top of upstream (every item has a live test in [docs/ours/FORK-FEATURES.md](docs/ours/FORK-FEATURES.md)):
 
