@@ -72,3 +72,41 @@ import "./contextMeter";
 // X2 chatlook
 
 // X3 titlebtn
+
+// R1 theme
+
+// R2 defaults
+
+// R3 viewbar
+
+// R4 working
+
+// R5 scroll
+
+// R7 diffcard
+
+// R8 errors
+
+// R9 openline
+
+// R10 dropview
+
+// R11 actions
+
+// R12 setup
+
+// R13 focus
+
+// R14 keys2
+
+// R15 announce
+
+// R16 output
+
+// R17 hunks
+
+// R18 substop
+
+// R19 emptylist
+
+// R20 longmsg
