@@ -6,3 +6,6 @@ dist-spike/
 .t3/
 .plans/
 .claude/
+CLAUDE.local.md
+reference/
+.claude/worktrees/

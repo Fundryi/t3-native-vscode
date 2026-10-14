@@ -1,0 +1,4 @@
+[
+  { "name": "t3code", "url": "https://github.com/pingdotgg/t3code.git", "track": "nightly" },
+  { "name": "busFred-t3-vscode", "url": "https://github.com/busFred/t3-vscode.git", "track": "head" }
+]

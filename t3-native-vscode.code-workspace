@@ -1,0 +1,75 @@
+{
+  "folders": [
+    { "name": "t3-native-vscode (our fork)", "path": "." },
+    { "name": "reference (read-only: t3code, busFred-t3-vscode)", "path": "reference" }
+  ],
+  "settings": {
+    // reference/ is its own root in "folders", so hide the duplicate inside the first root.
+    "files.exclude": {
+      "reference": true,
+      "**/.git": true,
+      "**/node_modules": true,
+      "**/.turbo": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/dist": true,
+      "**/out": true,
+      "**/.turbo": true,
+      "**/*.test.ts": false
+    },
+    "explorer.compactFolders": false,
+    "explorer.sortOrder": "foldersNestsFiles",
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.expand": false,
+    "explorer.fileNesting.patterns": {
+      "*.ts": "${capture}.test.ts, ${capture}.testkit.ts, ${capture}.integration.test.ts",
+      "*.tsx": "${capture}.test.tsx",
+      "package.json": "package-lock.json, pnpm-lock.yaml, pnpm-workspace.yaml, bun.lock, .npmrc, turbo.json, tsconfig*.json",
+      "AGENTS.md": "CLAUDE.md, CLAUDE.local.md",
+      ".gitignore": ".gitattributes, .editorconfig, .prettierrc*, .oxlintrc*"
+    },
+    "workbench.tree.indent": 14,
+    "workbench.tree.renderIndentGuides": "always",
+    "workbench.editor.highlightModifiedTabs": true,
+    "workbench.editor.wrapTabs": true,
+    "breadcrumbs.enabled": true,
+    // Source Control shows only our repo. The reference clones are read-only, never committed.
+    "git.autoRepositoryDetection": "subFolders",
+    "git.repositoryScanMaxDepth": 0,
+    // This is a TypeScript project. Without this, the Java/Gradle extensions import T3's
+    // Android modules and drop .gradle build caches into reference/t3code.
+    "java.import.gradle.enabled": false,
+    "java.import.maven.enabled": false,
+    "java.import.exclude": ["**/reference/**"],
+    "gradle.autoDetect": "off"
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        // Starts with the workspace (VS Code asks once to allow automatic tasks) and keeps
+        // reference/ on the newest T3 nightly and the original author's head: updates now, then every hour.
+        "label": "References: keep up to date",
+        "type": "shell",
+        "command": "node",
+        "args": ["${workspaceFolder:t3-native-vscode (our fork)}/scripts/references.mjs", "--watch=60"],
+        "isBackground": true,
+        "runOptions": { "runOn": "folderOpen", "instanceLimit": 1 },
+        "presentation": { "reveal": "never", "panel": "dedicated" },
+        "problemMatcher": []
+      },
+      {
+        "label": "References: update now",
+        "type": "shell",
+        "command": "node",
+        "args": ["${workspaceFolder:t3-native-vscode (our fork)}/scripts/references.mjs", "--yes"],
+        "presentation": { "reveal": "always", "panel": "dedicated" },
+        "problemMatcher": []
+      }
+    ]
+  },
+  "extensions": {
+    "recommendations": ["dbaeumer.vscode-eslint", "esbenp.prettier-vscode"]
+  }
+}
