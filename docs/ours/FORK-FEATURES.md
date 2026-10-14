@@ -121,42 +121,6 @@ A chat opens inside the T3 VSCode sidebar view, like the Claude Code and Codex e
 - Files: src/host/ours/layout.ts, src/host/ours/layoutRoute.ts (the routing rule, tested), src/webview/ours/layout.ts; src/webview/ours/drop.ts now checks the surface per event, so drops work in the sidebar chat.
 - Live test: click a session in the sidebar: the chat shows in the sidebar, send a message. Shift-drag README.md onto it: a reference shows. Click the pop-out icon with text in the composer: an editor tab opens with that text, the sidebar shows the list. Set the setting to `editor`: a session click opens a tab again.
 
-## Q9 read: Reading in VS Code marks the chat read in T3
-
-A chat you read in VS Code no longer shows as unread in the T3 app or on your phone.
-
-- While a chat (an editor tab, or the sidebar showing a chat, not the sessions list) has keyboard focus, the extension sends T3's `thread.visit` with the thread's `updatedAt`, the same watermark T3's own chat view sends. Focus is the proof the chat is on screen: VS Code tells a webview nothing about visibility. A chat that is only visible next to the editor is marked read once you click into it.
-- Only when the server reports `capabilities.threadVisitedTracking === true` (the owner's nightly does); otherwise nothing is sent and nothing shows.
-- One visit per `updatedAt`. While a turn streams, at most one visit per 10 s (T3's own throttle), trailing, so the last one carries the newest state; a finished run is marked at once. Opening another chat and coming back sends again, so a chat marked unread on the phone can be read again from VS Code.
-- Settings and commands: none. A failed visit writes one line to the output channel "T3 VSCode (fork)".
-- How: src/webview/ours/visit.ts reports the shown thread on every state push, on focus and on blur (request `visitShowing`); src/host/ours/visit.ts checks it is the view's own active thread, takes `updatedAt` from the host state and dispatches through his `client.dispatch`. A visit does not bump `updatedAt` (T3 ProjectionStore), so it never triggers another. No line of his changed.
-- Files: src/host/ours/visit.ts, src/host/ours/visit.test.ts (dedupe, throttle, capability), src/webview/ours/visit.ts.
-- Live test: let an agent finish in a chat while VS Code is in the background, see the unread dot in the T3 app, click into that chat in VS Code: the dot goes away in the T3 app. Then watch a run finish while the chat is focused and switch to the T3 app within a few seconds: no unread dot appears.
-
-## Q19 threadActions: Snooze, regenerate title, mark unread, copy branch or ID, stop a subagent
-
-The thread menu (right-click a session, or the chevron in a chat header) gets the T3 app's missing thread actions, below his own rows and above Delete.
-
-- Snooze...: a QuickPick of T3's own presets (in 1 hour, in 3 hours, this evening, tomorrow, next week), then `thread.snooze`; when the chat is already snoozed, "Wake thread" (`thread.unsnooze`) comes first. Hidden when the server lacks `threadSnooze` or the chat is archived.
-- Regenerate title: `thread.metadata.update` with `regenerateTitle`; the new title arrives through the normal thread list. Hidden without `threadTitleRegeneration`.
-- Mark unread: `thread.mark-unread`. Hidden without `threadVisitedTracking`. The effect shows in the T3 app; this extension shows no unread marks and never sends `thread.visit`.
-- Copy branch (only when the chat has one) and Copy thread ID: to the clipboard, with a status bar note.
-- Stop subagent: on a subagent chat that is working (its own header menu, or its row under "Subagents" in Sessions). As T3: a provider-native subagent stops through `subagent.stop` on its parent run, any other by interrupting its own run.
-- Command "T3 VSCode: More Thread Actions" (`t3-vscode.ours.threadActions.more`, also in the T3 view's "..." menu): the same entries as a QuickPick for the focused chat. His "Thread Actions" QuickPick is unchanged.
-- How: src/webview/ours/threadActions.ts notes which thread the menu opens for (capture listeners on the row and the header button), watches for his `.thread-actions-popup` portal and inserts the rows; the host (src/host/ours/threadActions.ts, requests `threadActions.list` and `threadActions.run`) decides which apply from the server flags (src/host/ours/threadActionsList.ts, tested) and runs them. No line of his changed.
-- Settings: none.
-- Live test: right-click a chat in Sessions, Snooze..., "In 1 hour": the chat moves to Snoozed in the T3 app; right-click again, Snooze...: "Wake thread" is offered. Regenerate title on a chat: its title changes after a few seconds. Copy thread ID and paste it somewhere.
-
-## Q20 contextMeter: Context left, and Implement on a plan
-
-- Capability check: the vendored nightly contracts carry `contextUsage` on the provider thread (vendor/contracts/src/orchestrationV2.ts:981) and a live `tokenUsage` on each provider turn (:1090), so both halves are built.
-- Context chip: next to the send button a small chip shows how full the chat's context window is, for example "62% context" (or "45k tokens" when the provider gives no window size); hover shows used and total tokens. From 80% it is drawn stronger. In a narrow composer (the sidebar) only the number shows. It follows T3's web app: the newest live report on a provider turn first, else the active provider thread's `contextUsage`. No report, no chip.
-- Plan cards: each "Proposed plan" card gets "Implement" (switches the chat to default mode and sends "PLEASE IMPLEMENT THIS PLAN:" plus the plan, as T3's web app does) and "Open as markdown" (the plan in an untitled markdown editor). The host looks the plan up by its transcript row key; the webview sends no plan text. While the plan still streams or the chat is working, Implement only warns, as T3 offers it only for a finished plan. With text, references or attachments in the composer, Implement also only warns "Send or clear the text in the composer first": his send clears the composer draft and releases its attachments.
-- Setting `t3-vscode.ours.contextMeter.show` (section "Fork: Context Meter", default on). T3's own meter switch `contextWindowMeterEnabled` is a browser-local client setting the extension cannot read, so this one replaces it.
-- How: no line of his changed. The host reads the thread projection from HostState's private `threads` map by name (a guarded shortcut; if upstream renames it the chip hides and the fork log says so once). The webview adds the chip and the buttons through the DOM (a MutationObserver, his `.composer-send-controls`, `.plan-card > header` and `data-search-row`).
-- Files: src/host/ours/contextMeter.ts (requests contextUsage, planImplement, planOpen), src/host/ours/contextUsage.ts (the derivation, tested), src/webview/ours/contextMeter.ts.
-- Live test: open a long chat: the chip shows a percentage that rises after the next turn. Switch a chat to plan mode, ask for a plan, click "Implement" on the card: the chat leaves plan mode and starts implementing. "Open as markdown" opens the plan in an editor.
-
 ## Q1b sidebar: Sidebar chat polish (and restore after reload)
 
 The sidebar chat now behaves like a real chat panel.
@@ -232,6 +196,18 @@ Thread Actions and Copy Link act on the chat in front of you (the focused chat t
 - His `t3-vscode.threadActions` read the sidebar thread; one line in src/extension.ts now reads `snapshot(registry.focusedViewId)` (no wrapper reaches a local inside his command).
 - Live test: open two chats in editor tabs, focus the second, run Thread Actions from the palette, Rename: the second is renamed. Stop the T3 server: Copy Link, Thread Actions and Open Web UI leave the palette.
 
+## Q9 read: Reading in VS Code marks the chat read in T3
+
+A chat you read in VS Code no longer shows as unread in the T3 app or on your phone.
+
+- While a chat (an editor tab, or the sidebar showing a chat, not the sessions list) has keyboard focus, the extension sends T3's `thread.visit` with the thread's `updatedAt`, the same watermark T3's own chat view sends. Focus is the proof the chat is on screen: VS Code tells a webview nothing about visibility. A chat that is only visible next to the editor is marked read once you click into it.
+- Only when the server reports `capabilities.threadVisitedTracking === true` (the owner's nightly does); otherwise nothing is sent and nothing shows.
+- One visit per `updatedAt`. While a turn streams, at most one visit per 10 s (T3's own throttle), trailing, so the last one carries the newest state; a finished run is marked at once. Opening another chat and coming back sends again, so a chat marked unread on the phone can be read again from VS Code.
+- Settings and commands: none. A failed visit writes one line to the output channel "T3 VSCode (fork)".
+- How: src/webview/ours/visit.ts reports the shown thread on every state push, on focus and on blur (request `visitShowing`); src/host/ours/visit.ts checks it is the view's own active thread, takes `updatedAt` from the host state and dispatches through his `client.dispatch`. A visit does not bump `updatedAt` (T3 ProjectionStore), so it never triggers another. No line of his changed.
+- Files: src/host/ours/visit.ts, src/host/ours/visit.test.ts (dedupe, throttle, capability), src/webview/ours/visit.ts.
+- Live test: let an agent finish in a chat while VS Code is in the background, see the unread dot in the T3 app, click into that chat in VS Code: the dot goes away in the T3 app. Then watch a run finish while the chat is focused and switch to the T3 app within a few seconds: no unread dot appears.
+
 ## Q10 latest: Latest button always there, and the agent looks alive
 
 When you scroll up in a chat, a "Latest" button sits at the bottom right and jumps back to the newest message; a pulsing dot on it says the agent is still working. His own button showed only with two or more prompts and the message navigator on.
@@ -268,6 +244,19 @@ When you scroll up in a chat, a "Latest" button sits at the bottom right and jum
 - How: src/webview/ours/planMode.ts places the button with a MutationObserver into his `.composer-traits` and calls his `setModes` through the bridge (never `run`); it reads the picked suggestion label from his `#composer-suggestions` markup in capture listeners, so his handler still clears the token. src/host/ours/planMode.ts wraps `hostState.composerSuggestions` to add the two items (src/host/ours/planModeSuggestions.ts, tested) only for views that reported the toggle as allowed, and serves the first state (`planModeState`, not his `getState`, which would mark the view ready too early). No line of his changed.
 - Merge risk: the slash pick depends on his ComposerSuggestions markup (`#composer-suggestions`, `role="option"`, `aria-selected`, `.suggestion-label`) and on his Enter/Tab rule in Composer.tsx onKeyDown; his compact-controls measure does not count the button.
 - Live test: with the setting off, a Build chat shows no button and no `/plan`; a chat set to Plan in the T3 app shows Plan, and a click turns it to Build (then the button hides). Turn the setting on: the button shows at once; click it: Plan, and the T3 app shows plan mode. Type `/def`, press Enter: the token goes and the mode is default. In a new chat before the first message, the button sets the draft's mode.
+
+## Q14 secrets: Secret requests show a card
+
+When an agent asks for a secret (T3's `request_secret`, a `secret_request` turn item), the chat shows a card above the composer instead of waiting with nothing on screen.
+
+- The card names what is asked (label and reason) and has "Enter secret..." and "Decline". "Enter secret..." opens a VS Code password box; the value goes straight from there to T3 (`secrets.answerRequest`), never through the chat webview or a log. T3 stores it and the agent only learns the status. Decline is one click, as in T3.
+- The card leaves by itself once T3 reports the request saved, declined or ended. A failure (already answered, the agent stopped) shows T3's own message as an error toast.
+- A request inherited from another thread (a fork) gets no card: T3 answers it only in the thread that asked.
+- Capability: the paired VS Code client may call the method. The nightly server requires `orchestration:operate` for it (apps/server/src/auth/RpcAuthorization.ts), and a pairing token gets the standard client scopes, which include it (the same scope his message sending uses).
+- Settings and commands: none.
+- How: no line of his changed. The host reads his private `run` and `requireSession` of T3Client through element access (still type-checked). The webview card is plain DOM, placed as the first child of his `.composer-column` and put back by an observer when his Composer remounts.
+- Files: src/host/ours/secrets.ts (request "secretAnswer", password box, RPC), src/webview/ours/secrets.ts (the card), src/shared/ours/secrets.ts (which requests the chat may answer, tested).
+- Live test: in a chat, ask the agent to request a secret with T3's request_secret tool; the card shows; click "Enter secret...", type a value, Enter: the card goes away and the agent goes on. Ask again and click "Decline". Editor tab: set `openThreadsIn` to `editor`, close the thread's tab, let that thread reach a pending secret request, then open it from the list: the card shows with no other activity.
 
 ## Q15 fileLinks: File links open in the right place
 
@@ -308,6 +297,30 @@ See every file a turn changed in one view, jump from a diff to the real file, or
 - Files: src/webview/ours/rowCopy.ts, src/shared/ours/rowTime.ts, src/shared/ours/rowTime.test.ts.
 - Live test: hover a message you sent and see the time; hover the Assistant header of a finished answer and see Started and Finished, and of a run waiting on an approval and see only Started; expand a command, hover its output, click the copy button, paste into an editor.
 
+## Q19 threadActions: Snooze, regenerate title, mark unread, copy branch or ID, stop a subagent
+
+The thread menu (right-click a session, or the chevron in a chat header) gets the T3 app's missing thread actions, below his own rows and above Delete.
+
+- Snooze...: a QuickPick of T3's own presets (in 1 hour, in 3 hours, this evening, tomorrow, next week), then `thread.snooze`; when the chat is already snoozed, "Wake thread" (`thread.unsnooze`) comes first. Hidden when the server lacks `threadSnooze` or the chat is archived.
+- Regenerate title: `thread.metadata.update` with `regenerateTitle`; the new title arrives through the normal thread list. Hidden without `threadTitleRegeneration`.
+- Mark unread: `thread.mark-unread`. Hidden without `threadVisitedTracking`. The effect shows in the T3 app; this extension shows no unread marks and never sends `thread.visit`.
+- Copy branch (only when the chat has one) and Copy thread ID: to the clipboard, with a status bar note.
+- Stop subagent: on a subagent chat that is working (its own header menu, or its row under "Subagents" in Sessions). As T3: a provider-native subagent stops through `subagent.stop` on its parent run, any other by interrupting its own run.
+- Command "T3 VSCode: More Thread Actions" (`t3-vscode.ours.threadActions.more`, also in the T3 view's "..." menu): the same entries as a QuickPick for the focused chat. His "Thread Actions" QuickPick is unchanged.
+- How: src/webview/ours/threadActions.ts notes which thread the menu opens for (capture listeners on the row and the header button), watches for his `.thread-actions-popup` portal and inserts the rows; the host (src/host/ours/threadActions.ts, requests `threadActions.list` and `threadActions.run`) decides which apply from the server flags (src/host/ours/threadActionsList.ts, tested) and runs them. No line of his changed.
+- Settings: none.
+- Live test: right-click a chat in Sessions, Snooze..., "In 1 hour": the chat moves to Snoozed in the T3 app; right-click again, Snooze...: "Wake thread" is offered. Regenerate title on a chat: its title changes after a few seconds. Copy thread ID and paste it somewhere.
+
+## Q20 contextMeter: Context left, and Implement on a plan
+
+- Capability check: the vendored nightly contracts carry `contextUsage` on the provider thread (vendor/contracts/src/orchestrationV2.ts:981) and a live `tokenUsage` on each provider turn (:1090), so both halves are built.
+- Context chip: next to the send button a small chip shows how full the chat's context window is, for example "62% context" (or "45k tokens" when the provider gives no window size); hover shows used and total tokens. From 80% it is drawn stronger. In a narrow composer (the sidebar) only the number shows. It follows T3's web app: the newest live report on a provider turn first, else the active provider thread's `contextUsage`. No report, no chip.
+- Plan cards: each "Proposed plan" card gets "Implement" (switches the chat to default mode and sends "PLEASE IMPLEMENT THIS PLAN:" plus the plan, as T3's web app does) and "Open as markdown" (the plan in an untitled markdown editor). The host looks the plan up by its transcript row key; the webview sends no plan text. While the plan still streams or the chat is working, Implement only warns, as T3 offers it only for a finished plan. With text, references or attachments in the composer, Implement also only warns "Send or clear the text in the composer first": his send clears the composer draft and releases its attachments.
+- Setting `t3-vscode.ours.contextMeter.show` (section "Fork: Context Meter", default on). T3's own meter switch `contextWindowMeterEnabled` is a browser-local client setting the extension cannot read, so this one replaces it.
+- How: no line of his changed. The host reads the thread projection from HostState's private `threads` map by name (a guarded shortcut; if upstream renames it the chip hides and the fork log says so once). The webview adds the chip and the buttons through the DOM (a MutationObserver, his `.composer-send-controls`, `.plan-card > header` and `data-search-row`).
+- Files: src/host/ours/contextMeter.ts (requests contextUsage, planImplement, planOpen), src/host/ours/contextUsage.ts (the derivation, tested), src/webview/ours/contextMeter.ts.
+- Live test: open a long chat: the chip shows a percentage that rises after the next turn. Switch a chat to plan mode, ask for a plan, click "Implement" on the card: the chat leaves plan mode and starts implementing. "Open as markdown" opens the plan in an editor.
+
 ## Q21 shiftHint: Hold Shift to drop, shown over the composer
 
 - What: when a file dragged from the Explorer or a tab bounces off a chat because Shift was not held, a small note "Hold Shift to drop files here" shows over the composer box for 2 s, right where the drag was. The toast from I stays (at most once per 5 s); the note shows on every bounce.
@@ -315,16 +328,3 @@ See every file a turn changed in one view, jump from a diff to the real file, or
 - Settings and commands: none.
 - Files: src/webview/ours/shiftHint.ts (the note), one call in src/webview/ours/drop.ts where the bounce is detected.
 - Live test: drag README.md from the Explorer onto the chat without Shift: the note shows over the composer and disappears after 2 s. Drag again with Shift held: the reference lands.
-
-## Q14 secrets: Secret requests show a card
-
-When an agent asks for a secret (T3's `request_secret`, a `secret_request` turn item), the chat shows a card above the composer instead of waiting with nothing on screen.
-
-- The card names what is asked (label and reason) and has "Enter secret..." and "Decline". "Enter secret..." opens a VS Code password box; the value goes straight from there to T3 (`secrets.answerRequest`), never through the chat webview or a log. T3 stores it and the agent only learns the status. Decline is one click, as in T3.
-- The card leaves by itself once T3 reports the request saved, declined or ended. A failure (already answered, the agent stopped) shows T3's own message as an error toast.
-- A request inherited from another thread (a fork) gets no card: T3 answers it only in the thread that asked.
-- Capability: the paired VS Code client may call the method. The nightly server requires `orchestration:operate` for it (apps/server/src/auth/RpcAuthorization.ts), and a pairing token gets the standard client scopes, which include it (the same scope his message sending uses).
-- Settings and commands: none.
-- How: no line of his changed. The host reads his private `run` and `requireSession` of T3Client through element access (still type-checked). The webview card is plain DOM, placed as the first child of his `.composer-column` and put back by an observer when his Composer remounts.
-- Files: src/host/ours/secrets.ts (request "secretAnswer", password box, RPC), src/webview/ours/secrets.ts (the card), src/shared/ours/secrets.ts (which requests the chat may answer, tested).
-- Live test: in a chat, ask the agent to request a secret with T3's request_secret tool; the card shows; click "Enter secret...", type a value, Enter: the card goes away and the agent goes on. Ask again and click "Decline". Editor tab: set `openThreadsIn` to `editor`, close the thread's tab, let that thread reach a pending secret request, then open it from the list: the card shows with no other activity.

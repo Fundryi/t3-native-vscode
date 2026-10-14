@@ -258,7 +258,7 @@
         "command": "t3-vscode.ours.drop.copy",
         "key": "ctrl+c",
         "mac": "cmd+c",
-        "when": "filesExplorerFocus && foldersViewVisible && !inputFocus"
+        "when": "filesExplorerFocus && foldersViewVisible && !inputFocus && t3-vscode.ours.active"
       },
       {
         "command": "t3-vscode.insertReference",
