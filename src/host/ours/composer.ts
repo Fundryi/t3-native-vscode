@@ -24,7 +24,7 @@ export async function insertFile(deps: OursDeps, reference: FileReference, viewI
   deps.registry.postWhenReady(viewId, Events.insertReference, { draftKey, reference });
 }
 
-/** Into the focused chat; the sidebar has no composer, so then into a panel for its thread. */
+/** Into the focused chat; from the sidebar through createPanel (K layout keeps it in the sidebar, else a panel). */
 export async function insertText(deps: OursDeps, text: string): Promise<void> {
   const focused = deps.registry.focusedViewId;
   const viewId = focused === SIDEBAR_VIEW_ID ? await deps.provider.createPanel(SIDEBAR_VIEW_ID) : focused;

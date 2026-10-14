@@ -24,3 +24,5 @@ import "./composer";
 // H saveOnSend
 
 import "./drop";
+
+import "./layout";

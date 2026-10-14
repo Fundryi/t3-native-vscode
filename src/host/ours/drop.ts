@@ -97,7 +97,7 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
           const lines = parseDrop(await dataTransfer.get("text/uri-list")?.asString() ?? "", "");
           log.info(`Drop on the Drop files here view: ${lines.length} file(s).`);
           if (!lines.length) return;
-          // The sidebar has no composer: then the panel of its thread, as his insertReference does.
+          // The sidebar list has no composer: createPanel opens its thread (in the sidebar under K layout, else a panel).
           const focused = deps.registry.focusedViewId;
           await addDropped(deps, focused === SIDEBAR_VIEW_ID ? await deps.provider.createPanel(SIDEBAR_VIEW_ID) : focused, lines);
         } catch (cause) { log.error("Drop on the Drop files here view failed.", cause); }

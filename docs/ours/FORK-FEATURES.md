@@ -109,3 +109,14 @@ Three ways to put files into a chat: hold Shift while dragging them from the Exp
 - What: vendor/ carries T3's contracts, shared and client-runtime from the nightly `v0.0.46-nightly.20261014.3093` (107f6024ea47) instead of 0.0.45, on Effect 4.0.2. Threads that contain a `secret_request` turn item load again, and turn item types newer than the vendored copy are skipped instead of breaking the thread. How it was done and how to redo it: vendor/README.md; log entry: docs/UPSTREAM.md.
 - Settings and commands: none.
 - Live test: open a T3 thread in which an agent asked for a secret (a `secret_request` item) and check it loads; pair on Windows once with the `t3` launcher to check the shell fix.
+
+## K. Chat in the sidebar (layout)
+
+A chat opens inside the T3 VSCode sidebar view, like the Claude Code and Codex extensions, instead of in a big editor tab. Opening a file from the Explorer no longer covers the chat.
+
+- Setting `t3-vscode.ours.layout.openThreadsIn` (section "Fork: Layout"): `sidebar` (default) or `editor` (each chat in its own editor tab, as before). It applies at once.
+- With `sidebar`: a click on a session in the sidebar list, the "+" in the sidebar (a new thread), the toast "Open session", a deep link, the status bar item, "Add to prompt", the Shift-drag and the Ctrl+V of Explorer files all show the chat with its composer in the sidebar. A bar above it has "Sessions" (back to the list) and a pop-out icon that opens the chat in an editor tab with the unsent text and attachments; the sidebar then goes back to the list. His header (history, new chat, web UI, thread actions) stays.
+- While the sidebar counts as a chat, a click in it makes it the focused chat: inserts from the editor (his "Add selection" too) then go to the sidebar and switch it to the chat.
+- How: src/host/ours/layout.ts wraps his openSession, createPanel (from the sidebar and without a draft) and createNewPanel (from the sidebar) and re-adds the sidebar to his registry as a chat view. The "layout" event makes src/webview/ours/layout.ts set body[data-surface] to "panel" (his App picks ChatView from it on every render) and re-deliver the state. No line of his changed.
+- Files: src/host/ours/layout.ts, src/host/ours/layoutRoute.ts (the routing rule, tested), src/webview/ours/layout.ts; src/webview/ours/drop.ts now checks the surface per event, so drops work in the sidebar chat.
+- Live test: click a session in the sidebar: the chat shows in the sidebar, send a message. Shift-drag README.md onto it: a reference shows. Click the pop-out icon with text in the composer: an editor tab opens with that text, the sidebar shows the list. Set the setting to `editor`: a session click opens a tab again.

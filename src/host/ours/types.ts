@@ -12,6 +12,7 @@ export interface OursProvider {
   openSession(threadId: string): Promise<string>;
   insertReference(reference: FileReference): Promise<void>;
   createPanel(sourceViewId?: string, transfer?: DraftTransfer): Promise<string>;
+  createNewPanel(sourceViewId?: string): Promise<string>;
   /** A method, not readonly: C wraps it (see docs/ours/PORT-MAP.md 0.2). */
   resolveWebviewView(webviewView: vscode.WebviewView): void;
 }

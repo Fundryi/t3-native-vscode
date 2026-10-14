@@ -315,6 +315,20 @@
     },
     "configuration": [
       {
+        "title": "Fork: Layout",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.layout.openThreadsIn": {
+            "type": "string",
+            "enum": ["sidebar", "editor"],
+            "enumDescriptions": ["Show the chat inside the T3 VSCode sidebar view, like the Claude Code and Codex extensions.", "Open each chat in its own editor tab."],
+            "default": "sidebar",
+            "scope": "window",
+            "description": "Where a chat opens when you pick a session, start a new chat from the sidebar, or follow a notification, link or status bar item. The sidebar chat has a button to open it in an editor tab."
+          }
+        }
+      },
+      {
         "title": "Fork: Add to prompt",
         "order": 10,
         "properties": {

@@ -1,5 +1,5 @@
 /**
- * I drop, webview side (chat panels only; the sidebar has no composer). VS Code lets a drag from its Explorer or a tab
+ * I drop, webview side (chat views only: a panel, or the sidebar while K layout shows a chat there). VS Code lets a drag from its Explorer or a tab
  * into a webview only while Shift is held. Window capture listeners claim those drags before his composer handler;
  * OS file drops (type Files without VS Code's types) stay with his composer. The host parses the strings (dropParse.ts).
  * A paste without text and without files asks the host for the paths of the last Explorer Ctrl+C (pasteCopied).
@@ -15,22 +15,24 @@ const fromCode = (types: ReadonlyArray<string>) => CODE_TYPES.some((type) => typ
 // text/plain drive paths are the trail when VS Code's own types do not reach the webview; never with OS files.
 const mayClaim = (types: ReadonlyArray<string>) => fromCode(types) || (types.includes("text/plain") && !types.includes("files"));
 const report = (cause: unknown) => console.error("T3 VSCode (fork): drop failed", cause);
+// Read on every event: K layout flips the sidebar between its list ("sidebar") and a chat.
+const noChat = () => document.body.dataset.surface === "sidebar";
 
-if (document.body.dataset.surface !== "sidebar") {
+{
   let internal = false; // a drag that started in this document (composer text, queue reorder) is never ours
   let entered = 0;
   let hinted = 0;
   window.addEventListener("dragstart", () => { internal = true; }, true);
   window.addEventListener("dragend", () => { internal = false; }, true);
   window.addEventListener("dragover", (event) => {
-    if (!event.isTrusted || internal || !event.dataTransfer || !mayClaim(typesOf(event))) return;
+    if (noChat() || !event.isTrusted || internal || !event.dataTransfer || !mayClaim(typesOf(event))) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
   }, true);
   window.addEventListener("drop", (event) => {
     const data = event.dataTransfer;
     entered = 0;
-    if (!event.isTrusted || internal || !data) return;
+    if (noChat() || !event.isTrusted || internal || !data) return;
     const types = typesOf(event);
     // text/uri-list holds only the first item in Chromium; VS Code's own list and text/plain hold all of them.
     const text = data.getData("text/plain") || data.getData("text/uri-list");
@@ -41,7 +43,7 @@ if (document.body.dataset.surface !== "sidebar") {
   }, true);
   // A VS Code drag without Shift bounces off the webview: in and out within 500 ms. Hint at most once per 5 s.
   window.addEventListener("dragenter", (event) => {
-    if (event.isTrusted && !internal && HINT_TYPES.some((type) => typesOf(event).includes(type))) entered = Date.now();
+    if (!noChat() && event.isTrusted && !internal && HINT_TYPES.some((type) => typesOf(event).includes(type))) entered = Date.now();
   }, true);
   window.addEventListener("dragleave", (event) => {
     if (event.relatedTarget) return; // moved to another element of this page: the drag goes on
@@ -52,7 +54,7 @@ if (document.body.dataset.surface !== "sidebar") {
   // No isTrusted check: Ctrl+V reaches a webview through VS Code's paste plumbing, and a fake paste only re-adds copied paths.
   window.addEventListener("paste", (event) => {
     const data = event.clipboardData;
-    if (!data || data.files.length || data.getData("text/plain")) return; // his handlers paste text and images
+    if (noChat() || !data || data.files.length || data.getData("text/plain")) return; // his handlers paste text and images
     event.preventDefault();
     void oursRequest("pasteCopied").catch(report);
   }, true);

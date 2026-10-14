@@ -22,4 +22,4 @@ export { activateSaveOnSend as saveOnSend } from "./saveOnSend.js";
 
 export { activateDrop as drop } from "./drop.js";
 
-export {};
+export { activateLayout as layout } from "./layout.js";
