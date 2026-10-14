@@ -19,6 +19,7 @@ import type { ProviderModelPreferences } from "./modelPreferences.js";
 import type { ScheduledTasksState } from "./scheduledTasks.js";
 
 export const Methods = {
+  ours: "ours",
   refreshScheduledTasks: "refreshScheduledTasks", saveScheduledTask: "saveScheduledTask", setScheduledTaskEnabled: "setScheduledTaskEnabled", runScheduledTask: "runScheduledTask", editScheduledTask: "editScheduledTask",
   searchSession: "searchSession", cancelSessionSearch: "cancelSessionSearch", revealSessionMatch: "revealSessionMatch",
   sessionSearchPreviews: "sessionSearchPreviews", setSearchPreferences: "setSearchPreferences",

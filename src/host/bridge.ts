@@ -4,6 +4,7 @@ import { parseSearchFilters } from "../shared/sessionSearch.js";
 import type * as vscode from "vscode";
 import { Events, isObject, paramsObject, stringParam, validateRpcMessage, type BridgeEvent, type HostStateSnapshot, type RpcResult } from "../shared/bridge.js";
 import { SIDEBAR_VIEW_ID, type HostState } from "./hostState.js";
+import { oursRpc } from "./ours/rpc.js";
 import { resolveChatFileLink } from "./fileLinks.js";
 import type { TurnDiff, TurnDiffFile } from "./turnDiff.js";
 import type { ReviewDiffFileContentsResult } from "@t3tools/contracts";
@@ -89,6 +90,7 @@ export class BridgeHandler {
       const params = message.params === undefined ? {} : paramsObject(message.params);
       const id = () => stringParam(params, "threadId");
       switch (message.method) {
+        case "ours": return { id: message.id, result: await oursRpc(params, viewId) };
         case "searchSession": {
           if (typeof params.query !== "string" || typeof params.caseSensitive !== "boolean" || typeof params.wholeWord !== "boolean" || !["all", "messages"].includes(String(params.scope))) throw new Error("Invalid session search options.");
           this.hostState.searchSession(id(), { query: params.query, caseSensitive: params.caseSensitive, wholeWord: params.wholeWord, scope: params.scope as "all" | "messages", ...parseSearchFilters(params) }, viewId); break;

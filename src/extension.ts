@@ -9,6 +9,7 @@ import { ComposerDraftStore } from "./host/composerDraftStore.js";
 import { basename, resolve } from "node:path";
 import * as vscode from "vscode";
 import { BridgeHandler, WebviewRegistry } from "./host/bridge.js";
+import { activateOurs } from "./host/ours/index.js";
 import { HostState, SIDEBAR_VIEW_ID } from "./host/hostState.js";
 import { resolveT3Home } from "./host/serverDiscovery.js";
 import { SecretCredentialStore } from "./host/sessionStore.js";
@@ -136,6 +137,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     }),
   );
+  context.subscriptions.push(activateOurs(context, { client, hostState, registry, provider, notifications }));
 
   await hostState.start();
 }

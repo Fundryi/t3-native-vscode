@@ -1,11 +1,13 @@
 /** Every contributed command must be registered, or it appears in the palette and fails when chosen. */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 
 const root = new URL("../", import.meta.url);
 const manifest = JSON.parse(await readFile(new URL("package.json", root), "utf8"));
-const source = await readFile(new URL("src/extension.ts", root), "utf8");
+// The fork registers its commands under src/host/ours, with double-quoted literal ids (see src/host/ours/index.ts).
+const ours = (await readdir(new URL("src/host/ours/", root), { recursive: true })).filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts")).map((file) => `src/host/ours/${file.replaceAll("\\", "/")}`);
+const source = (await Promise.all(["src/extension.ts", ...ours].map((file) => readFile(new URL(file, root), "utf8")))).join("\n");
 
 test("Contributed commands are registered, including the usage refresh", () => {
   const declared = manifest.contributes.commands.map((command) => command.command);

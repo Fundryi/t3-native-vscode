@@ -17,7 +17,7 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": ["onStartupFinished", "onUri"],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -124,6 +124,18 @@
       }
     ],
     "menus": {
+      "explorer/context": [
+      ],
+      "editor/title": [
+      ],
+      "editor/title/context": [
+      ],
+      "terminal/context": [
+      ],
+      "scm/title": [
+      ],
+      "view/item/context": [
+      ],
       "commandPalette": [
         {
           "command": "t3-vscode.newThread",
@@ -303,7 +315,7 @@
     "typecheck": "tsc --noEmit",
     "vscode:prepublish": "pnpm run build && node scripts/generate-notices.mjs",
     "package": "node scripts/package-vsix.mjs",
-    "test": "tsx --test src/host/*.test.ts src/shared/*.test.ts scripts/*.test.mjs"
+    "test": "tsx --test src/host/*.test.ts src/shared/*.test.ts scripts/*.test.mjs \"src/host/ours/**/*.test.ts\" \"src/shared/ours/**/*.test.ts\""
   },
   "dependencies": {
     "@legendapp/list": "3.3.5",
