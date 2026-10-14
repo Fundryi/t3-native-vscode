@@ -58,7 +58,7 @@ export { activateDiffs as diffs } from "./diffs.js";
 
 export { activateVisit as read } from "./visit.js";
 
-// Q14 secrets
+export { activateSecrets as secrets } from "./secrets.js";
 
 export { activateThreadActions as threadActions } from "./threadActions.js";
 

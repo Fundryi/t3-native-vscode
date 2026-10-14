@@ -61,7 +61,7 @@ import "./shiftHint";
 
 import "./visit";
 
-// Q14 secrets
+import "./secrets";
 
 import "./threadActions";
 

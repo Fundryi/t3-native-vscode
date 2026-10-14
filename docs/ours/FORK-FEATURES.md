@@ -315,3 +315,16 @@ See every file a turn changed in one view, jump from a diff to the real file, or
 - Settings and commands: none.
 - Files: src/webview/ours/shiftHint.ts (the note), one call in src/webview/ours/drop.ts where the bounce is detected.
 - Live test: drag README.md from the Explorer onto the chat without Shift: the note shows over the composer and disappears after 2 s. Drag again with Shift held: the reference lands.
+
+## Q14 secrets: Secret requests show a card
+
+When an agent asks for a secret (T3's `request_secret`, a `secret_request` turn item), the chat shows a card above the composer instead of waiting with nothing on screen.
+
+- The card names what is asked (label and reason) and has "Enter secret..." and "Decline". "Enter secret..." opens a VS Code password box; the value goes straight from there to T3 (`secrets.answerRequest`), never through the chat webview or a log. T3 stores it and the agent only learns the status. Decline is one click, as in T3.
+- The card leaves by itself once T3 reports the request saved, declined or ended. A failure (already answered, the agent stopped) shows T3's own message as an error toast.
+- A request inherited from another thread (a fork) gets no card: T3 answers it only in the thread that asked.
+- Capability: the paired VS Code client may call the method. The nightly server requires `orchestration:operate` for it (apps/server/src/auth/RpcAuthorization.ts), and a pairing token gets the standard client scopes, which include it (the same scope his message sending uses).
+- Settings and commands: none.
+- How: no line of his changed. The host reads his private `run` and `requireSession` of T3Client through element access (still type-checked). The webview card is plain DOM, placed as the first child of his `.composer-column` and put back by an observer when his Composer remounts.
+- Files: src/host/ours/secrets.ts (request "secretAnswer", password box, RPC), src/webview/ours/secrets.ts (the card), src/shared/ours/secrets.ts (which requests the chat may answer, tested).
+- Live test: in a chat, ask the agent to request a secret with T3's request_secret tool; the card shows; click "Enter secret...", type a value, Enter: the card goes away and the agent goes on. Ask again and click "Decline". Editor tab: set `openThreadsIn` to `editor`, close the thread's tab, let that thread reach a pending secret request, then open it from the list: the card shows with no other activity.
