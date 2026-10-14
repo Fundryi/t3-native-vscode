@@ -23,4 +23,4 @@ import "./composer";
 
 // H saveOnSend
 
-// I drop
+import "./drop";

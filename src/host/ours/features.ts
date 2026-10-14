@@ -4,22 +4,22 @@
  * Keep the blank lines between slots: they let nine branches merge without conflicts.
  */
 
-// A mcp
+export { activateMcp as mcp } from "./mcp/index.js";
 
-// B approvals
+export { activateApprovals as approvals } from "./approvals.js";
 
-// C statusbar
+export { activateStatusbar as statusbar } from "./statusbar.js";
 
-// D prompt
+export { activatePrompt as prompt } from "./prompt.js";
 
-// E tasks
+export { activateTasks as tasks } from "./tasks.js";
 
-// F desktop
+export { activateDesktop as desktop } from "./desktop.js";
 
-// G links
+export { activateLinks as links } from "./links.js";
 
-// H saveOnSend
+export { activateSaveOnSend as saveOnSend } from "./saveOnSend.js";
 
-// I drop
+export { activateDrop as drop } from "./drop.js";
 
 export {};

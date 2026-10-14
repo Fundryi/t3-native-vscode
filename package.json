@@ -34,10 +34,84 @@
           "type": "webview",
           "id": "t3.webview",
           "name": "T3 VSCode"
+        },
+        {
+          "id": "t3-vscode.ours.drop.view",
+          "name": "Drop files here"
         }
       ]
     },
     "commands": [
+      {
+        "command": "t3-vscode.ours.mcp.setup",
+        "title": "Set Up the VS Code Context Server",
+        "category": "T3 VSCode",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "t3-vscode.ours.mcp.addClaude",
+        "title": "Add the VS Code Context Server to Claude Code",
+        "category": "T3 VSCode",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "t3-vscode.ours.mcp.addCodex",
+        "title": "Add the VS Code Context Server to Codex",
+        "category": "T3 VSCode",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "t3-vscode.ours.mcp.nudge",
+        "title": "Ask Once About the VS Code Context Server",
+        "category": "T3 VSCode"
+      },
+      {
+        "command": "t3-vscode.ours.prompt.addFiles",
+        "title": "Add to T3 Prompt",
+        "category": "T3 VSCode",
+        "icon": "$(add)"
+      },
+      {
+        "command": "t3-vscode.ours.prompt.addTerminalSelection",
+        "title": "Add Terminal Selection to T3 Prompt",
+        "category": "T3 VSCode",
+        "icon": "$(terminal)"
+      },
+      {
+        "command": "t3-vscode.ours.prompt.addLastCommand",
+        "title": "Add Last Command to T3 Prompt",
+        "category": "T3 VSCode",
+        "icon": "$(history)"
+      },
+      {
+        "command": "t3-vscode.ours.prompt.fix",
+        "title": "Fix with T3",
+        "category": "T3 VSCode",
+        "icon": "$(lightbulb)"
+      },
+      {
+        "command": "t3-vscode.ours.prompt.reviewChanges",
+        "title": "Review Changes with T3",
+        "category": "T3 VSCode",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "t3-vscode.ours.desktop.open",
+        "title": "Open This Thread in the T3 App",
+        "category": "T3 VSCode",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "t3-vscode.ours.links.copy",
+        "title": "Copy Link to This Thread",
+        "category": "T3 VSCode",
+        "icon": "$(link)"
+      },
+      {
+        "command": "t3-vscode.ours.statusbar.open",
+        "title": "Open the Session That Needs You",
+        "category": "T3 VSCode"
+      },
       {
         "command": "t3-vscode.openInTab",
         "title": "Open New Chat in Editor Tab",
@@ -125,18 +199,57 @@
     ],
     "menus": {
       "explorer/context": [
+        {
+          "command": "t3-vscode.ours.prompt.addFiles",
+          "group": "t3ours"
+        }
       ],
       "editor/title": [
+        {
+          "command": "t3-vscode.ours.desktop.open",
+          "when": "activeWebviewPanelId == 't3Panel'",
+          "group": "navigation"
+        }
       ],
       "editor/title/context": [
+        {
+          "command": "t3-vscode.ours.prompt.addFiles",
+          "when": "resourceScheme == file",
+          "group": "t3ours"
+        }
       ],
       "terminal/context": [
+        {
+          "command": "t3-vscode.ours.prompt.addTerminalSelection",
+          "when": "terminalTextSelected",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.ours.prompt.addLastCommand",
+          "group": "t3ours"
+        }
       ],
       "scm/title": [
+        {
+          "command": "t3-vscode.ours.prompt.reviewChanges",
+          "when": "scmProvider == git",
+          "group": "t3ours"
+        }
       ],
-      "view/item/context": [
-      ],
+      "view/item/context": [],
       "commandPalette": [
+        {
+          "command": "t3-vscode.ours.mcp.nudge",
+          "when": "false"
+        },
+        {
+          "command": "t3-vscode.ours.prompt.fix",
+          "when": "false"
+        },
+        {
+          "command": "t3-vscode.ours.statusbar.open",
+          "when": "false"
+        },
         {
           "command": "t3-vscode.newThread",
           "when": "false"
@@ -150,6 +263,16 @@
         }
       ],
       "view/title": [
+        {
+          "command": "t3-vscode.ours.desktop.open",
+          "when": "view == t3.webview",
+          "group": "navigation@5"
+        },
+        {
+          "command": "t3-vscode.ours.links.copy",
+          "when": "view == t3.webview",
+          "group": "1_thread"
+        },
         {
           "command": "t3-vscode.threadActions",
           "when": "view == t3.webview",
@@ -173,6 +296,30 @@
       ]
     },
     "configuration": [
+      {
+        "title": "Fork: Add to prompt",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.prompt.todoLens": {
+            "type": "boolean",
+            "default": true,
+            "scope": "window",
+            "description": "Show \"Implement with T3\" above TODO and FIXME comments."
+          }
+        }
+      },
+      {
+        "title": "Fork: Save on send",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.saveOnSend.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "window",
+            "description": "Save all dirty files (untitled ones excepted) before T3 sends a prompt or a queued-message edit, so the agent reads what the editors show."
+          }
+        }
+      },
       {
         "title": "Appearance",
         "order": 1,
@@ -302,7 +449,33 @@
           "fontCharacter": "\\E004"
         }
       }
-    }
+    },
+    "taskDefinitions": [
+      {
+        "type": "t3",
+        "required": [
+          "script"
+        ],
+        "properties": {
+          "script": {
+            "type": "string",
+            "description": "Script name in t3.json"
+          }
+        }
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "t3.json",
+        "url": "https://t3.codes/schema/t3.json"
+      }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "t3-vscode.ours.mcp",
+        "label": "T3 VS Code context"
+      }
+    ]
   },
   "scripts": {
     "build": "pnpm run build:extension && pnpm run build:webview",
