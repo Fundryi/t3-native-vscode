@@ -39,3 +39,6 @@ registerOursEvent("addAttachments", (data) => {
   const { length } = readDraft(draftKey).text;
   focusComposer(draftKey, addDraftAttachments(draftKey, attachments, readDraftSelection(draftKey) ?? { start: length, end: length }));
 });
+
+// Q2 keys: the host revealed this chat for Ctrl+Alt+C, New Chat or Switch Chat; put the caret in its composer.
+registerOursEvent("focus", (data) => { if (typeof data.draftKey === "string") focusComposer(data.draftKey); });

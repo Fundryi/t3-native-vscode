@@ -5,6 +5,7 @@
  * would count my own edits as the agent's changes.
  */
 import * as vscode from "vscode";
+import { toastWithLogs } from "./logs.js";
 import { log } from "./log.js";
 import type { OursFeature } from "./types.js";
 import { wrap } from "./wrap.js";
@@ -22,9 +23,7 @@ async function saveDirty(): Promise<void> {
 }
 
 function warn(reason: string): void {
-  log.error(`Save on send: ${reason} The prompt was sent anyway.`);
-  // Not awaited: the toast resolves only when dismissed and would hold the send.
-  void vscode.window.showWarningMessage(`T3: could not save all files before sending (${reason}). The prompt was sent anyway.`);
+  toastWithLogs("warning", `T3: could not save all files before sending (${reason}). The prompt was sent anyway.`);
 }
 
 export const activateSaveOnSend: OursFeature = ({ hostState }) => {

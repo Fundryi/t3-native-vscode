@@ -4,9 +4,11 @@
  * approvable requests out of his list and toast them ourselves; user_input and the rest keep his "Open session" toast.
  */
 import * as vscode from "vscode";
+import { toastWithLogs } from "./logs.js";
 import { randomUUID } from "node:crypto";
 import type { ThreadSummary } from "../../shared/bridge.js";
 import { approvalToast, isAlreadyAnswered, isApprovable, redact } from "./approvalText.js";
+import { isReading } from "./finished.js";
 import { log } from "./log.js";
 import type { OursDeps } from "./types.js";
 import { wrap } from "./wrap.js";
@@ -16,7 +18,7 @@ export function activateApprovals(deps: OursDeps): vscode.Disposable {
   const show = async (threadId: string) => {
     if (!deps.hostState.snapshot().threads.some((item) => item.id === threadId)) return;
     try { await deps.provider.openSession(threadId); }
-    catch (cause) { await vscode.window.showErrorMessage(String(cause)); }
+    catch (cause) { toastWithLogs("error", String(cause), cause); }
   };
 
   const ask = async (thread: ThreadSummary, requestId: string, kind: string): Promise<void> => {
@@ -54,6 +56,8 @@ export function activateApprovals(deps: OursDeps): vscode.Disposable {
     const his = original(state);
     // Claimed synchronously (update is sync); the toast itself waits for the thread's projection.
     return his.filter((thread) => {
+      // Q3: no toast (ours or his) for the chat the user is reading; it shows the request already.
+      if (isReading(thread.id)) return false;
       const request = thread.pendingRuntimeRequest;
       if (!request || !isApprovable(request.kind)) return true;
       void ask(thread, request.id, request.kind).catch((cause: unknown) => log.error("Approval toast failed:", cause));

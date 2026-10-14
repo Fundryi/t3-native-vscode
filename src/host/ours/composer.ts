@@ -1,5 +1,6 @@
 /** Puts text, file references and attachments into a chat composer (used by A, D and I). */
 import * as vscode from "vscode";
+import { toastWithLogs } from "./logs.js";
 import { readFile, stat } from "node:fs/promises";
 import { basename, relative } from "node:path";
 import { isProviderSendTurnSupportedImageMimeType, PROVIDER_SEND_TURN_MAX_FILE_BYTES, PROVIDER_SEND_TURN_MAX_IMAGE_BYTES } from "@t3tools/contracts";
@@ -59,7 +60,7 @@ export async function insertAttachments(deps: OursDeps, viewId: string, files: R
   const result = await uploadFiles(deps, viewId, files);
   const draftKey = deps.hostState.snapshot(viewId).activeThreadId ?? "new";
   if (result.attachments.length) deps.registry.postWhenReady(viewId, OURS_EVENT, { kind: "addAttachments", draftKey, ...result } satisfies OursAddAttachments);
-  if (result.errors.length) void vscode.window.showWarningMessage(`T3 VSCode could not attach: ${result.errors.join("; ")}`);
+  if (result.errors.length) toastWithLogs("warning", `T3 VSCode could not attach: ${result.errors.join("; ")}`);
   return result;
 }
 

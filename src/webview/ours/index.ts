@@ -31,33 +31,33 @@ import "./layout";
 
 // Q2 keys
 
-// Q3 toasts
+import "./toasts";
 
-// Q4 reconnect
+import "./reconnect";
 
-// Q5 escape
+import "./escape";
 
 // Q7 statusbar2
 
 // Q8 contexts
 
-// Q10 latest
+import "./latest";
 
-// Q11 reprompt
+import "./reprompt";
 
-// Q12 composerFit
+import "./composerFit";
 
-// Q13 planMode
+import "./planMode";
 
-// Q15 fileLinks
+import "./fileLinks";
 
-// Q16 diffs
+import "./diffs";
 
-// Q17 approvalKeys
+import "./approvalKeys";
 
-// Q18 rowCopy
+import "./rowCopy";
 
-// Q21 shiftHint
+import "./shiftHint";
 
 import "./visit";
 

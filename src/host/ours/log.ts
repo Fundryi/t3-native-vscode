@@ -14,4 +14,6 @@ export const log = {
     const text = cause === undefined ? message : `${message} ${detail(cause)}`;
     if (channel) channel.error(text); else console.error(text);
   },
+  /** Opens the output channel without taking focus (Q7 statusbar2). */
+  show: (): void => { channel?.show(true); },
 };

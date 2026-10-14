@@ -5,6 +5,7 @@
  * Ctrl+C in the Explorer then Ctrl+V in a chat (the drop.copy keybinding remembers the paths, pasteCopied inserts them).
  */
 import * as vscode from "vscode";
+import { toastWithLogs } from "./logs.js";
 import { stat } from "node:fs/promises";
 import { basename } from "node:path";
 import { SIDEBAR_VIEW_ID } from "../hostState.js";
@@ -41,8 +42,7 @@ async function addDropped(deps: OursDeps, viewId: string, lines: ReadonlyArray<s
     }
     if (images.length) await insertAttachments(deps, viewId, images);
   } catch (cause) {
-    log.error("Drop: adding the files failed.", cause);
-    void vscode.window.showWarningMessage(`T3 VSCode could not add the dropped files: ${cause instanceof Error ? cause.message : String(cause)}`);
+    toastWithLogs("warning", `T3 VSCode could not add the dropped files: ${cause instanceof Error ? cause.message : String(cause)}`, cause);
   }
 }
 

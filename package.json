@@ -46,6 +46,45 @@
     },
     "commands": [
       {
+        "command": "t3-vscode.ours.diffs.openFile",
+        "title": "Open File",
+        "category": "T3 VSCode",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "t3-vscode.ours.diffs.revert",
+        "title": "Revert File to Before This Turn",
+        "category": "T3 VSCode",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "t3-vscode.ours.log.show",
+        "title": "Show Logs",
+        "category": "T3 VSCode",
+        "icon": "$(output)"
+      },
+      {
+        "command": "t3-vscode.ours.chat.focus",
+        "title": "Focus Chat Input",
+        "category": "T3 VSCode"
+      },
+      {
+        "command": "t3-vscode.ours.chat.new",
+        "title": "New Chat",
+        "category": "T3 VSCode"
+      },
+      {
+        "command": "t3-vscode.ours.chat.switch",
+        "title": "Switch Chat",
+        "category": "T3 VSCode"
+      },
+      {
+        "command": "t3-vscode.ours.sidebar.moveToSidebar",
+        "title": "Move Chat to Side Panel",
+        "category": "T3 VSCode",
+        "icon": "$(layout-sidebar-right)"
+      },
+      {
         "command": "t3-vscode.ours.threadActions.more",
         "title": "More Thread Actions",
         "category": "T3 VSCode"
@@ -198,6 +237,24 @@
     ],
     "keybindings": [
       {
+        "command": "t3-vscode.ours.chat.focus",
+        "key": "ctrl+alt+c"
+      },
+      {
+        "command": "t3-vscode.ours.chat.new",
+        "key": "ctrl+alt+shift+n"
+      },
+      {
+        "command": "t3-vscode.ours.chat.switch",
+        "key": "ctrl+alt+s"
+      },
+      {
+        "command": "t3-vscode.insertReference",
+        "key": "shift+alt+k",
+        "mac": "shift+alt+k",
+        "when": "editorTextFocus"
+      },
+      {
         "command": "t3-vscode.ours.drop.copy",
         "key": "ctrl+c",
         "mac": "cmd+c",
@@ -224,6 +281,31 @@
         }
       ],
       "editor/title": [
+        {
+          "command": "t3-vscode.ours.diffs.openFile",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff",
+          "group": "navigation"
+        },
+        {
+          "command": "t3-vscode.ours.diffs.revert",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.ours.links.copy",
+          "when": "activeWebviewPanelId == 't3Panel' && t3-vscode.ours.hasThread",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.threadActions",
+          "when": "activeWebviewPanelId == 't3Panel' && t3-vscode.ours.hasThread",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.ours.sidebar.moveToSidebar",
+          "when": "activeWebviewPanelId == 't3Panel' && config.t3-vscode.ours.layout.openThreadsIn != 'editor'",
+          "group": "navigation"
+        },
         {
           "command": "t3-vscode.ours.desktop.open",
           "when": "activeWebviewPanelId == 't3Panel'",
@@ -258,6 +340,34 @@
       "view/item/context": [],
       "commandPalette": [
         {
+          "command": "t3-vscode.ours.diffs.openFile",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/"
+        },
+        {
+          "command": "t3-vscode.ours.diffs.revert",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/"
+        },
+        {
+          "command": "t3-vscode.openWebUi",
+          "when": "t3-vscode.ours.ready"
+        },
+        {
+          "command": "t3-vscode.refreshUsage",
+          "when": "t3-vscode.ours.ready"
+        },
+        {
+          "command": "t3-vscode.ours.links.copy",
+          "when": "t3-vscode.ours.hasThread"
+        },
+        {
+          "command": "t3-vscode.threadActions",
+          "when": "t3-vscode.ours.hasThread"
+        },
+        {
+          "command": "t3-vscode.ours.sidebar.moveToSidebar",
+          "when": "activeWebviewPanelId == 't3Panel' && config.t3-vscode.ours.layout.openThreadsIn != 'editor'"
+        },
+        {
           "command": "t3-vscode.ours.drop.copy",
           "when": "false"
         },
@@ -280,12 +390,27 @@
       ],
       "editor/context": [
         {
+          "command": "t3-vscode.ours.diffs.openFile",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.ours.diffs.revert",
+          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/",
+          "group": "t3ours"
+        },
+        {
           "command": "t3-vscode.insertReference",
           "when": "editorTextFocus",
           "group": "t3"
         }
       ],
       "view/title": [
+        {
+          "command": "t3-vscode.ours.log.show",
+          "when": "view == t3.webview",
+          "group": "t3ours"
+        },
         {
           "command": "t3-vscode.ours.threadActions.more",
           "when": "view == t3.webview",
@@ -324,6 +449,40 @@
       ]
     },
     "configuration": [
+      {
+        "title": "Fork: Plan mode",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.planMode.enabled": {
+            "type": "boolean",
+            "default": false,
+            "scope": "window",
+            "description": "Show the Plan/Build toggle and the /plan and /default suggestions in the chat composer when the provider supports plan mode. Mirrors the T3 app's plan mode setting, which the extension cannot read. A chat already in plan mode always shows the toggle."
+          }
+        }
+      },
+      {
+        "title": "Fork: Notifications",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.notify.finished": {
+            "type": "string",
+            "enum": [
+              "unfocused",
+              "always",
+              "off"
+            ],
+            "enumDescriptions": [
+              "Only while VS Code does not have focus, for example while you are in another app.",
+              "Also while you work in VS Code, except for the chat you are reading.",
+              "Never."
+            ],
+            "default": "unfocused",
+            "scope": "window",
+            "description": "When to show a toast that a T3 turn finished or failed. Approval and question toasts never show for the chat you are reading."
+          }
+        }
+      },
       {
         "title": "Fork: Context Meter",
         "order": 10,

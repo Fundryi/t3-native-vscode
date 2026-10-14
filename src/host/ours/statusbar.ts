@@ -5,6 +5,7 @@
 import * as vscode from "vscode";
 import { activity } from "./activity.js";
 import { log } from "./log.js";
+import { toastWithLogs } from "./logs.js";
 import type { OursDeps } from "./types.js";
 import { wrap } from "./wrap.js";
 
@@ -29,18 +30,19 @@ export function activateStatusbar({ hostState, provider }: OursDeps): vscode.Dis
     try {
       if (typeof threadId === "string") await provider.openSession(threadId);
       else await vscode.commands.executeCommand("t3-vscode.showThreads");
-    } catch (cause) { await vscode.window.showErrorMessage(String(cause)); }
+    } catch (cause) { toastWithLogs("error", String(cause), cause); }
   });
   // Runs inside his emit loop (and his connect); never let it throw.
   const unlisten = hostState.onDidChangeState((state) => {
     try {
       const now = activity(state);
       if (now.wait.length !== waiting) { waiting = now.wait.length; paintBadge(); }
-      if (now.text === undefined) { item.hide(); return; }
       item.text = now.text;
       item.backgroundColor = now.warning ? new vscode.ThemeColor("statusBarItem.warningBackground") : undefined;
-      item.command = { command: now.command, title: "T3 activity", arguments: [...now.args] };
-      item.tooltip = new vscode.MarkdownString().appendText(now.lines.join("\n"));
+      item.command = now.command ? { command: now.command, title: "T3 activity", arguments: [...now.args] } : undefined;
+      const tooltip = new vscode.MarkdownString().appendText(now.lines.join("\n")).appendMarkdown("\n\n[Show Logs](command:t3-vscode.ours.log.show)");
+      tooltip.isTrusted = { enabledCommands: ["t3-vscode.ours.log.show"] };
+      item.tooltip = tooltip;
       item.show();
     } catch (cause) { log.error("Fork status bar update failed.", cause); }
   });

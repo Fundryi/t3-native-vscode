@@ -156,3 +156,162 @@ The thread menu (right-click a session, or the chevron in a chat header) gets th
 - How: no line of his changed. The host reads the thread projection from HostState's private `threads` map by name (a guarded shortcut; if upstream renames it the chip hides and the fork log says so once). The webview adds the chip and the buttons through the DOM (a MutationObserver, his `.composer-send-controls`, `.plan-card > header` and `data-search-row`).
 - Files: src/host/ours/contextMeter.ts (requests contextUsage, planImplement, planOpen), src/host/ours/contextUsage.ts (the derivation, tested), src/webview/ours/contextMeter.ts.
 - Live test: open a long chat: the chip shows a percentage that rises after the next turn. Switch a chat to plan mode, ask for a plan, click "Implement" on the card: the chat leaves plan mode and starts implementing. "Open as markdown" opens the plan in an editor.
+
+## Q1b sidebar: Sidebar chat polish (and restore after reload)
+
+The sidebar chat now behaves like a real chat panel.
+
+- Pop-out moves the draft: after the pop-out icon, the new editor tab reports that the draft arrived, and only then the sidebar copy is cleared. If the thread already had a tab (his code only reveals it), nothing arrives and the sidebar keeps its text.
+- Move a tab back: the editor title of a chat tab has "Move Chat to Side Panel" (`t3-vscode.ours.sidebar.moveToSidebar`, also in the palette while a chat tab is active, sidebar mode only). The tab hands its unsent text and references to the sidebar chat, its own stored draft is emptied, and the tab closes. A draft with attachments is refused with a warning: only his registerView can share an upload with another view, and the sidebar is registered already.
+- "Back to <title>": in the sessions list, a bar above the list returns to the chat the sidebar showed last.
+- The sessions list keeps its scroll position when a chat opens and closes.
+- Narrow side bar (300 px and less): the chat header hides the project name, the Scheduled button and the Web UI button. His "+" still says "Open New Chat in Editor Tab" although in sidebar mode it opens the chat in the side panel; that string is his.
+- Restore after reload: while the sidebar shows a chat, its thread id is kept in workspaceState (`t3-vscode.ours.layout.sidebarThread`); after the next connect the same chat shows again, without taking the focus. An archived or deleted thread falls back to the sessions list.
+- Inserts while the list shows (Alt+K and the like) still open the newest thread in the sidebar with the reference, as before (decision kept).
+- Files: src/host/ours/layout.ts, src/webview/ours/layout.ts, package.json (one command, one editor/title entry, one palette entry). No line of his changed.
+- Live test: type a draft in the side panel chat and pop it out: the text is in the tab only. "Move Chat to Side Panel" on the tab: the text is back in the sidebar and the tab is gone. Go to Sessions, scroll down, open a chat, go back: same place; "Back to" returns to the chat. Narrow the side bar to 250 px: the header fits. Reload Window: the same chat shows.
+
+## Q2 keys: Keys into T3: focus, new chat, switch chat, a safe insert key
+
+- Ctrl+Alt+C (`t3-vscode.ours.chat.focus`, "Focus Chat Input"): shows the chat you used last and puts the caret in its composer. A chat tab is revealed in place; otherwise the sidebar's chat opens (in the sidebar or a tab, by `t3-vscode.ours.layout.openThreadsIn`). With no chat at all it only shows the T3 view. It replaces VS Code's own Ctrl+Alt+C for Copy Watch Expression (debug Watch view focused) and, on Linux, Copy Path in the Explorer and search results.
+- Ctrl+Alt+Shift+N (`t3-vscode.ours.chat.new`, "New Chat"): a new empty chat, placed by the layout setting, caret in the composer. Not Ctrl+Alt+N: Code Runner (formulahendry.code-runner) binds that with no condition.
+- Ctrl+Alt+S (`t3-vscode.ours.chat.switch`, "Switch Chat"): a picker of this workspace's chats, newest first, archived ones left out; type part of a title (or "working", "needs you", "pinned"), Enter opens it with the caret in the composer. It replaces VS Code's own Ctrl+Alt+S for "Share..." (`workbench.action.share`), which the built-in GitHub extension enables in any repo with a GitHub remote.
+- Shift+Alt+K in an editor runs his `t3-vscode.insertReference` (add selection or file). His Alt+K stays, but Claude Code also binds Alt+K (and Ctrl+Alt+K), so which extension gets Alt+K is luck; Shift+Alt+K is ours alone.
+- These keys do not fire while the terminal has focus (VS Code sends keys to the shell unless a command is in `terminal.integrated.commandsToSkipShell`, which only the user can set).
+- Settings: none. Rebind any key in Keyboard Shortcuts.
+- How: src/host/ours/keys.ts calls his public provider methods (createPanel for a focused tab, openSession, createNewPanel; the layout wrap routes them) and then posts the ours event "focus"; src/webview/ours/composer.ts answers it with the existing focusComposer retry.
+- Live test (not yet run; for the owner): in an editor press Ctrl+Alt+C and type: the text lands in the chat box. Ctrl+Alt+Shift+N: an empty chat. Ctrl+Alt+S, type part of a title, Enter: that chat with the caret in it. Select text and press Shift+Alt+K: a reference in the chat.
+
+## Q3 toasts: Toasts that help: turn finished, none for the chat you are reading
+
+- When a turn of a thread of this window ends, a toast says `T3: "<title>" finished.` (or a warning `... failed.`) with a Show button that opens the chat. A turn you stopped yourself (interrupted, cancelled, rolled back) gets none, nor do provider subagents. A queued follow-up counts as still working, so a queue toasts once at its end. The end must hold for 2 s, so a thread that streams in bursts does not toast mid-way.
+- Setting `t3-vscode.ours.notify.finished` (section "Fork: Notifications"): `unfocused` (default, only while VS Code does not have focus), `always` (also while you work in VS Code, but not for the chat you are reading), `off`. VS Code shows the toast inside its own window (no OS notification), so it waits there until you come back.
+- No toast for the chat you are reading: when VS Code has focus and the chat view with keyboard focus shows the thread, the approval toast (B), his question toast and the finished toast are skipped. The status bar and badge still show "needs you". The request is not toasted again when you leave the chat.
+- How: src/webview/ours/toasts.ts reports focus (window focus, blur, and the K layout flip of body[data-surface]) through the ours request `toastsFocus`; src/host/ours/finished.ts keeps the reading view, checks which thread it shows and listens to the host state; src/host/ours/finishedEdge.ts holds the edge rule (tested); src/host/ours/approvals.ts asks `isReading` first.
+- Commands: none. Log: each finished or failed toast writes one line to "T3 VSCode (fork)".
+- Live test: send a prompt, switch to another app until it ends, come back: the "finished" toast waits. Stay in the chat, let the agent ask for an approval and answer it there: no toast. Set the setting to `always`, click into an editor while a turn runs: the toast shows in VS Code.
+
+## Q4 reconnect: Connection dead ends: auto-reconnect and buttons
+
+Restart or update T3 and VS Code connects again by itself; where it cannot, the screen has a button.
+
+- Auto-reconnect: while his setup screen shows a server problem (`missing-runtime`, `server-stopped`, `unreachable`, or `connection`, the error of a connect that failed while T3 was half started), the host retries when `<home>/userdata/server-runtime.json` is written, every 10 s and when the VS Code window gets focus, through his own `hostState.reconnect()`. His own retry gives up after 3 tries over 6 s.
+- Guards: never on `pairing` or `cli-missing`; only after T3's own discovery answers (the server process is alive and its environment probe replies) and a stored, unexpired pairing credential belongs to that server (otherwise his connect would run `t3 pair` on every tick). The probe also keeps the setup screen from blinking to "Connecting" every 10 s while T3 is down. A server that answers but still fails to connect is retried less often, up to every 80 s; a file change or window focus retries at once.
+- Buttons: the "Connecting to T3 Code" screen gets "Retry connection" and "Connection settings" (as his error screen has). The "server not found" and "server stopped" screens get "Open T3 app" (runs `t3-vscode.ours.desktop.open`, which opens `t3code://new` when nothing is connected). Not on the pairing screen.
+- Settings and commands: none. Log: one line "Reconnect: T3 answers again, reconnecting." per auto attempt in "T3 VSCode (fork)".
+- How: src/host/ours/reconnect.ts (watcher, poll, focus, the ours request `reconnectOpenApp`); src/webview/ours/reconnect.ts adds the buttons to his screens through the DOM, from the phase in his state events. No line of his changed.
+- Live test: quit T3 with VS Code open, start it again: the chat returns within about 10 s with no click.
+
+## Q5 escape: Escape stops a running turn
+
+Escape in the chat box (or with focus in the transcript) stops the running turn, as in Claude Code and Codex.
+
+- It acts only when no popup is open: the mention list, model picker, find, history, thread menu, equation menu, message navigator, quote comment, image preview and the composer "..." menu all keep their own Escape. Modifier keys, a held key and IME composition are ignored.
+- How: src/webview/ours/escape.ts, two window keydown listeners. The capture one notes whether a popup (`[role=dialog]`, `[role=menu]`, the open composer overflow) was in the DOM before any handler ran; the bubble one acts only if no handler called preventDefault, then clicks his own "Stop generation" button of that chat, so his interrupt path runs. No line of his changed.
+- Settings and commands: none.
+- Live test: start a long prompt, press Escape in the chat box: it stops. Open the model picker and press Escape: only the picker closes. Open an image and press Escape: only the image closes, the turn keeps running.
+
+## Q7 statusbar2: Status bar and logs tell the truth
+
+The status bar item left of the usage meters now says what the connection is doing, and the fork's log is one click away.
+
+- Labels: "T3: not running" (no server found), "T3: connection problem" (connect failed), "$(sync~spin) T3: pairing" (no click: a second click would queue a second pairing), "$(sync~spin) T3: connecting" (discovering and connecting, also his reconnect tries), "T3" when nothing runs, then the existing "running" and "needs you". Every label except pairing opens the T3 VSCode view on click (his error screen has Retry). The tooltip starts with his notice (the reason) and ends with a "Show Logs" link.
+- Command `t3-vscode.ours.log.show` ("T3 VSCode: Show Logs"), also in the T3 view's "..." menu: opens the output channel "T3 VSCode (fork)".
+- Log: every change of phase, problem kind or notice writes one line ("T3 connection: error (connection): ...").
+- Ours error toasts (a failed command in prompt, approvals Show, the status bar click, a failed drop, a failed attach, save on send) log the error with its stack and carry a "Show Logs" button.
+- Settings: none. Files: src/host/ours/logs.ts (command, phase log, toastWithLogs), src/host/ours/activity.ts (labels, tested), src/host/ours/statusbar.ts, src/host/ours/log.ts (log.show).
+- Live test: quit T3 with VS Code open: the label goes "T3: connecting" (three reconnect tries) and then "T3: not running"; start T3 and Retry: back to "T3". Run "T3 VSCode: Show Logs": the phase lines are there.
+
+## Q8 contexts: Commands target the chat you are in, and hide when they cannot work
+
+Thread Actions and Copy Link act on the chat in front of you (the focused chat tab, else the sidebar), and the palette does not offer commands that would only fail.
+
+- Context keys (src/host/ours/contexts.ts, from his onDidChangeState and the registry focus): `t3-vscode.ours.ready` (connected to T3) and `t3-vscode.ours.hasThread` (connected and the focused chat shows a thread).
+- Palette: Thread Actions and Copy Link to This Thread need `hasThread`; Open Web UI and Refresh Usage Meters need `ready`.
+- A chat tab has Copy Link and Thread Actions in its "..." menu (editor/title, group t3ours).
+- His `t3-vscode.threadActions` read the sidebar thread; one line in src/extension.ts now reads `snapshot(registry.focusedViewId)` (no wrapper reaches a local inside his command).
+- Live test: open two chats in editor tabs, focus the second, run Thread Actions from the palette, Rename: the second is renamed. Stop the T3 server: Copy Link, Thread Actions and Open Web UI leave the palette.
+
+## Q10 latest: Latest button always there, and the agent looks alive
+
+When you scroll up in a chat, a "Latest" button sits at the bottom right and jumps back to the newest message; a pulsing dot on it says the agent is still working. His own button showed only with two or more prompts and the message navigator on.
+
+- The button shows whenever the transcript is scrolled up (more than 40 px from the end, his threshold). A click uses his hidden Latest button when it exists (it also resumes following new output), else scrolls the list to the end.
+- His "Working" labels (the answer header and the sessions list spinner) pulse; the system "reduce motion" setting turns the pulse off (his rule in tokens.css).
+- A collapsed work group that is still running shows its newest running step after the count, for example "1 running  pnpm run build".
+- How: src/webview/ours/latest.ts (DOM button, scroll listener, injected CSS, no line of his changed); src/shared/ours/latest.ts picks the running step per work group from the state snapshot (tested). It relies on his class names `.transcript-container`, `.transcript-list`, `.work-group-toggle` and `data-message-key`; re-check them on each upstream merge.
+- Settings and commands: none.
+- Live test: send one prompt with a long answer, scroll up while it streams: Latest shows with a pulsing dot; click it and the chat follows the answer again.
+
+## Q11 reprompt: Bring a past prompt back
+
+- ArrowUp in an empty chat box puts my last prompt back; more ArrowUp presses walk back, ArrowDown walks forward and past the newest empties the box (T3's rules, ported from its composerPromptHistory.ts). It steps only from an empty box or from a recall I have not edited, so in a typed draft the arrows move the caret as always; in a multi-line recall they move inside it until the caret is on the first or last line. Not while the @ or / suggestions are open, not with attachments in the box.
+- A "use again" icon next to Copy on each of my messages puts that prompt in the box.
+- A Retry button under a turn error puts the prompt that failed back in the box; Enter sends it again (it does not send by itself).
+- The recalled text is what I typed: file links stay as links, the appended editor snapshots and the "Ultrathink:" prefix go, attachments are not brought back. The old box text is replaced as a native edit, so Ctrl+Z brings it back.
+- Settings and commands: none.
+- How: src/webview/ours/reprompt.ts (a window capture keydown before his Composer; the two buttons are added to his rendered rows by a MutationObserver, data looked up on click through getState); src/shared/ours/reprompt.ts (recall text, history steps, the prompt before an error; tested). No line of his changed. The QOL plan named slots in his Composer.tsx and TranscriptView.tsx; once the message-actions slot lands, the buttons can move there.
+- Live test: send a prompt, press ArrowUp in the empty box and see it again; press ArrowDown and the box empties. Click the "use again" icon on an older message. In a chat with an error row, click Retry and press Enter.
+
+## Q12 composerFit: Composer fits real prompts and says what it can do
+
+- What: the message box grows with a long paste up to 40 percent of the view (his cap was 220 px) and then scrolls; its placeholder adds "Type @ for files, / for commands."; a failed send also shows above the box ("Not sent: <reason>"), not only in the top banner. The note goes away on the next keystroke or the next send.
+- Settings and commands: none.
+- How: src/webview/ours/composerFit.ts only, no line of his changed. A MutationObserver lifts his inline 220 px height and appends the hint to his two placeholder strings (his text stays a prefix, scripts/verify-ui.mjs finds the box by it); a CSS rule sets the 40vh cap; an observe-only wrapper on the webview bridge's request sees a rejected sendMessage and inserts a note in his composer-attachment-error style.
+- Live test: paste 100 lines into the box and see it grow, then scroll. Any send the host or server rejects shows its reason above the box and keeps the text, for example Enter in a provider-controlled subagent thread, or stop the T3 server and press Enter before the view notices.
+
+## Q13 planMode: Plan mode, see it and switch it
+
+- What: a "Plan" / "Build" button in the composer traits (after the permission select; in the narrow "..." popup when the composer is compact) shows the chat's interaction mode and switches it. Typing `/plan` or `/default` offers the same switch in the suggestion list next to `/model`, as T3 web does; picking one switches the mode and removes the typed token. Before the first message it sets the new chat's draft mode.
+- When shown: when `t3-vscode.ours.planMode.enabled` is on and the chat's provider allows it (`showInteractionModeToggle` not false), and always while the chat is already in plan mode, so it can be switched back (owner question 4 default). The `/plan` and `/default` suggestions follow the button. T3's own `planModeEnabled` is a per-client setting (T3 web or desktop storage) the extension cannot read; our setting stands in for it, off by default as in T3.
+- Settings and commands: `t3-vscode.ours.planMode.enabled` (boolean, default false); a change applies to open chats at once. No command.
+- How: src/webview/ours/planMode.ts places the button with a MutationObserver into his `.composer-traits` and calls his `setModes` through the bridge (never `run`); it reads the picked suggestion label from his `#composer-suggestions` markup in capture listeners, so his handler still clears the token. src/host/ours/planMode.ts wraps `hostState.composerSuggestions` to add the two items (src/host/ours/planModeSuggestions.ts, tested) only for views that reported the toggle as allowed, and serves the first state (`planModeState`, not his `getState`, which would mark the view ready too early). No line of his changed.
+- Merge risk: the slash pick depends on his ComposerSuggestions markup (`#composer-suggestions`, `role="option"`, `aria-selected`, `.suggestion-label`) and on his Enter/Tab rule in Composer.tsx onKeyDown; his compact-controls measure does not count the button.
+- Live test: with the setting off, a Build chat shows no button and no `/plan`; a chat set to Plan in the T3 app shows Plan, and a click turns it to Build (then the button hides). Turn the setting on: the button shows at once; click it: Plan, and the T3 app shows plan mode. Type `/def`, press Enter: the token goes and the mode is default. In a new chat before the first message, the button sets the draft's mode.
+
+## Q15 fileLinks: File links open in the right place
+
+A file link in a reply (a markdown link, a changed-file row, a search result, a message reference) opens with VS Code's own editor for that file, so an image or a pdf opens too, not only text. From a chat in an editor tab the file opens in another editor group (a new group to the right when there is only one), so the chat stays visible. From the sidebar chat it opens in the active editor group, as before.
+
+- Links with a line or range (`file.ts:12`, `#L3-L9`) open as text with the selection, as before. Web links, missing files and bad links still go to his openLink unchanged (his error message).
+- A folder link opens quick open ("Go to File") filled with that folder's path, not his reveal in the Explorer, which would replace the T3 chat in the side bar.
+- Settings and commands: none.
+- How: src/webview/ours/fileLinks.ts wraps the webview's `bridge.request` and sends each non-web `openLink` to the ours request `fileLinks.open` (src/host/ours/fileLinks.ts); when that fails, his `openLink` runs. No line of his changed. The host part repeats about 10 lines of his private `openLink` (src/host/bridge.ts), so a change of his there must be copied by hand on a merge.
+- Live test: in a reply, click a `.ts` link and a `.png` link, once in the sidebar chat and once in a chat popped out to an editor tab: both open, the png as an image, and the editor-tab chat stays visible. Click a `file.ts:12` link: the file opens with line 12 selected. Click a folder link (such as `src/host/`) in the sidebar chat: quick open lists that folder's files and the sidebar still shows the chat.
+
+## Q16 diffs: Show all changes, Open File and Revert from a turn diff
+
+See every file a turn changed in one view, jump from a diff to the real file, or put one file back as it was before the turn.
+
+- "Open diff" under a response that changed two or more files now opens one VS Code multi-diff view with all of them ("Turn N: X changed files") instead of asking for one file. A turn with one file, and a click on a single file in the tree, open his single diff as before. A binary file is left out of the view (T3 cannot show it as text; the log names it). If the view cannot open, his file picker runs as before.
+- On a turn diff (his single diff or the all-changes view): "Open File" (editor title icon, and the right-click menu inside the diff) opens the real workspace file. "Revert File to Before This Turn" (editor title "..." menu and the right-click menu) puts that one file back after a modal confirm. It refuses when the file has unsaved changes, when the file on disk differs from what the turn left (line endings do not count: T3 reads git blobs, LF), and for a renamed file. A file the turn created is deleted, a file it deleted is restored; the confirm says which. The file is saved after the revert, so `git diff` shows it.
+- Settings: none. Commands: `t3-vscode.ours.diffs.openFile`, `t3-vscode.ours.diffs.revert` (palette only while a turn diff is focused).
+- How: a capture click listener in the webview (src/webview/ours/diffs.ts) takes his "Open diff" button when the turn's box holds two or more files and sends `diffs.openAll` with the box's checkpoint id; the host (src/host/ours/diffs.ts) finds that row in the view's snapshot and calls his public `hostState.prepareTurnDiff` and `loadTurnDiffFile`, keeps the texts under its own scheme `t3-ours-diff` (the last 10 views) and runs `vscode.changes`. A wrap of his `hostState.loadTurnDiffFile` remembers the last 100 loaded files with their turn folder and change type, so Open File and Revert on his single diff use the turn's own folder (a worktree too) and never guess; a diff not in that memory is refused ("open it again"). No line of his changed; his nativeDiff.ts QuickPick stays as the fallback. The revert rule is src/host/ours/diffsRevert.ts (tested).
+- Live test: after a turn that changed several files, click "Open diff": one view lists all files. Right-click inside one file's right side, "Revert File to Before This Turn", confirm: `git diff` no longer shows that file. Edit a file the turn changed, then try Revert on it: it refuses.
+
+## Q17 approvalKeys: Approvals and questions by keyboard
+
+- What: while an approval card shows above the chat box, Alt+1..9 presses its Nth button (each button shows its key, for example "Approve Alt+3"). On a question card, Alt+N picks option N of the question that holds focus, else of the first unanswered question, else of the last; a card without multi-select questions sends itself once every question has an answer. After any answer (key or mouse, Dismiss too) focus goes back to the chat box, so typing goes on.
+- Keys: Alt without Ctrl, Shift or Meta, on the digit row (`event.code` Digit1..9). Ctrl+Alt is AltGr on German layouts and is left alone. T3 itself uses plain 1-9 for questions (t3-facts `pending-input-digit-keys`); Alt keeps typing in the chat box safe.
+- VS Code binds Alt+1..9 to "open editor N" on Windows and Linux, and a webview forwards every keydown to it. The key is swallowed only while a card is on the page and the number matches a button or option, even while that answer is sending; otherwise Alt+N still switches editors.
+- Menu bar: VS Code saw the Alt keydown but not the swallowed digit, so an Alt release that reaches it first reads as a lone Alt tap and focuses the menu bar. When Alt is released before the digit, both keyups are kept from VS Code. Known limit: VS Code then believes Alt is still held until the next modifier key or window blur, so toolbars may show their Alt variant (Split Editor Down instead of Right) until then. Checked against VS Code 7baac39ec3.
+- Settings and commands: none.
+- How: src/webview/ours/approvalKeys.ts, window capture listeners that click his buttons and inputs (his PendingRequests.tsx) and send his `t3-focus-composer` event once the answer settled. No line of his changed.
+- Live test: with a chat in approval mode, let the agent run a command; press Alt+3 (Approve) and keep typing: the text lands in the chat box. Do it twice: once releasing the digit first, once releasing Alt first. Both times the menu bar must not take focus and the typed text must land in the chat box. With no card showing, Alt+1 still switches to editor 1.
+
+## Q18 rowCopy: Copy and time on transcript rows
+
+- Copy: expand a command or tool row in a chat and point at its command, its output or the tool input: a copy button shows at the top right of that box. One click puts the exact text on the clipboard (through his copyText, so vscode.env.clipboard); the icon turns into a check for 1.5 s.
+- Time: point at a sent message to see "Sent" with the date and time in its tooltip; point at the "Assistant" header of a response to see "Started" and, once the run is done, "Finished", each with its time. A run the server still reports as active (also one waiting on an approval) shows no "Finished". Local date and time format.
+- Settings and commands: none.
+- How: no line of his changed. src/webview/ours/rowCopy.ts uses window listeners: one shared floating button (his boxes scroll and React rewrites their text while output streams, so a button inside them would not stay) and a title set on hover from the newest state snapshot. The row keys come from his DOM (data-search-row, data-run-header); a key not yet in the snapshot asks the host for the state once. The title text is src/shared/ours/rowTime.ts (tested).
+- Files: src/webview/ours/rowCopy.ts, src/shared/ours/rowTime.ts, src/shared/ours/rowTime.test.ts.
+- Live test: hover a message you sent and see the time; hover the Assistant header of a finished answer and see Started and Finished, and of a run waiting on an approval and see only Started; expand a command, hover its output, click the copy button, paste into an editor.
+
+## Q21 shiftHint: Hold Shift to drop, shown over the composer
+
+- What: when a file dragged from the Explorer or a tab bounces off a chat because Shift was not held, a small note "Hold Shift to drop files here" shows over the composer box for 2 s, right where the drag was. The toast from I stays (at most once per 5 s); the note shows on every bounce.
+- The note takes no pointer events, so a following Shift-drag drops through it. It is a polite live region for screen readers.
+- Settings and commands: none.
+- Files: src/webview/ours/shiftHint.ts (the note), one call in src/webview/ours/drop.ts where the bounce is detected.
+- Live test: drag README.md from the Explorer onto the chat without Shift: the note shows over the composer and disappears after 2 s. Drag again with Shift held: the reference lands.

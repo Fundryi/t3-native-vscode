@@ -3,6 +3,7 @@
  * Alt+K (a selection) is his t3-vscode.insertReference. Nothing here ever sends.
  */
 import * as vscode from "vscode";
+import { toastWithLogs } from "./logs.js";
 import { stat } from "node:fs/promises";
 import { basename } from "node:path";
 import { editorReference } from "../editorReference.js";
@@ -18,7 +19,7 @@ const MAX_FIXES = 3;
 export function activatePrompt(deps: OursDeps): vscode.Disposable {
   /** Errors as his insertReference shows them; a command never throws into VS Code. */
   const guarded = <A extends unknown[]>(run: (...args: A) => Promise<unknown>) => async (...args: A): Promise<void> => {
-    try { await run(...args); } catch (cause) { await vscode.window.showErrorMessage(String(cause)); }
+    try { await run(...args); } catch (cause) { toastWithLogs("error", String(cause), cause); }
   };
 
   /**

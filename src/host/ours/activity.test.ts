@@ -18,6 +18,13 @@ test("Status bar activity: waiting beats running, archived and provider subagent
   assert.deepEqual(state.run.map((item) => item.id), ["queued"]);
   assert.equal(state.command, "t3-vscode.ours.statusbar.open");
   assert.deepEqual(state.args, ["both"]);
-  assert.equal(activity({ phase: "ready", threads: [thread("idle")] }).text, undefined);
-  assert.equal(activity({ phase: "pairing", threads: [] }).command, "t3-vscode.pair");
+});
+
+test("Status bar activity: each connection phase says what it is, pairing has no click", () => {
+  assert.equal(activity({ phase: "ready", threads: [thread("idle")] }).text, "T3");
+  assert.equal(activity({ phase: "pairing", threads: [] }).command, undefined);
+  assert.equal(activity({ phase: "error", threads: [] }).text, "T3: connection problem");
+  assert.equal(activity({ phase: "no-server", threads: [] }).text, "T3: not running");
+  assert.equal(activity({ phase: "discovering", threads: [] }).text, "$(sync~spin) T3: connecting");
+  assert.deepEqual(activity({ phase: "connecting", notice: "Connection lost.", threads: [] }).lines[0], "Connection lost.");
 });

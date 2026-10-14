@@ -5,6 +5,7 @@
  * A paste without text and without files asks the host for the paths of the last Explorer Ctrl+C (pasteCopied).
  */
 import { oursRequest } from "./channel";
+import { showShiftHint } from "./shiftHint";
 
 const CODE_TYPES = ["application/vnd.code.uri-list", "resourceurls"];
 // Not "files": an OS file drag reaches his composer without Shift, so its quick pass over the panel needs no hint.
@@ -41,14 +42,18 @@ const noChat = () => document.body.dataset.surface === "sidebar";
     // Unclaimed drops (an OS file drop too, which his composer attaches) still go to the host log, to show what arrived.
     void oursRequest("dropUris", claim ? { types, uriList: data.getData("application/vnd.code.uri-list"), text } : { types }).catch(report);
   }, true);
-  // A VS Code drag without Shift bounces off the webview: in and out within 500 ms. Hint at most once per 5 s.
+  // A VS Code drag without Shift bounces off the webview: in and out within 500 ms. Note over the composer on every
+  // bounce (Q21), the toast at most once per 5 s.
   window.addEventListener("dragenter", (event) => {
     if (!noChat() && event.isTrusted && !internal && HINT_TYPES.some((type) => typesOf(event).includes(type))) entered = Date.now();
   }, true);
   window.addEventListener("dragleave", (event) => {
     if (event.relatedTarget) return; // moved to another element of this page: the drag goes on
     const now = Date.now();
-    if (entered && now - entered < 500 && now - hinted >= 5000) { hinted = now; void oursRequest("dropHint", { types: typesOf(event) }).catch(report); }
+    if (entered && now - entered < 500) {
+      showShiftHint();
+      if (now - hinted >= 5000) { hinted = now; void oursRequest("dropHint", { types: typesOf(event) }).catch(report); }
+    }
     entered = 0;
   }, true);
   // No isTrusted check: Ctrl+V reaches a webview through VS Code's paste plumbing, and a fake paste only re-adds copied paths.

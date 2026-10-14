@@ -26,17 +26,17 @@ export { activateLayout as layout } from "./layout.js";
 
 // Q1b sidebar
 
-// Q2 keys
+export { activateKeys as keys } from "./keys.js";
 
-// Q3 toasts
+export { activateToasts as toasts } from "./finished.js";
 
-// Q4 reconnect
+export { activateReconnect as reconnect } from "./reconnect.js";
 
 // Q5 escape
 
-// Q7 statusbar2
+export { activateLogs as statusbar2 } from "./logs.js";
 
-// Q8 contexts
+export { activateContexts as contexts } from "./contexts.js";
 
 // Q10 latest
 
@@ -44,11 +44,11 @@ export { activateLayout as layout } from "./layout.js";
 
 // Q12 composerFit
 
-// Q13 planMode
+export { activatePlanMode as planMode } from "./planMode.js";
 
-// Q15 fileLinks
+export { activateFileLinks as fileLinks } from "./fileLinks.js";
 
-// Q16 diffs
+export { activateDiffs as diffs } from "./diffs.js";
 
 // Q17 approvalKeys
 

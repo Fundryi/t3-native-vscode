@@ -110,7 +110,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       void hostState?.workspaceChanged().catch((cause) => vscode.window.showErrorMessage(String(cause)));
     }),
     vscode.commands.registerCommand("t3-vscode.threadActions", async () => {
-      const state = hostState?.snapshot();
+      const state = hostState?.snapshot(registry.focusedViewId);
       const thread = state?.threads.find((item) => item.id === state.activeThreadId);
       if (!thread || !hostState) return;
       const choice = await vscode.window.showQuickPick([
