@@ -26,7 +26,7 @@ export function showShiftHint(): void {
     const box = document.querySelector(".composer-box")?.getBoundingClientRect();
     note.style.left = `${box ? box.left + box.width / 2 : window.innerWidth / 2}px`;
     note.style.top = `${box ? box.top + box.height / 2 : window.innerHeight - 60}px`;
-    note.textContent = "Drop on \"Drop files here\", or Ctrl+C then Ctrl+V";
+    note.textContent = "Hold Shift to drop here, or Ctrl+C then Ctrl+V";
     note.hidden = false;
     clearTimeout(timer);
     timer = setTimeout(() => { note.hidden = true; note.textContent = ""; }, SHOW_MS);

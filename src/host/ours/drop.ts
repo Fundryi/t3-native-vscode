@@ -1,10 +1,10 @@
 /**
  * I drop: files dragged from VS Code's Explorer or a tab go into a chat, images T3 can send as attachments, the rest as
- * whole-file references. Two ways in that work: the "Drop files here" view, and Ctrl+C in the Explorer then Ctrl+V in a
- * chat (the drop.copy keybinding remembers the paths, pasteCopied inserts them). A drag straight onto a chat never
- * arrives, Shift or not: Chromium refuses a drag between cross-site frames of one page
- * (WebContentsViewDragSecurityInfo::IsValidDragTarget), and the workbench and the webview iframe are such frames
- * (scripts/verify-drag.mjs, docs/ours/FORK-FEATURES.md I). dropUris and dropHint stay for a drag that does arrive.
+ * whole-file references. Ways in: Shift-drag onto a chat (VS Code lets a workbench drag into a webview only with Shift),
+ * the "Drop files here" view, and Ctrl+C in the Explorer then Ctrl+V in a chat (the drop.copy keybinding remembers the
+ * paths, pasteCopied inserts them). Whether a real Shift-drag from the Explorer reaches the chat document is not proven
+ * either way (docs/ours/FORK-FEATURES.md I); the webview sends a dragTrace for every trusted dragenter and drop, so the
+ * log shows what arrived.
  */
 import * as vscode from "vscode";
 import { toastWithLogs } from "./logs.js";
@@ -78,16 +78,20 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
     await addDropped(deps, viewId, copied.lines);
     return copied.lines.length;
   });
+  // One line per trusted dragenter (at most one per 500 ms) and drop in a chat webview: the evidence for a drop that did nothing.
+  const offTrace = registerOursRpc("dragTrace", (params, viewId) => {
+    log.info(`Drag trace: ${String(params.event).slice(0, 20)} types=${typesText(params.types)} shift=${params.shift === true} kinds=${typesText(params.kinds)} view=${viewId}`);
+  });
   const offHint = registerOursRpc("dropHint", (params) => {
     log.info(`Drag left the chat at once, types ${typesText(params.types)}; hint shown.`);
-    void vscode.window.showInformationMessage("VS Code does not let a drag from its Explorer or tabs into the chat. Drop the files on \"Drop files here\" in the T3 side bar, or select them in the Explorer, press Ctrl+C, then Ctrl+V in the chat.");
+    void vscode.window.showInformationMessage("Hold Shift while dropping files from the Explorer or a tab onto the chat (VS Code blocks the drop otherwise). Or drop them on \"Drop files here\" in the T3 side bar, or select them in the Explorer, press Ctrl+C, then Ctrl+V in the chat.");
   });
 
   // One item, not an empty tree: VS Code hides an empty tree behind its welcome text, and the drop target is the tree.
   const item = new vscode.TreeItem("Drop files here");
   item.iconPath = new vscode.ThemeIcon("cloud-upload");
   item.description = "drag from the Explorer or a tab";
-  item.tooltip = "Drag files from the Explorer or a tab here to add them to the focused T3 chat. Images go in as attachments. A drag onto the chat itself does not arrive, with or without Shift (VS Code blocks it); Ctrl+C in the Explorer and Ctrl+V in the chat also works.";
+  item.tooltip = "Drag files from the Explorer or a tab here to add them to the focused T3 chat. Images go in as attachments. A drag onto the chat itself needs Shift held (VS Code blocks it otherwise); Ctrl+C in the Explorer and Ctrl+V in the chat also works.";
   const view = vscode.window.createTreeView<vscode.TreeItem>("t3-vscode.ours.drop.view", {
     treeDataProvider: { getChildren: (element) => element ? [] : [item], getTreeItem: (element) => element },
     dragAndDropController: {
@@ -106,5 +110,5 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
       },
     },
   });
-  return vscode.Disposable.from(view, copy, { dispose: offDrop }, { dispose: offPaste }, { dispose: offHint });
+  return vscode.Disposable.from(view, copy, { dispose: offDrop }, { dispose: offPaste }, { dispose: offHint }, { dispose: offTrace });
 }
