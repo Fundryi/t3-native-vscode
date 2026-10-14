@@ -40,7 +40,8 @@ test("Development profile copies Default without sharing files or changing its e
 
 test("A linked development state directory cannot redirect setup into the normal installation", async (t) => {
   const f = await fixture(t);
-  await symlink(f.sourceUserData, join(f.workspace, ".t3"));
+  // A junction needs no privilege on Windows; other platforms ignore the type.
+  await symlink(f.sourceUserData, join(f.workspace, ".t3"), "junction");
   await assert.rejects(prepareDefaultProfile(f), /linked development directory/);
   assert.equal(await readFile(join(f.sourceUserData, "User", "settings.json"), "utf8"), f.settings);
 });

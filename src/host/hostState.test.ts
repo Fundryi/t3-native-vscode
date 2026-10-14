@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { ProviderInstanceId, ProviderDriverKind, ThreadId, ProjectId, TurnItemId, EventId, RuntimeRequestId, NodeId, ProviderSessionId, type OrchestrationV2ThreadStreamItem, type OrchestrationV2TurnItem, type OrchestrationV2ProjectedTurnItem, type OrchestrationV2RuntimeRequest } from "@t3tools/contracts";
 import { v2Now, v2Project, v2ThreadShell, v2Projection } from "../../vendor/client-runtime/src/state/orchestrationV2TestFixtures.ts";
 import { HostState, type HostTransport } from "./hostState.js";
@@ -221,7 +221,7 @@ test("Workspace matching resolves symlinks to avoid duplicate projects for the s
   const directory = await mkdtemp(join(tmpdir(), "t3-vscode-scope-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const real = join(directory, "project"); const linked = join(directory, "linked");
-  await mkdir(real); await symlink(real, linked);
+  await mkdir(real); await symlink(real, linked, "junction"); // junction: no privilege needed on Windows
   const client = new FakeTransport();
   client.shell = { ...client.shell, projects: [{ ...v2Project, workspaceRoot: real }] };
   const { host } = await harness({ workspaceRoots: () => [linked] }, client); t.after(() => host.dispose());
@@ -243,7 +243,7 @@ test("Servers without Scratch prompt for a folder and create the project before 
   assert.equal(picks, 1);
   assert.equal(client.scratchCalls, 0);
   assert.equal(client.projectCreates, 1);
-  assert.equal(host.snapshot().projects[0]?.workspaceRoot, "/tmp/chosen-folder");
+  assert.equal(host.snapshot().projects[0]?.workspaceRoot, resolve("/tmp/chosen-folder"));
   const created = client.commands.find((command) => command.type === "thread.create");
   assert.equal(created?.projectId, "workspace-project");
   assert.equal(client.commands.findLast((command) => command.type === "message.dispatch")?.threadId, created?.threadId);

@@ -25,23 +25,31 @@ The progress file of this fork. Read it first after a restart, a compaction or a
 
 - Fork at 382def7 plus the migration commit of this moment (legacy/, docs/KICKOFF.md, these notes). Nothing pushed. Builds on Windows; VSIX target-installer/t3-vscode-0.1.21.vsix is installed in the owner's VS Code as hungtienhuang.t3-vscode@0.1.21; the old fundryi.t3-vscode is uninstalled.
 - Not verified: pairing and a first thread on Windows. The owner reloads VS Code, opens t3-native-vscode.code-workspace and the T3 VSCode view; it pairs itself through the t3 CLI. If pairing fails, the owner sends the output channel text.
-- Open answers from the owner: (1) may we push to the fork; (2) rename the extension id from hungtienhuang.t3-vscode to fundryi.t3-native-vscode (lead will do it unless told no).
+- Open answer from the owner: may we push to the fork. Decided 2026-10-14 08:32: no rename. The extension keeps his id hungtienhuang.t3-vscode; the old extension is uninstalled and deprecated, legacy/ is a feature reference only. Risk to watch: VS Code may auto-update his Marketplace id over our installed VSIX once his version is higher than ours; keep our version above his line when we package.
 - Old repo D:\GIT\t3-vscode: archived (README and STATUS carry the note); the owner archives it on GitHub. Its source is copied to legacy/old-extension/ (see legacy/README.md). Its uncommitted other-session files are untouched.
 
 ### Next, in this order
 
 1. Owner's pairing result on Windows. If it fails: fix his Windows pairing path (CHANGELOG 0.1.13 and 0.1.14 name the t3.cmd resolution) in the smallest way.
-2. Rename the extension identity: package.json name t3-native-vscode, publisher fundryi, displayName "T3 Native" (or the owner's pick), keep his commands' ids for now (t3-vscode.*) so his code and docs still match; bump version to 0.2.0 to stay above his line. Package, install, verify the view still appears.
-3. The 6 Windows test failures (symlink EPERM in prepare-vscode-profile and the workspace symlink tests; fileLinks tests that expect /tmp/workspace): make the tests Windows-aware without weakening them (skip symlink tests when symlinks are not permitted, use path.resolve in the expectations).
-4. Vendored T3 pin: his vendor/ is T3 0.0.45 (7812230572f2d7e042d8d14ada2381fc71377560); the owner runs 0.0.46 nightly. Check the wire protocol against reference/t3code (packages/contracts, shared, client-runtime); re-vendor the way vendor/README.md says if something broke; start t3-facts.json with the upstream paths the vendored copy mirrors, so scripts/references.mjs reports drift after every nightly bump (design docs/ours/DRIFT.md).
+2. (dropped 08:32, owner: no rename.)
+3. (done 08:48) The 6 Windows test failures: junction instead of symlink, path.resolve and pathToFileURL in expectations, turnBaseline reads .git/index after its own git status. 255 of 256 pass, 1 skipped as before.
+4. (checked 08:48, docs/ours/VENDOR-DRIFT.md) Handshake still protocol 2. One real break: the nightly's new turn item type secret_request fails his pinned decoder for any thread that contains one. Re-vendor is a phase 3 build item (own worktree, Effect rc.115 to 4.0.2, keep his Windows shell fix, skip the source-control packages). t3-facts.json seeded with 8 facts; docs/ours/t3-facts-old.json removed. Merge rule for vendor/: on an upstream merge take his vendor/ wholesale, then re-apply our re-vendor if his pin is older.
 5. Port, one Opus builder per item in a worktree, in this order: the MCP context bridge (legacy/old-extension/context.js, mcp.js, bridge.js; setup command with the CC Switch and native paths, decision 16; design docs/ours/PIECE2.md); approvals as notifications with Approve, Deny, Show on his approval state (decision 15, docs/ours/APPROVE.md); status bar running state and badge next to his usage item; Add to prompt from Explorer, Alt+K selection, terminal selection, last command, TODO lens, Fix with T3, Review changes, all ending in his composer insert (his command t3-vscode.insertReference); t3.json scripts as tasks; Open in the desktop app; thread deep links; save on send.
 6. Drag and drop (the owner's top pain): his composer takes OS files only. Add the Explorer Shift-drag (VS Code's types application/vnd.code.uri-list and text/plain paths) to his composer drop handler, images as attachments through his own addFiles, the Hold Shift hint (VS Code blocks every drag over a webview unless Shift is held; see docs/ours/QOL.md item 1 and docs/ours/SWITCH.md section 0), and a native "Drop files here" tree view with a drop controller (text/uri-list) for drags without Shift. Verify with a real hand.
 7. Upstream routine proven once: on his next release, `git fetch upstream`, merge, build, tests, our checks, an entry in docs/UPSTREAM.md.
 8. Then the rest of docs/ours/BACKLOG.md as feature ideas (R19, B32, the Q rows that his extension does not already cover), FEATURES.md refreshed for the fork, one full Codex review.
 
+## Run plan (owner 2026-10-14 08:40: usage is not a limit, use as many Opus agents as useful)
+
+- Phase 1 (running): Windows test fixes, vendor drift report. Builder plus reviewer each, worktrees wintests and vendor.
+- Phase 2 (running in parallel, read-only): 7 Opus scouts map his code and our legacy code per feature; one synthesis agent writes docs/ours/PORT-MAP.md: per feature the files to create, the smallest hook into his files, package.json contributions, acceptance criteria, the owner's live test. The lead reviews the map.
+- Phase 3: 9 builders at once, one worktree each (mcp-bridge, approvals, statusbar, add-to-prompt, tasks, desktop-app, deep-links, save-on-send, drag-drop), each followed by an adversarial reviewer and one fix round. All our code under src/host/ours/ and src/webview/ours/; his files get one-line hooks only.
+- Phase 4: the lead merges small items first (patch + 3-way), runs build, typecheck, test after each, resolves package.json by hand, packages one VSIX, installs it, hands the owner live tests one at a time.
+- Phase 5: re-vendor if the drift report says so; upstream merge routine; backlog.
+
 ## Now
 
-- Migration day. Waiting for the owner's pairing result; step 2 (rename) can start without it.
+- 08:40: phase 1 and phase 2 run. Pairing result still open.
 
 ## Log
 

@@ -1,1 +1,10 @@
-[]
+[
+  { "id": "vendor-contracts", "used": "vendor/contracts: wire schemas, pinned copy of packages/contracts/src", "path": "packages/contracts", "grep": "\"name\": \"@t3tools/contracts\",", "upstream": "packages/contracts/src", "vendored": "vendor/contracts", "sha": "7812230572f2d7e042d8d14ada2381fc71377560" },
+  { "id": "vendor-shared", "used": "vendor/shared: pinned copy of packages/shared/src", "path": "packages/shared", "grep": "\"name\": \"@t3tools/shared\",", "upstream": "packages/shared/src", "vendored": "vendor/shared", "sha": "7812230572f2d7e042d8d14ada2381fc71377560" },
+  { "id": "vendor-client-runtime", "used": "vendor/client-runtime: RPC session and state, pinned copy of packages/client-runtime/src", "path": "packages/client-runtime", "grep": "\"name\": \"@t3tools/client-runtime\",", "upstream": "packages/client-runtime/src", "vendored": "vendor/client-runtime", "sha": "7812230572f2d7e042d8d14ada2381fc71377560" },
+  { "id": "protocol-version", "used": "vendored client-runtime connection/compatibility.ts: protocol 2 in the WS query", "path": "packages/contracts/src/environment.ts", "grep": "export const ORCHESTRATION_PROTOCOL_VERSION = 2;" },
+  { "id": "protocol-version-text", "used": "src/host/t3Client.ts getHistory: protocol header value", "path": "packages/contracts/src/environment.ts", "grep": "export const ORCHESTRATION_PROTOCOL_VERSION_TEXT = \"2\";" },
+  { "id": "protocol-header", "used": "src/host/t3Client.ts getHistory: protocol header name", "path": "packages/contracts/src/environment.ts", "grep": "export const ORCHESTRATION_PROTOCOL_HEADER = \"x-t3-orchestration-protocol\";" },
+  { "id": "protocol-query-param", "used": "vendored client-runtime connection/compatibility.ts: WS URL parameter", "path": "packages/contracts/src/environment.ts", "grep": "export const ORCHESTRATION_PROTOCOL_QUERY_PARAM = \"orchestrationProtocol\";" },
+  { "id": "descriptor-protocol-field", "used": "src/host/serverDiscovery.ts: rejects a server whose descriptor is not protocol 2", "path": "packages/contracts/src/environment.ts", "grep": "orchestrationProtocolVersion: Schema.optionalKey(Schema.Int)," }
+]

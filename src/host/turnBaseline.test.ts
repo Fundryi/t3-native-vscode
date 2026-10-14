@@ -26,8 +26,9 @@ test("Manual edits between responses are excluded even in the same file; snapsho
   await git("add", "manual-only.txt");
   await write("untracked.txt", "manual untracked\n");
   await write(".gitignore", "ignored.txt\n"); await write("ignored.txt", "secret\n");
-  const indexBefore = await readFile(join(cwd, ".git/index"));
+  // git status may refresh the index itself (seen on Windows), so read the index after it.
   const statusBefore = await git("status", "--porcelain");
+  const indexBefore = await readFile(join(cwd, ".git/index"));
   await captureTurnBaseline(cwd, "thread", "message");
   assert.deepEqual(await readFile(join(cwd, ".git/index")), indexBefore);
   assert.equal(await git("status", "--porcelain"), statusBefore);
