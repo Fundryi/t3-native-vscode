@@ -1,6 +1,7 @@
 /**
- * I drop, webview side (chat views only: a panel, or the sidebar while K layout shows a chat there). VS Code lets a drag from its Explorer or a tab
- * into a webview only while Shift is held. Window capture listeners claim those drags before his composer handler;
+ * I drop, webview side (chat views only: a panel, or the sidebar while K layout shows a chat there). A drag from VS Code's
+ * Explorer or a tab never reaches this document on Chromium, Shift or not (src/host/ours/drop.ts says why); these
+ * listeners stay for a drag that does arrive. Window capture listeners claim those drags before his composer handler;
  * OS file drops (type Files without VS Code's types) stay with his composer. The host parses the strings (dropParse.ts).
  * A paste without text and without files asks the host for the paths of the last Explorer Ctrl+C (pasteCopied).
  */

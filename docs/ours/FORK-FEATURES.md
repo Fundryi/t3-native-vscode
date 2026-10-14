@@ -514,3 +514,5 @@ Undo a single change of a turn, not the whole file, and edit right inside the di
 - How: part of X2's module src/webview/ours/chatlook.ts (one stylesheet): CSS clips the bubble's message text (not the bubble, whose "You" label sits outside it), and a MutationObserver adds the toggle button to bubbles whose text overflows. No line of his changed. Copy and search still use the full text.
 - Settings: none.
 - Live test: paste 300 lines into the box and send: the bubble shows about ten lines and "Show full message"; click it, then "Show less". Try a fenced code block paste too.
+
+

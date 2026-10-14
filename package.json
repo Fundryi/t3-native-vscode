@@ -40,13 +40,7 @@
         },
         {
           "id": "t3-vscode.ours.drop.view",
-          "name": "Drop files here",
-          "when": "config.t3-vscode.ours.drop.showView",
-          "visibility": "collapsed"
-        },
-        {
-          "id": "t3-vscode.ours.drop.view",
-          "name": "Drop files here",
+          "name": "Drop files here (no Shift needed)",
           "when": "config.t3-vscode.ours.drop.showView",
           "visibility": "collapsed"
         }
@@ -502,9 +496,21 @@
         "properties": {
           "t3-vscode.ours.drop.showView": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "scope": "window",
-            "description": "Show the \"Drop files here\" view under the T3 VSCode sidebar. It takes a drag without Shift and adds the files to the focused chat. Without it, hold Shift while dragging onto the chat, or select files in the Explorer, press Ctrl+C, and paste them into the chat with Ctrl+V."
+            "description": "Show the \"Drop files here\" view under the T3 VSCode sidebar. Drag files from the Explorer or a tab onto it and they go into the focused chat. A drag straight onto a chat cannot work, with or without Shift: VS Code does not pass a drag from its own Explorer or tabs into a webview. The other way: select files in the Explorer, press Ctrl+C, and paste them into the chat with Ctrl+V."
+          }
+        }
+      },
+      {
+        "title": "Fork: Drop files view",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.drop.showView": {
+            "type": "boolean",
+            "default": true,
+            "scope": "window",
+            "description": "Show the \"Drop files here\" view under the T3 VSCode sidebar. Drag files from the Explorer or a tab onto it and they go into the focused chat. A drag straight onto a chat cannot work, with or without Shift: VS Code does not pass a drag from its own Explorer or tabs into a webview. The other way: select files in the Explorer, press Ctrl+C, and paste them into the chat with Ctrl+V."
           }
         }
       },

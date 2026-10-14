@@ -1,8 +1,10 @@
 /**
  * I drop: files dragged from VS Code's Explorer or a tab go into a chat, images T3 can send as attachments, the rest as
- * whole-file references. Three ways in: a Shift-drag onto a chat panel (src/webview/ours/drop.ts asks dropUris, and
- * dropHint when a drag bounced off without Shift), the "Drop files here" view, which takes a drag without Shift, and
- * Ctrl+C in the Explorer then Ctrl+V in a chat (the drop.copy keybinding remembers the paths, pasteCopied inserts them).
+ * whole-file references. Two ways in that work: the "Drop files here" view, and Ctrl+C in the Explorer then Ctrl+V in a
+ * chat (the drop.copy keybinding remembers the paths, pasteCopied inserts them). A drag straight onto a chat never
+ * arrives, Shift or not: Chromium refuses a drag between cross-site frames of one page
+ * (WebContentsViewDragSecurityInfo::IsValidDragTarget), and the workbench and the webview iframe are such frames
+ * (scripts/verify-drag.mjs, docs/ours/FORK-FEATURES.md I). dropUris and dropHint stay for a drag that does arrive.
  */
 import * as vscode from "vscode";
 import { toastWithLogs } from "./logs.js";
@@ -77,15 +79,15 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
     return copied.lines.length;
   });
   const offHint = registerOursRpc("dropHint", (params) => {
-    log.info(`Drag left the chat at once (no Shift held?), types ${typesText(params.types)}; hint shown.`);
-    void vscode.window.showInformationMessage("Hold Shift while dragging files into T3 Code.");
+    log.info(`Drag left the chat at once, types ${typesText(params.types)}; hint shown.`);
+    void vscode.window.showInformationMessage("VS Code does not let a drag from its Explorer or tabs into the chat. Drop the files on \"Drop files here\" in the T3 side bar, or select them in the Explorer, press Ctrl+C, then Ctrl+V in the chat.");
   });
 
   // One item, not an empty tree: VS Code hides an empty tree behind its welcome text, and the drop target is the tree.
   const item = new vscode.TreeItem("Drop files here");
   item.iconPath = new vscode.ThemeIcon("cloud-upload");
-  item.description = "or hold Shift to drop into the chat";
-  item.tooltip = "Drag files from the Explorer or a tab here to add them to the focused T3 chat, or hold Shift while dragging onto the chat box itself (VS Code blocks a webview drop without Shift). Images go in as attachments.";
+  item.description = "drag from the Explorer or a tab";
+  item.tooltip = "Drag files from the Explorer or a tab here to add them to the focused T3 chat. Images go in as attachments. A drag onto the chat itself does not arrive, with or without Shift (VS Code blocks it); Ctrl+C in the Explorer and Ctrl+V in the chat also works.";
   const view = vscode.window.createTreeView<vscode.TreeItem>("t3-vscode.ours.drop.view", {
     treeDataProvider: { getChildren: (element) => element ? [] : [item], getTreeItem: (element) => element },
     dragAndDropController: {
