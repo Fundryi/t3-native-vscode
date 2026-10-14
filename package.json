@@ -48,6 +48,33 @@
     },
     "commands": [
       {
+        "command": "t3-vscode.ours.viewbar.sessions",
+        "title": "Back to Sessions",
+        "category": "T3 VSCode",
+        "icon": "$(arrow-left)"
+      },
+      {
+        "command": "t3-vscode.ours.viewbar.popOut",
+        "title": "Open This Chat in an Editor Tab",
+        "category": "T3 VSCode",
+        "icon": "$(empty-window)"
+      },
+      {
+        "command": "t3-vscode.ours.chat.focus",
+        "title": "Focus Chat Input",
+        "category": "T3 VSCode",
+        "icon": {
+          "light": "resources/t3-tab-light.svg",
+          "dark": "resources/t3-tab-dark.svg"
+        }
+      },
+      {
+        "command": "t3-vscode.ours.chat.new",
+        "title": "New Chat",
+        "category": "T3 VSCode",
+        "icon": "$(add)"
+      },
+      {
         "command": "t3-vscode.ours.threadActions.more",
         "title": "Thread Actions",
         "category": "T3 VSCode"
@@ -83,16 +110,6 @@
         "icon": "$(output)"
       },
       {
-        "command": "t3-vscode.ours.chat.focus",
-        "title": "Focus Chat Input",
-        "category": "T3 VSCode"
-      },
-      {
-        "command": "t3-vscode.ours.chat.new",
-        "title": "New Chat",
-        "category": "T3 VSCode"
-      },
-      {
         "command": "t3-vscode.ours.chat.switch",
         "title": "Switch Chat",
         "category": "T3 VSCode"
@@ -102,11 +119,6 @@
         "title": "Move Chat to Side Panel",
         "category": "T3 VSCode",
         "icon": "$(layout-sidebar-right)"
-      },
-      {
-        "command": "t3-vscode.ours.threadActions.more",
-        "title": "More Thread Actions",
-        "category": "T3 VSCode"
       },
       {
         "command": "t3-vscode.ours.drop.copy",
@@ -301,6 +313,10 @@
       ],
       "editor/title": [
         {
+          "command": "t3-vscode.ours.chat.focus",
+          "group": "navigation"
+        },
+        {
           "command": "t3-vscode.ours.threadActions.more",
           "when": "activeWebviewPanelId == 't3Panel' && t3-vscode.ours.hasThread",
           "group": "t3ours"
@@ -363,6 +379,14 @@
       ],
       "view/item/context": [],
       "commandPalette": [
+        {
+          "command": "t3-vscode.ours.viewbar.sessions",
+          "when": "false"
+        },
+        {
+          "command": "t3-vscode.ours.viewbar.popOut",
+          "when": "false"
+        },
         {
           "command": "t3-vscode.threadActions",
           "when": "false"
@@ -443,9 +467,39 @@
       ],
       "view/title": [
         {
+          "command": "t3-vscode.ours.chat.new",
+          "when": "view == t3.webview && !t3-vscode.ours.sidebarChat",
+          "group": "navigation@1"
+        },
+        {
+          "command": "t3-vscode.ours.viewbar.sessions",
+          "when": "view == t3.webview && t3-vscode.ours.sidebarChat",
+          "group": "navigation@1"
+        },
+        {
+          "command": "t3-vscode.ours.viewbar.popOut",
+          "when": "view == t3.webview && t3-vscode.ours.sidebarChat",
+          "group": "navigation@2"
+        },
+        {
           "command": "t3-vscode.ours.threadActions.more",
-          "when": "view == t3.webview && t3-vscode.ours.hasThread",
+          "when": "view == t3.webview && t3-vscode.ours.hasThread && (t3-vscode.ours.sidebarChat || config.t3-vscode.ours.layout.openThreadsIn == 'editor')",
           "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.ours.threadActions.regenerateTitle",
+          "when": "view == t3.webview && t3-vscode.ours.hasThread && (t3-vscode.ours.sidebarChat || config.t3-vscode.ours.layout.openThreadsIn == 'editor')",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.ours.desktop.open",
+          "when": "view == t3.webview && t3-vscode.ours.hasThread && (t3-vscode.ours.sidebarChat || config.t3-vscode.ours.layout.openThreadsIn == 'editor')",
+          "group": "navigation@5"
+        },
+        {
+          "command": "t3-vscode.ours.links.copy",
+          "when": "view == t3.webview && t3-vscode.ours.hasThread && (t3-vscode.ours.sidebarChat || config.t3-vscode.ours.layout.openThreadsIn == 'editor')",
+          "group": "1_thread"
         },
         {
           "command": "t3-vscode.threadActions",
@@ -453,24 +507,9 @@
           "group": "1_thread"
         },
         {
-          "command": "t3-vscode.ours.threadActions.regenerateTitle",
-          "when": "view == t3.webview && t3-vscode.ours.hasThread",
-          "group": "t3ours"
-        },
-        {
           "command": "t3-vscode.ours.log.show",
           "when": "view == t3.webview",
           "group": "t3ours"
-        },
-        {
-          "command": "t3-vscode.ours.desktop.open",
-          "when": "view == t3.webview",
-          "group": "navigation@5"
-        },
-        {
-          "command": "t3-vscode.ours.links.copy",
-          "when": "view == t3.webview",
-          "group": "1_thread"
         },
         {
           "command": "t3-vscode.fontSettings",

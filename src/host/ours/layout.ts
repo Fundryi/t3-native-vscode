@@ -5,6 +5,8 @@
  * his registry as a chat view, and the "layout" event tells the sidebar webview to render his ChatView.
  * Q1b (FORK-FEATURES Q1b): a pop-out moves its draft, a tab moves back into the sidebar, "Back to" reopens the chat just
  * left, and the chat the sidebar showed comes back after a window reload.
+ * R3 viewbar (FORK-FEATURES R3): context t3-vscode.ours.sidebarChat drives the view title buttons (New Chat in the list,
+ * Sessions and pop-out in a chat), and the view title says "Sessions" or the chat title with the project beside it.
  */
 import * as vscode from "vscode";
 import { SIDEBAR_VIEW_ID } from "../hostState.js";
@@ -24,12 +26,36 @@ const SHOWN_KEY = "t3-vscode.ours.layout.sidebarThread"; // workspaceState: the 
 export function activateLayout({ context, hostState, registry, provider }: OursDeps): vscode.Disposable {
   let view: vscode.WebviewView | undefined;
   let chatShown = false; // so a re-resolved sidebar (the view was moved) shows the chat again
+  // R3: his updateTitles resets the sidebar title to "T3 VSCode" on every state change; ours runs right after it.
+  const titleView = () => {
+    if (!view) return;
+    try {
+      let title = "Sessions", description = "";
+      if (chatShown) {
+        const state = hostState.snapshot(SIDEBAR_VIEW_ID);
+        const thread = state.threads.find((item) => item.id === state.activeThreadId);
+        title = thread?.title.trim() || "New conversation";
+        // As his ChatView heading (ChatView.tsx project-label).
+        description = state.projects.find((item) => item.id === thread?.projectId)?.title ?? state.draft.workspaceRoot?.split(/[\\/]/).filter(Boolean).at(-1) ?? "";
+      }
+      view.title = title;
+      view.description = description;
+    } catch (cause) { log.error("Fork layout: setting the view title failed.", cause); }
+  };
+  const setShown = (chat: boolean) => {
+    chatShown = chat;
+    void vscode.commands.executeCommand("setContext", "t3-vscode.ours.sidebarChat", chat).then(undefined, (cause: unknown) => log.error("Fork layout: setting the sidebarChat context failed.", cause));
+    titleView();
+  };
+  setShown(false);
+  // The list "+" tooltip in the webview follows the setting.
+  const postMode = () => registry.postWhenReady(SIDEBAR_VIEW_ID, OURS_EVENT, { kind: "layoutMode", sidebar: mode() === "sidebar" });
   const remember = (threadId: string | undefined) => {
     if (context.workspaceState.get(SHOWN_KEY) === threadId) return;
     void Promise.resolve(context.workspaceState.update(SHOWN_KEY, threadId)).catch((cause) => log.error("Fork layout: saving the shown chat failed.", cause));
   };
   const post = (chat: boolean) => {
-    chatShown = chat;
+    setShown(chat);
     if (!chat) remember(undefined);
     registry.postWhenReady(SIDEBAR_VIEW_ID, OURS_EVENT, { kind: "layout", chat });
   };
@@ -49,6 +75,8 @@ export function activateLayout({ context, hostState, registry, provider }: OursD
       const resolved = args[0];
       view = resolved;
       resolved.onDidDispose(() => { if (view === resolved) view = undefined; });
+      titleView(); // his original ran updateTitles before view was set
+      postMode();
       if (mode() !== "sidebar") return;
       // His line adds the sidebar with acceptsChatFocus false; nothing is ready yet, so re-adding here loses nothing.
       registry.add(SIDEBAR_VIEW_ID, resolved.webview, true);
@@ -77,8 +105,9 @@ export function activateLayout({ context, hostState, registry, provider }: OursD
       await hostState.composerState(threadId, true, false, SIDEBAR_VIEW_ID);
       return show();
     }),
+    wrap(provider, "updateTitles", (original) => () => { original(); titleView(); }),
   ];
-  const offList = registerOursRpc("layoutList", (_params, viewId) => { if (viewId === SIDEBAR_VIEW_ID) { chatShown = false; remember(undefined); } });
+  const offList = registerOursRpc("layoutList", (_params, viewId) => { if (viewId === SIDEBAR_VIEW_ID) { setShown(false); remember(undefined); } });
   // Every webview reports an initializeDraft it received; a pop-out's arrival in its new tab clears the sidebar copy.
   // When his createPanel only revealed an existing tab, nothing arrives and the sidebar keeps its text.
   const offArrived = registerOursRpc("layoutDraftArrived", (params, viewId) => {
@@ -117,6 +146,12 @@ export function activateLayout({ context, hostState, registry, provider }: OursD
     setTimeout(() => { void Promise.resolve(vscode.window.tabGroups.close(tab)).catch((cause) => log.error("Fork layout: closing the moved tab failed.", cause)); }, 0);
     return true;
   });
+  const viewbarCommands = [
+    // His showThreads posts showNavigation; the sidebar webview then flips to the list and reports layoutList.
+    vscode.commands.registerCommand("t3-vscode.ours.viewbar.sessions", () => Promise.resolve(vscode.commands.executeCommand("t3-vscode.showThreads")).catch((cause) => log.error("Fork layout: Sessions failed.", cause))),
+    // The webview runs his openInTab path, which carries the draft and its attachments.
+    vscode.commands.registerCommand("t3-vscode.ours.viewbar.popOut", () => { registry.postWhenReady(SIDEBAR_VIEW_ID, OURS_EVENT, { kind: "layoutPopOut" }); }),
+  ];
   const moveCommand = vscode.commands.registerCommand("t3-vscode.ours.sidebar.moveToSidebar", async () => {
     try {
       if (mode() !== "sidebar") { void vscode.window.showInformationMessage("T3 VSCode: set Open Threads In to sidebar to move a chat into the side panel."); return; }
@@ -161,11 +196,12 @@ export function activateLayout({ context, hostState, registry, provider }: OursD
       // shortcut: add() clears his ready flag and a loaded sidebar never asks again; if a switch lands while the view
       // is still loading, events wait for a window reload.
       registry.markReady(SIDEBAR_VIEW_ID);
+      postMode();
       if (!chat && chatShown) post(false);
     } catch (cause) { log.error("Fork layout: applying the setting failed.", cause); }
   });
   return vscode.Disposable.from(
     { dispose: () => { for (const unwrap of unwraps.reverse()) unwrap(); offList(); offArrived(); offOpen(); offMove(); offState(); moves.clear(); view = undefined; } },
-    configListener, moveCommand,
+    configListener, moveCommand, ...viewbarCommands,
   );
 }

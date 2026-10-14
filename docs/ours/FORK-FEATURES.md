@@ -515,4 +515,22 @@ Undo a single change of a turn, not the whole file, and edit right inside the di
 - Settings: none.
 - Live test: paste 300 lines into the box and send: the bubble shows about ten lines and "Show full message"; click it, then "Show less". Try a fenced code block paste too.
 
+## R3 viewbar: Native view title buttons, one header row
 
+- What: the T3 side panel uses real VS Code view title buttons. In the sessions list the title bar has "+" (New Chat); in a chat it has a back arrow (Sessions) and a pop-out (open this chat in an editor tab), and our slim "Sessions / pop-out" bar and his duplicate History button are gone, so a chat has one header row. The view title says "Sessions" in the list and the chat title in a chat, with the project name beside it, instead of "T3 VSCODE" twice. Every editor title bar has a T3 button (Focus Chat Input), as in the Claude Code and Codex extensions.
+- Thread buttons in the view title (Open in the T3 App, Copy Link, Thread Actions, Regenerate Title) show only while a chat is on screen (or in editor-tab mode with a chat focused), not over the sessions list.
+- In sidebar mode his "+" buttons are titled "New chat" (they open the chat in the side panel); his list "+" keeps its aria-label "New thread".
+- How: src/host/ours/layout.ts sets the context `t3-vscode.ours.sidebarChat` wherever the K layout flips list and chat, wraps his public `updateTitles` (he resets the sidebar title on every state change) to set the view title and description, posts `layoutMode` for the tooltips, and registers `t3-vscode.ours.viewbar.sessions` (runs his showThreads) and `t3-vscode.ours.viewbar.popOut` (the webview runs his openInTab path, draft included). src/webview/ours/layout.ts holds the hide CSS and the tooltip observer. package.json: view/title and editor/title entries, icons on chat.new and chat.focus. No line of his changed.
+- Settings: none.
+- Live test: the side panel list shows "+" in its title bar; open a chat: the title bar shows the chat name, the back arrow and the pop-out, and inside the panel only his chat header row is left. Any text editor shows the T3 icon top right.
+- Limit: VS Code shows view title buttons always only while T3 is the only view in its container; with the drop view turned on they appear on hover.
+
+## R19 emptylist: The empty sessions list explains itself
+
+- What: when the sessions list has no active chat for this folder, under "No active conversations in this workspace." it shows a "Start a chat" button (same as Ctrl+Alt+Shift+N), the line "T3 has N chats in other folders." with Show (only when N is above 0), and "Alt+K adds the selection, Ctrl+Alt+C focuses the chat."
+- Show opens Switch Chat over those chats (title, folder name, full path). They stay outside the workspace filter (owner default: they do not count as this workspace), so picking one does not open it here: a message offers "Open Folder in New Window" for the chat's folder.
+- Footer: with no folder open his filter shows every T3 project, so "Current workspace only" reads "All T3 folders (no folder open)".
+- Counted: live top-level chats (not archived, not deleted, not subagents) of T3 projects whose folder is not one of this window's folders. A sub or parent folder counts as another folder, as in his exact-root filter.
+- How: host src/host/ours/emptyList.ts (RPCs emptyList.info and emptyList.run; reads his private HostState.shell and visibleProjects() by name, logs once if renamed), rule in emptyListRules.ts (+ test), Switch Chat takes an optional "other" argument (src/host/ours/keys.ts). Webview src/webview/ours/emptyList.ts adds the block after his empty line in the full sessions list only (not the compact history of a chat tab). No line of his changed.
+- Settings: none.
+- Live test: open a parent or sub folder of a T3 project (for example D:\GIT) as the folder: the list shows the block with the count; Show lists those chats, picking one offers its folder; Start a chat opens a new chat. Open an empty window: the footer reads "All T3 folders (no folder open)".

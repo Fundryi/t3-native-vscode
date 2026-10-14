@@ -3,6 +3,8 @@
  * in the sidebar the "layout" event flips that attribute and re-delivers a state snapshot to make App render again.
  * A slim bar above his ChatView leads back to the sessions list or pops the chat out to an editor tab; in the list it
  * offers "Back to <title>" (Q1b). Every webview answers the move of its tab into the sidebar and reports an arrived draft.
+ * R3 viewbar: in a chat the slim bar and his History button hide (the view title has Sessions and pop-out), and his "+"
+ * says "New chat" where it opens one in the sidebar.
  */
 import { bridge, Events, Methods } from "../bridge-client";
 import { isObject, type HostStateSnapshot } from "../../shared/bridge";
@@ -36,12 +38,13 @@ if (document.body.dataset.surface === "sidebar") {
 body[data-ours-chat], body[data-ours-back] { display: flex; flex-direction: column; }
 body[data-ours-chat] > #root, body[data-ours-back] > #root { flex: 1; min-height: 0; height: auto; }
 .ours-sidebar-bar { display: none; }
-body[data-ours-chat] > .ours-sidebar-bar, body[data-ours-back] > .ours-sidebar-bar { display: flex; align-items: center; gap: 4px; padding: 2px 6px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+body[data-ours-back]:not([data-ours-chat]) > .ours-sidebar-bar { display: flex; align-items: center; gap: 4px; padding: 2px 6px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 .ours-sidebar-bar .ours-sidebar-back, .ours-sidebar-bar .ours-sidebar-return { display: flex; align-items: center; gap: 4px; width: auto; padding: 0 6px 0 2px; }
 .ours-sidebar-bar .ours-sidebar-gap { flex: 1; }
 .ours-sidebar-return { min-width: 0; max-width: 100%; }
 .ours-sidebar-return > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 body[data-ours-chat] .ours-sidebar-return, body:not([data-ours-chat]) .ours-sidebar-back, body:not([data-ours-chat]) .ours-sidebar-gap, body:not([data-ours-chat]) .ours-sidebar-popout { display: none; }
+body[data-ours-chat] .chat-header [aria-label="History"] { display: none; }
 @media (max-width: 300px) {
   body[data-ours-chat] .chat-header .project-label, body[data-ours-chat] .chat-header .breadcrumb-divider,
   body[data-ours-chat] .chat-header .scheduled-header-button, body[data-ours-chat] .chat-header [aria-label="Open Web UI"] { display: none; }
@@ -112,4 +115,27 @@ body[data-ours-chat] .ours-sidebar-return, body:not([data-ours-chat]) .ours-side
   back.addEventListener("click", () => { if (lastThreadId) void oursRequest("layoutOpen", { threadId: lastThreadId }).catch(report); });
   // His App openInTab handler carries the draft and its attachments over; the host then sends us back to the list.
   bar.querySelector(".ours-sidebar-popout")?.addEventListener("click", () => deliver(Events.openInTab));
+  registerOursEvent("layoutPopOut", () => { if (chatShown()) deliver(Events.openInTab); });
+
+  // R3: his "+" tooltips say "Open New Chat in Editor Tab"; in sidebar mode both open the chat here. His list button keeps
+  // its aria-label "New thread", which is true in both modes (and his live scripts click it by that name).
+  const NEW_CHAT = "New chat";
+  let sidebarMode: boolean | undefined; // undefined until the host says so: his strings stay
+  const setLabel = (element: HTMLElement | null, title: string, aria?: string) => {
+    if (!element) return;
+    if (element.title !== title) element.title = title;
+    if (aria !== undefined && element.getAttribute("aria-label") !== aria) element.setAttribute("aria-label", aria);
+  };
+  const relabel = () => {
+    if (sidebarMode !== undefined) setLabel(document.querySelector<HTMLElement>(".sidebar-search-add"), sidebarMode ? NEW_CHAT : "Open New Chat in Editor Tab");
+    // data-ours-chat is set in sidebar mode only, so this "+" makes a new chat in the sidebar.
+    if (chatShown()) setLabel(document.querySelector<HTMLElement>('.chat-header .icon-button[aria-label="Open New Chat in Editor Tab"]'), NEW_CHAT, NEW_CHAT);
+  };
+  registerOursEvent("layoutMode", (data) => { sidebarMode = data.sidebar === true; relabel(); });
+  let queued = false;
+  new MutationObserver(() => {
+    if (queued) return;
+    queued = true;
+    requestAnimationFrame(() => { queued = false; try { relabel(); } catch (cause) { report(cause); } });
+  }).observe(document.body, { childList: true, subtree: true });
 }

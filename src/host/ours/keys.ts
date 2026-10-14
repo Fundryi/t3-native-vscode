@@ -6,6 +6,7 @@
 import * as vscode from "vscode";
 import { OURS_EVENT } from "../../shared/ours/channel.js";
 import { SIDEBAR_VIEW_ID } from "../hostState.js";
+import { otherFolderChats } from "./emptyList.js";
 import { log } from "./log.js";
 import type { OursDeps } from "./types.js";
 
@@ -13,11 +14,22 @@ export function activateKeys({ hostState, registry, provider }: OursDeps): vscod
   // His Composer ignores a t3-focus-composer whose draftKey is not its own (Composer.tsx:178).
   const focusComposer = (viewId: string) =>
     registry.postWhenReady(viewId, OURS_EVENT, { kind: "focus", draftKey: hostState.snapshot(viewId).activeThreadId ?? "new" });
-  const run = (name: string, body: () => Promise<void>) => async () => {
-    try { await body(); } catch (cause) {
+  const run = (name: string, body: (...args: unknown[]) => Promise<void>) => async (...args: unknown[]) => {
+    try { await body(...args); } catch (cause) {
       log.error(`Fork keys: ${name} failed.`, cause);
       void vscode.window.showErrorMessage(`T3 VSCode: ${name} failed: ${cause instanceof Error ? cause.message : String(cause)}`);
     }
+  };
+  // R19: chats of other folders stay outside his workspace filter (selectThread refuses them), so picking one offers its folder.
+  const switchOther = async () => {
+    const chats = otherFolderChats(hostState);
+    if (!chats.length) { void vscode.window.showInformationMessage("T3 VSCode: no chats in other folders."); return; }
+    const picked = await vscode.window.showQuickPick(chats.map((chat) => ({
+      label: chat.title, description: chat.root.split(/[\\/]/).filter(Boolean).pop() ?? chat.root, detail: chat.root, chat,
+    })), { placeHolder: "T3 chats in other folders (each opens in its own folder)", matchOnDescription: true, matchOnDetail: true });
+    if (!picked?.chat.root) return;
+    const open = await vscode.window.showInformationMessage(`"${picked.chat.title}" belongs to ${picked.chat.root}. Open that folder to continue it.`, "Open Folder in New Window");
+    if (open) await vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(picked.chat.root), { forceNewWindow: true });
   };
   return vscode.Disposable.from(
     vscode.commands.registerCommand("t3-vscode.ours.chat.focus", run("Focus Chat", async () => {
@@ -31,7 +43,8 @@ export function activateKeys({ hostState, registry, provider }: OursDeps): vscod
     vscode.commands.registerCommand("t3-vscode.ours.chat.new", run("New Chat", async () => {
       focusComposer(await provider.createNewPanel(SIDEBAR_VIEW_ID));
     })),
-    vscode.commands.registerCommand("t3-vscode.ours.chat.switch", run("Switch Chat", async () => {
+    vscode.commands.registerCommand("t3-vscode.ours.chat.switch", run("Switch Chat", async (scope?: unknown) => {
+      if (scope === "other") return switchOther();
       const time = (thread: { lastActiveAt?: string | null; updatedAt: string }) => Date.parse(thread.lastActiveAt ?? thread.updatedAt) || 0;
       const threads = hostState.snapshot(SIDEBAR_VIEW_ID).threads.filter((thread) => !thread.archived).sort((a, b) => time(b) - time(a));
       if (!threads.length) { void vscode.window.showInformationMessage("T3 VSCode: no chats in this workspace yet."); return; }

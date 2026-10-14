@@ -15,6 +15,8 @@ export interface OursProvider {
   createNewPanel(sourceViewId?: string): Promise<string>;
   /** A method, not readonly: C wraps it (see docs/ours/PORT-MAP.md 0.2). */
   resolveWebviewView(webviewView: vscode.WebviewView): void;
+  /** R3 viewbar wraps it: his version resets the sidebar title on every state change. */
+  updateTitles(): void;
 }
 
 export interface OursDeps {

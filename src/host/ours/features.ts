@@ -74,7 +74,7 @@ export { activateChatlook as chatlook } from "./chatlook.js";
 
 export { activateDefaults as defaults } from "./defaults.js";
 
-// R3 viewbar
+// R3 viewbar: lives in layout.ts (K layout owns the sidebar view and its chatShown state)
 
 // R4 working
 
@@ -104,6 +104,6 @@ export { activateOutput as output } from "./output.js";
 
 // R18 substop
 
-// R19 emptylist
+export { activateEmptyList as emptyList } from "./emptyList.js";
 
 // R20 longmsg

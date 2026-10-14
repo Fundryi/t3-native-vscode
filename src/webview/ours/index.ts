@@ -77,7 +77,7 @@ import "./polish";
 
 import "./defaults";
 
-// R3 viewbar
+// R3 viewbar: in ./layout (the slim bar it hides and the "+" labels sit there)
 
 import "./working";
 
@@ -107,6 +107,6 @@ import "./focus";
 
 import "./substop";
 
-// R19 emptylist
+import "./emptyList";
 
 // R20 longmsg: in ./chatlook (X2), no import of its own
