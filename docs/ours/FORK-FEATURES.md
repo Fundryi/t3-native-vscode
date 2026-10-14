@@ -462,3 +462,14 @@ Undo a single change of a turn, not the whole file, and edit right inside the di
 - How: no line of his changed. His card carries no child thread id, so the webview reads its row key (`data-search-row`, TranscriptView.tsx) and finds the subagent item's `childThreadId` in the last state snapshot; an editor tab whose first snapshot was a reply asks for the state once.
 - Files: src/webview/ours/substop.ts.
 - Live test: start a subagent from a chat; its card shows Stop next to the chevron; click it: the card turns to stopped or interrupted and the button goes away.
+
+## R13 focus: Focus never drops to the page
+
+- Sidebar: opening a chat from Sessions puts the caret in its composer (his own focus path, so the remembered caret comes back). "Sessions" puts focus on the row of the chat just left, else the active row, else "Search threads"; the restored list scroll is kept.
+- Removing an attachment or reference chip moves focus to the next chip's X, or to the message box after the last one.
+- Tabbing out of a popup (model picker, history, thread menu, composer options, quote comment, find filters, equation menu, image preview) closes it, and focus stays where Tab put it, so Escape stops a running turn again.
+- Rule: a popup closes only when Tab leaves from inside it (or focus comes from the body or VS Code). A popup that opens without taking focus (find filters, portaled to the end of the page) stays open until Tab reaches into it.
+- Only acts while the webview has focus and only when focus was lost (body, a removed or hidden element); it never moves focus the user or his code already placed.
+- How: no line of his changed. src/webview/ours/focus.ts: a MutationObserver on body[data-ours-chat] (set by layout.ts), a capture click listener on the chip X buttons and a window focusin listener that sends the popup a synthetic Escape (the popup list is the one escape.ts exports). That listener ignores focus moved by the pointer (from a pointerdown until the next key press): a click on the popup's own button must toggle it closed, and his outside-click handlers cover the rest.
+- Settings and commands: none.
+- Live test: keyboard only in the side panel: Enter on a session row, type at once; Tab to "Sessions", Enter: focus is on that chat's row (Enter reopens it); add two files, Tab to the first X, Enter, Enter: both go and the caret is in the message box; open the model picker, Shift+Tab: it closes; in Find, Enter on "Search filters", then Tab until focus is inside the filters popover: it stays open and the filters are reachable, Tab out of it: it closes; start a turn, Escape stops it. With the mouse: open the model picker, click its button again: it closes.

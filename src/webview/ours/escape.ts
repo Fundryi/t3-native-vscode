@@ -6,7 +6,7 @@
  * its popup; the decision runs in the window bubble phase, after React's root handlers had their chance.
  */
 // details: only his composer overflow menu; transcript details (changed files) stay open as content, not popups.
-const POPUPS = "[role=dialog], [role=menu], details.composer-options-overflow[open]";
+export const POPUPS = "[role=dialog], [role=menu], details.composer-options-overflow[open]";
 let popupAtKeyDown = false;
 
 window.addEventListener("keydown", (event) => {

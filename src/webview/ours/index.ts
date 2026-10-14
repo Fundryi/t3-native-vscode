@@ -95,7 +95,7 @@ import "./openline";
 
 // R12 setup
 
-// R13 focus
+import "./focus";
 
 // R14 keys2
 
