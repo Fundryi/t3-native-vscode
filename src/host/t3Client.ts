@@ -22,8 +22,8 @@ import * as Option from "effect/Option";
 import * as Schema from "effect/Schema";
 import * as Scope from "effect/Scope";
 import * as Stream from "effect/Stream";
-import { FetchHttpClient, type HttpClient } from "effect/unstable/http";
-import * as Socket from "effect/unstable/socket/Socket";
+import { FetchHttpClient, type HttpClient } from "effect/http";
+import * as Socket from "effect/socket/Socket";
 import type { DiscoveredServer } from "./serverDiscovery.js";
 import { readCheckpointFiles, readCheckpointDiff } from "./checkpointFiles.js";
 

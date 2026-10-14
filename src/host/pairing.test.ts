@@ -6,8 +6,8 @@ import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { delimiter, join } from "node:path";
 import * as Effect from "effect/Effect";
-import { HostProcessEnvironment, HostProcessPlatform } from "@t3tools/shared/hostProcess";
-import { resolveSpawnCommand, SpawnExecutableResolution } from "@t3tools/shared/shell";
+import { Environment as HostProcessEnvironment, Platform as HostProcessPlatform } from "@t3tools/shared/HostProcess";
+import { CommandResolutionCache, resolveSpawnCommand, SpawnExecutableResolution } from "@t3tools/shared/shell";
 import { pairWithServer, PairingError, runPairingCommand, type PairingCommandRuntime } from "./pairing.js";
 
 function commandHarness(platform: NodeJS.Platform, executable?: string) {
@@ -58,6 +58,7 @@ test("Windows lookup honors Path/PATHEXT and resolves the first installed launch
   const { calls, runtime } = commandHarness("win32");
   const resolve: PairingCommandRuntime["resolve"] = (command, args) => Effect.runSync(resolveSpawnCommand(command, args).pipe(
     Effect.provideService(HostProcessPlatform, "win32"),
+    Effect.provideService(CommandResolutionCache, new Map()),
     Effect.provideService(HostProcessEnvironment, {
       Path: '"C:\\Users\\Hung Tien\\.t3\\bin";C:\\later', PATHEXT: ".EXE;.CMD",
     }),

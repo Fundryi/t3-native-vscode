@@ -21,10 +21,10 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc-rs --noEmit",
     "test": "vp test run --config ../../vite.config.ts --dir ."
   },
   "dependencies": {
-    "effect": "4.0.0-rc.115"
+    "effect": "4.0.2"
   }
 }

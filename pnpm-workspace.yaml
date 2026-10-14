@@ -1,11 +1,12 @@
 packages:
   - vendor/*
 overrides:
-  effect: 4.0.0-rc.115
+  effect: 4.0.2
 allowBuilds:
   esbuild: true
   '@tailwindcss/oxide': true
   # Local VSIX packaging does not use Microsoft's signing binary.
   '@vscode/vsce-sign': false
 patchedDependencies:
+  effect@4.0.2: patches/effect@4.0.2.patch
   '@legendapp/list@3.3.5': patches/@legendapp__list@3.3.5.patch

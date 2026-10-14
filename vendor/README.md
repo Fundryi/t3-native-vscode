@@ -2,8 +2,9 @@
 
 Source copied (src only) from the T3 Code repo:
 
-- **Upstream:** `/home/hungtien/Documents/playground/myt3code`
-- **Git sha:** `7812230572f2d7e042d8d14ada2381fc71377560` (2026-10-05, upstream version 0.0.45)
+- **Upstream:** https://github.com/pingdotgg/t3code (the fork's read-only clone under `reference/t3code`)
+- **Git sha:** `107f6024ea4786a58a83c921728a113b849de192` (tag `v0.0.46-nightly.20261014.3093`, committed 2026-10-13)
+- **Previous pin:** `7812230572f2d7e042d8d14ada2381fc71377560` (2026-10-05, upstream version 0.0.45)
 
 ## What is here
 
@@ -12,9 +13,11 @@ Source copied (src only) from the T3 Code repo:
 | `@t3tools/contracts` | `packages/contracts` | `vendor/contracts` |
 | `@t3tools/shared` | `packages/shared` | `vendor/shared` |
 | `@t3tools/client-runtime` | `packages/client-runtime` | `vendor/client-runtime` |
+| `@t3tools/source-control-<host>` (7) | `packages/source-control-<host>/src/client/definition.ts` | `vendor/source-control-<host>` |
 
-Each copy contains the package's `src/` tree (structure preserved) and its
-`package.json`, nothing else.
+Each of the first three copies contains the package's `src/` tree (structure
+preserved) and its `package.json`, nothing else. The seven source-control
+copies hold only `src/client/definition.ts` and a reduced `package.json` (step 6).
 
 ## What was excluded
 
@@ -22,6 +25,11 @@ Each copy contains the package's `src/` tree (structure preserved) and its
 - `packages/shared/src/testing/` entirely (testkit: `longTempDir.ts`,
   `symlinks.ts`, `TraceRetention.fixture.mjs`). No non-test source imports it.
 - All `devDependencies` from the copied package.jsons (test-only tooling).
+- `client-runtime/src/reviewGuideTour.ts` (needs `@pierre/diffs` 1.5.2; the
+  extension does not use it) and `client-runtime/src/remotePerformance.bench.ts`
+  (imports `vite-plus/test`).
+- Everything in the seven `source-control-*` packages except
+  `src/client/definition.ts`.
 - No `__snapshots__` directories existed upstream, so none were copied.
 
 ## Why
@@ -49,20 +57,22 @@ The vendored manifests declare their runtime dependencies and keep
 version; the root also declares Effect because the host adapter imports it.
 The lockfile resolves the remaining dependencies:
 
-- `effect` **4.0.0-rc.115** — exactly one copy; duplicates break schema decoding
+- `effect` **4.0.2**, patched with T3's `patches/effect@4.0.2.patch` (step 7);
+  exactly one copy, duplicates break schema decoding
 - `@noble/curves` 1.9.1
 - `@noble/hashes` 1.8.0
 - `jose` 6.2.2
 - `yaml` ^2.9.0
-- `mdast-util-directive` ^3.1.0
-- `micromark-extension-directive` ^4.0.0
-- `micromark-util-character` ^2.1.1
-- `remark-parse` ^11.0.0
-- `unified` ^11.0.5
+- `mdast-util-directive` 3.1.0
+- `micromark-extension-directive` 4.0.0
+- `micromark-util-character` 2.1.1
+- `rehype-raw` 7.0.0, `rehype-sanitize` 6.0.0, `remark-breaks` 4.0.0,
+  `remark-gfm` 4.0.1, `remark-parse` 11.0.0, `remark-rehype` 11.1.2
+- `unified` 11.0.5
 - `three` 0.180.0
 
 Type-checking additionally needs `micromark-util-types` ^2.0.2 (type-only
-import in `client-runtime/src/codexMarkdownDirectives.ts`; it was a devDependency
+import in `shared/src/codexMarkdownDirectives.ts`; it was a devDependency
 upstream) and `@types/node` (several `shared` files import `node:*` builtins).
 Both belong in the root devDependencies.
 
@@ -71,7 +81,7 @@ Both belong in the root devDependencies.
 Against a fresh upstream checkout:
 
 ```sh
-UPSTREAM=/path/to/myt3code        # at the desired sha
+UPSTREAM=/path/to/t3code          # at the desired sha
 DEST=vendor
 
 rsync -a --exclude='*.test.ts' --exclude='__snapshots__/' \
@@ -79,13 +89,25 @@ rsync -a --exclude='*.test.ts' --exclude='__snapshots__/' \
 rsync -a --exclude='*.test.ts' --exclude='__snapshots__/' --exclude='/testing/' \
   "$UPSTREAM/packages/shared/src/"           "$DEST/shared/src/"
 rsync -a --exclude='*.test.ts' --exclude='__snapshots__/' \
+  --exclude='/reviewGuideTour.ts' --exclude='/remotePerformance.bench.ts' \
   "$UPSTREAM/packages/client-runtime/src/"   "$DEST/client-runtime/src/"
+for d in "$UPSTREAM"/packages/source-control-*; do
+  [ -f "$d/src/client/definition.ts" ] || continue
+  mkdir -p "$DEST/$(basename "$d")/src/client"
+  cp "$d/src/client/definition.ts" "$DEST/$(basename "$d")/src/client/definition.ts"
+done
 
 cp "$UPSTREAM/packages/contracts/package.json"      "$DEST/contracts/package.json"
 cp "$UPSTREAM/packages/shared/package.json"         "$DEST/shared/package.json"
 cp "$UPSTREAM/packages/client-runtime/package.json" "$DEST/client-runtime/package.json"
 cp "$UPSTREAM/LICENSE"                              "$DEST/LICENSE.t3code"
+cp "$UPSTREAM/patches/effect@<version>.patch"       patches/
 ```
+
+Empty each `src/` first (or use `rsync --delete`): upstream renames and moves
+files (0.0.46 moved `client-runtime/src/markdownLinks.ts` to `shared` and
+renamed `shared/src/hostProcess.ts` to `HostProcess.ts`). On Windows, stage a
+case-only rename with `git mv`; `git add -A` does not see it.
 
 Then re-apply the package.json edits by hand (they are **not** scripted):
 
@@ -110,8 +132,27 @@ Then re-apply the package.json edits by hand (they are **not** scripted):
    task reads retain opaque schedule data and unknown server fields; writes still
    validate interval/fixed schedules and keep additional task/schedule fields.
    This lets the extension display newer schedules safely and retain fields
-   that its form does not edit. `src/host/scheduledTasks.test.ts` verifies this
-   boundary. The separate T3 Code application is not changed.
+   that its form does not edit. `ScheduledTaskUpsertSchedule` leaves out the
+   upstream `webhook` member: the sidebar form writes only interval and
+   fixed_time, and `src/shared/scheduledTasks.ts` narrows to that union.
+   `src/host/scheduledTasks.test.ts` verifies this boundary. The separate T3
+   Code application is not changed.
+
+6. Give each `vendor/source-control-<host>` a reduced `package.json`: the
+   upstream name, `private`, `type: module`, only the `./client/definition`
+   export, and dependencies `@t3tools/contracts`, `@t3tools/shared`,
+   `@t3tools/source-control-core` (where upstream lists it) and `effect`.
+   `client-runtime/src/operations/projects.ts` (the host uses it) imports
+   `sourceControlClients.ts`, which imports these seven definitions; each
+   definition imports only contracts, shared, effect and source-control-core.
+   Drop `@pierre/diffs` from client-runtime's dependencies (only the excluded
+   `reviewGuideTour.ts` uses it).
+
+7. Copy T3's Effect patch to `patches/` and list it under
+   `patchedDependencies` in `pnpm-workspace.yaml`; set the root `effect`
+   dependency and the `overrides` entry to the same version. The 4.0.2 patch
+   adds the `RpcClient.ConnectionHooks.onPingTimeout` hook that
+   `client-runtime/src/rpc/session.ts` sets.
 
 Update the provenance block at the top of this file, and re-run the
 verification greps: no `three` imports outside `client-runtime/src/device/`,
@@ -120,8 +161,9 @@ no imports of `./testing` / `@t3tools/shared/testing` outside test files.
 ## Known caveats
 
 - `vendor/shared/package.json` still exports `./testing/longTempDir` and
-  `./testing/symlinks`; those entries are left intact from upstream but point
+  `./testing/symlinks`, and `vendor/client-runtime/package.json` still exports
+  `./review-guide-tour`; those entries are left intact from upstream but point
   at files that are excluded here. Nothing in the vendored tree imports them.
-- `vendor/client-runtime/src/remotePerformance.bench.ts` is kept verbatim (it
-  is not a `*.test.ts`). It imports `vite-plus/test`, which is not vendored;
-  exclude or delete it on the next sync if it interferes with typechecking.
+- Effect 4.0 moved its modules out of `unstable`: the host imports
+  `effect/http` and `effect/socket/Socket` (src/host/pairing.ts,
+  serverDiscovery.ts, t3Client.ts, scripts/spike.ts).
