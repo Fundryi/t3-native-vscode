@@ -1,0 +1,486 @@
+{
+  "name": "t3-vscode",
+  "displayName": "T3 Code",
+  "description": "Use a running T3 Code server from VS Code.",
+  "publisher": "fundryi",
+  "version": "0.1.1",
+  "private": true,
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "main": "./extension.js",
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished",
+    "onView:t3vscode.panel",
+    "onCommand:t3vscode.open",
+    "onCommand:t3vscode.pair",
+    "onCommand:t3vscode.startT3",
+    "onCommand:t3vscode.forget",
+    "onUri"
+  ],
+  "contributes": {
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "t3vscode.mcp",
+        "label": "T3 VS Code context"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "t3vscode",
+          "title": "T3 Code",
+          "icon": "media/t3.svg"
+        }
+      ]
+    },
+    "views": {
+      "t3vscode": [
+        {
+          "type": "webview",
+          "id": "t3vscode.panel",
+          "name": "T3 Code"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "t3vscode.open",
+        "category": "T3",
+        "title": "Open",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "t3vscode.openInEditor",
+        "category": "T3",
+        "title": "Open in editor tab"
+      },
+      {
+        "command": "t3vscode.showChanges",
+        "category": "T3",
+        "title": "Show this thread's changes"
+      },
+      {
+        "command": "t3vscode.pair",
+        "category": "T3",
+        "title": "Pair with this computer"
+      },
+      {
+        "command": "t3vscode.startT3",
+        "category": "T3",
+        "title": "Start the T3 desktop app"
+      },
+      {
+        "command": "t3vscode.forget",
+        "category": "T3",
+        "title": "Forget the pairing"
+      },
+      {
+        "command": "t3vscode.mcpSetup",
+        "category": "T3",
+        "title": "Show MCP setup"
+      },
+      {
+        "command": "t3vscode.mcpAddClaude",
+        "category": "T3",
+        "title": "Add MCP server to Claude Code"
+      },
+      {
+        "command": "t3vscode.mcpAddCodex",
+        "category": "T3",
+        "title": "Add MCP server to Codex"
+      },
+      {
+        "command": "t3vscode.focusComposer",
+        "category": "T3",
+        "title": "Focus the composer"
+      },
+      {
+        "command": "t3vscode.openInDesktop",
+        "category": "T3",
+        "title": "Open this thread in the T3 app",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "t3vscode.addToPrompt",
+        "title": "T3: Add to prompt"
+      },
+      {
+        "command": "t3vscode.addSelection",
+        "title": "T3: Add selection to prompt"
+      },
+      {
+        "command": "t3vscode.newThread",
+        "category": "T3",
+        "title": "New thread",
+        "icon": "$(add)"
+      },
+      {
+        "command": "t3vscode.switchThread",
+        "category": "T3",
+        "title": "Switch thread",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "t3vscode.showLogs",
+        "category": "T3",
+        "title": "Show logs"
+      },
+      {
+        "command": "t3vscode.walkthrough",
+        "category": "T3",
+        "title": "Get started"
+      },
+      {
+        "command": "t3vscode.fixWithT3",
+        "category": "T3",
+        "title": "Fix with T3"
+      },
+      {
+        "command": "t3vscode.addTerminalSelection",
+        "title": "T3: Add terminal selection to prompt"
+      },
+      {
+        "command": "t3vscode.openSettings",
+        "category": "T3",
+        "title": "Open T3 settings"
+      },
+      {
+        "command": "t3vscode.reviewChanges",
+        "category": "T3",
+        "title": "Review changes with T3"
+      },
+      {
+        "command": "t3vscode._open",
+        "title": "T3: Open a file (internal)"
+      },
+      {
+        "command": "t3vscode._diff",
+        "title": "T3: Show a file's change (internal)"
+      },
+      {
+        "command": "t3vscode.copyThreadLink",
+        "category": "T3",
+        "title": "Copy link to this thread"
+      },
+      {
+        "command": "t3vscode.addLastCommand",
+        "title": "T3: Add last terminal command to prompt"
+      },
+      {
+        "command": "t3vscode._mention",
+        "title": "T3: Add text to prompt (internal)"
+      },
+      {
+        "command": "t3vscode._mcpNudge",
+        "title": "T3: Ask once about the MCP setup (internal)"
+      },
+      {
+        "command": "t3vscode.newThreadIn",
+        "category": "T3",
+        "title": "New thread in a folder..."
+      },
+      {
+        "command": "t3vscode.t3Palette",
+        "category": "T3",
+        "title": "Open T3's command palette"
+      }
+    ],
+    "taskDefinitions": [
+      {
+        "type": "t3",
+        "required": [
+          "script"
+        ],
+        "properties": {
+          "script": {
+            "type": "string",
+            "description": "The name of a script in t3.json at the workspace folder root."
+          }
+        }
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "t3.json",
+        "url": "https://t3.codes/schema/t3.json"
+      }
+    ],
+    "configuration": {
+      "title": "T3 Code",
+      "properties": {
+        "t3vscode.followTheme": {
+          "type": "boolean",
+          "default": true,
+          "description": "Make T3's light or dark mode follow VS Code's theme."
+        },
+        "t3vscode.openOnStartup": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show the T3 panel when a window opens."
+        },
+        "t3vscode.notify": {
+          "type": "string",
+          "enum": [
+            "all",
+            "needsYou",
+            "off"
+          ],
+          "default": "all",
+          "description": "Which thread events show a notification while the panel is hidden or the window is not focused."
+        },
+        "t3vscode.runInTerminal": {
+          "type": "string",
+          "enum": [
+            "vscode",
+            "t3"
+          ],
+          "default": "vscode",
+          "description": "Where a code block's Run in terminal button runs: a VS Code terminal, or T3's own drawer."
+        },
+        "t3vscode.keysToVsCode": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "palette",
+              "quickOpen",
+              "panel",
+              "terminal",
+              "switch",
+              "blur"
+            ]
+          },
+          "uniqueItems": true,
+          "default": [
+            "palette",
+            "quickOpen",
+            "panel",
+            "terminal",
+            "switch",
+            "blur"
+          ],
+          "description": "Keys pressed inside T3's page that go to VS Code instead of T3: palette (Ctrl+Shift+P), quickOpen (Ctrl+P), panel (Ctrl+J), terminal (Ctrl+Backquote), switch (Ctrl+Alt+T), blur (Ctrl+Alt+C)."
+        },
+        "t3vscode.saveOnSend": {
+          "type": "boolean",
+          "default": true,
+          "description": "Save all dirty files when a prompt is sent in T3, so agents read what you see."
+        },
+        "t3vscode.todoLens": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show an Implement with T3 lens above TODO and FIXME comments."
+        }
+      }
+    },
+    "walkthroughs": [
+      {
+        "id": "t3vscode.start",
+        "title": "Get started with T3 Code",
+        "description": "Connect VS Code to the T3 Code server on this computer and learn the keys.",
+        "steps": [
+          {
+            "id": "startT3",
+            "title": "Start T3",
+            "description": "The T3 desktop app runs the server; the panel says when it is down.\n[Start T3](command:t3vscode.startT3)",
+            "media": {
+              "markdown": "media/walkthrough/start.md"
+            },
+            "completionEvents": [
+              "onContext:t3vscode.running"
+            ]
+          },
+          {
+            "id": "pair",
+            "title": "Pair this computer",
+            "description": "Paste a pairing link from T3 into the panel's form. A session lasts 30 days.\n[Pair](command:t3vscode.pair)",
+            "media": {
+              "markdown": "media/walkthrough/pair.md"
+            },
+            "completionEvents": [
+              "onContext:t3vscode.paired"
+            ]
+          },
+          {
+            "id": "mcp",
+            "title": "Register the VS Code context server for your agents",
+            "description": "Show the setup for this computer, then register it with CC Switch, the Add buttons or the harness CLI. Agents inside VS Code find it in MCP: List Servers.\n[Show MCP setup](command:t3vscode.mcpSetup)",
+            "media": {
+              "markdown": "media/walkthrough/mcp.md"
+            },
+            "completionEvents": [
+              "onCommand:t3vscode.mcpSetup"
+            ]
+          },
+          {
+            "id": "keys",
+            "title": "The keys and menus",
+            "description": "Ctrl+Alt+C, Alt+K, Ctrl+Alt+T, right-click Add to prompt, Shift-drag, Fix with T3 and Implement with T3.\n[Open the panel](command:t3vscode.open)\n[Keyboard Shortcuts](command:workbench.action.openGlobalKeybindings?%5B%22t3vscode%22%5D)",
+            "media": {
+              "markdown": "media/walkthrough/keys.md"
+            },
+            "completionEvents": [
+              "onView:t3vscode.panel"
+            ]
+          }
+        ]
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "t3vscode.focusComposer",
+        "key": "ctrl+alt+c",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "t3vscode.addSelection",
+        "key": "alt+k",
+        "when": "editorTextFocus && t3vscode.panelVisible"
+      },
+      {
+        "command": "t3vscode.switchThread",
+        "key": "ctrl+alt+t"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "t3vscode.addToPrompt",
+          "group": "t3vscode"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "t3vscode.addToPrompt",
+          "group": "t3vscode"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "t3vscode.newThread",
+          "when": "view == t3vscode.panel",
+          "group": "navigation@1"
+        },
+        {
+          "command": "t3vscode.switchThread",
+          "when": "view == t3vscode.panel",
+          "group": "navigation@2"
+        },
+        {
+          "command": "t3vscode.openInDesktop",
+          "when": "view == t3vscode.panel",
+          "group": "navigation@3"
+        },
+        {
+          "command": "t3vscode.openInEditor",
+          "when": "view == t3vscode.panel",
+          "group": "t3vscode"
+        },
+        {
+          "command": "t3vscode.showChanges",
+          "when": "view == t3vscode.panel",
+          "group": "t3vscode"
+        }
+      ],
+      "scm/title": [
+        {
+          "command": "t3vscode.reviewChanges",
+          "group": "t3vscode"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "t3vscode.open",
+          "group": "navigation",
+          "when": "resourceScheme == file"
+        }
+      ],
+      "terminal/context": [
+        {
+          "command": "t3vscode.addTerminalSelection",
+          "when": "terminalTextSelected",
+          "group": "t3vscode"
+        },
+        {
+          "command": "t3vscode.addLastCommand",
+          "group": "t3vscode"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "t3vscode.addSelection",
+          "when": "editorHasSelection",
+          "group": "t3vscode"
+        },
+        {
+          "command": "t3vscode.addToPrompt",
+          "when": "!editorHasSelection && resourceScheme == file",
+          "group": "t3vscode"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "t3vscode.addSelection",
+          "when": "editorTextFocus"
+        },
+        {
+          "command": "t3vscode.focusComposer",
+          "when": "t3vscode.panelVisible"
+        },
+        {
+          "command": "t3vscode.openInDesktop",
+          "when": "t3vscode.panelVisible"
+        },
+        {
+          "command": "t3vscode.fixWithT3",
+          "when": "false"
+        },
+        {
+          "command": "t3vscode.openSettings",
+          "when": "t3vscode.panelVisible"
+        },
+        {
+          "command": "t3vscode.reviewChanges",
+          "when": "t3vscode.panelVisible"
+        },
+        {
+          "command": "t3vscode._open",
+          "when": "false"
+        },
+        {
+          "command": "t3vscode._diff",
+          "when": "false"
+        },
+        {
+          "command": "t3vscode.copyThreadLink",
+          "when": "t3vscode.panelVisible"
+        },
+        {
+          "command": "t3vscode._mention",
+          "when": "false"
+        },
+        {
+          "command": "t3vscode._mcpNudge",
+          "when": "false"
+        },
+        {
+          "command": "t3vscode.newThreadIn",
+          "when": "t3vscode.panelVisible"
+        },
+        {
+          "command": "t3vscode.t3Palette",
+          "when": "t3vscode.panelVisible"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "selfcheck": "node scripts/selfcheck.mjs",
+    "selfcheck:live": "node scripts/selfcheck.mjs --live",
+    "livecheck": "node scripts/livecheck.mjs"
+  }
+}
