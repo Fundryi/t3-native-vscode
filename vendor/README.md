@@ -131,6 +131,10 @@ Then re-apply the package.json edits by hand (they are **not** scripted):
    command-path metacharacters without adding argument-style quotes, keeping
    argument escaping separate as in [cross-spawn](https://github.com/moxystudio/node-cross-spawn/blob/master/lib/util/escape.js).
    The extension's `src/host/pairing.test.ts` covers this adapter change.
+   Since nightly 3118 upstream builds one joined string
+   (`[resolvedCommand, ...args].map(escapeWindowsShellArg).join(" ")`, `args: []`),
+   which quotes the command path; rewrite that one line (metachar-escape the
+   path, arg-escape the rest, join) rather than swapping the two old lines.
 
 5. Preserve the scheduled-task adapter in `contracts/src/scheduledTask.ts`:
    task reads retain opaque schedule data and unknown server fields; writes still
@@ -156,7 +160,10 @@ Then re-apply the package.json edits by hand (they are **not** scripted):
    `patchedDependencies` in `pnpm-workspace.yaml`; set the root `effect`
    dependency and the `overrides` entry to the same version. The 4.0.2 patch
    adds the `RpcClient.ConnectionHooks.onPingTimeout` hook that
-   `client-runtime/src/rpc/session.ts` sets.
+   `client-runtime/src/rpc/session.ts` sets. Since nightly 3105 upstream is on
+   Effect 4.0.4 with no Effect patch (the hook ships in 4.0.4): a sync at that
+   pin or later drops `patches/effect@4.0.2.patch` and its `patchedDependencies`
+   entry and bumps the root `effect` and the override to 4.0.4.
 
 Update the provenance block at the top of this file, and re-run the
 verification greps: no `three` imports outside `client-runtime/src/device/`,
