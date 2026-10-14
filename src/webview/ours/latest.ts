@@ -9,14 +9,15 @@
 import { bridge, Events, Methods } from "../bridge-client";
 import type { HostStateSnapshot, TranscriptItem } from "../../shared/bridge";
 import { runningStepLabels } from "../../shared/ours/latest";
+import { failed } from "./channel";
 
-const report = (cause: unknown) => console.error("T3 VSCode (fork): latest failed", cause);
+const report = failed("latest");
 const END_DISTANCE = 40; // his "at end" threshold (TranscriptView onScroll)
 
 const style = document.createElement("style");
 style.textContent = `
 @keyframes ours-pulse { 50% { opacity: .35; } }
-.response-header .working-label, .thread-working svg, .ours-latest[data-working] .ours-latest-dot { animation: ours-pulse 1.6s ease-in-out infinite; }
+.response-header .working-label, .ours-latest[data-working] .ours-latest-dot { animation: ours-pulse 1.6s ease-in-out infinite; }
 .transcript-container .message-nav-latest:not(.ours-latest) { display: none; }
 .ours-latest[hidden] { display: none; }
 .ours-latest-dot { display: none; width: 6px; height: 6px; border-radius: 50%; background: var(--primary); }

@@ -7,10 +7,10 @@
 import { bridge, Events } from "../bridge-client";
 import { readDraft } from "../composerDrafts";
 import type { HostStateSnapshot } from "../../shared/bridge";
-import { oursRequest } from "./channel";
+import { oursRequest, failed } from "./channel";
 
 interface Meter { readonly label: string; readonly title: string; readonly percent: number | null }
-const report = (cause: unknown) => console.error("T3 VSCode (fork): context meter failed", cause);
+const report = failed("context meter");
 
 const style = document.createElement("style");
 style.textContent = `
@@ -25,7 +25,7 @@ document.head.append(style);
   const paint = () => {
     const controls = document.querySelector(".composer-send-controls");
     let chip = document.querySelector<HTMLElement>(".ours-context-chip");
-    if (!meter || !controls) { chip?.remove(); return; }
+    if (!meter || typeof meter.label !== "string" || !controls) { chip?.remove(); return; }
     if (!chip || chip.parentElement !== controls) {
       chip?.remove();
       chip = document.createElement("span");

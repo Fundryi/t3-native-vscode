@@ -6,9 +6,9 @@
  */
 import { bridge, Events, Methods } from "../bridge-client";
 import type { HostStateSnapshot } from "../../shared/bridge";
-import { oursRequest, registerOursEvent } from "./channel";
+import { oursRequest, registerOursEvent, failed } from "./channel";
 
-const report = (cause: unknown) => console.error("T3 VSCode (fork): plan mode failed", cause);
+const report = failed("plan mode");
 const PLAN_TITLE = "Plan mode: click to return to normal build mode";
 const BUILD_TITLE = "Build mode: click to enter plan mode";
 

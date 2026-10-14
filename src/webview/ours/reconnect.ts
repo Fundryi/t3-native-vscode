@@ -6,9 +6,9 @@
  */
 import { bridge, Events, Methods } from "../bridge-client";
 import type { HostStateSnapshot } from "../../shared/bridge";
-import { oursRequest } from "./channel";
+import { oursRequest, failed } from "./channel";
 
-const report = (cause: unknown) => console.error("T3 VSCode (fork): reconnect failed", cause);
+const report = failed("reconnect");
 
 try {
   let phase: string | undefined;

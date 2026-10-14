@@ -76,6 +76,10 @@ import in `shared/src/codexMarkdownDirectives.ts`; it was a devDependency
 upstream) and `@types/node` (several `shared` files import `node:*` builtins).
 Both belong in the root devDependencies.
 
+## Local adapters to re-apply after a sync
+
+- `shared/src/usageLimits.ts` `nativeReport`: `provider.auth?.email` and `provider.auth?.workspaceId` (optional chaining). Older servers and the extension's browser fixtures send providers without `auth`; the upstream code throws in the sidebar render.
+
 ## Syncing from upstream
 
 Against a fresh upstream checkout:

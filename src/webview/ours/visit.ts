@@ -4,7 +4,7 @@
  */
 import { bridge, Events } from "../bridge-client";
 import type { HostStateSnapshot } from "../../shared/bridge";
-import { oursRequest } from "./channel";
+import { oursRequest, failed } from "./channel";
 
 let latest: HostStateSnapshot | undefined;
 let lastKey = "";
@@ -16,7 +16,7 @@ const report = () => {
   if (key === lastKey) return;
   lastKey = key;
   void oursRequest("visitShowing", thread ? { threadId: thread.id, running: thread.activeRunId !== null } : {})
-    .catch((cause) => console.error("T3 VSCode (fork): read report failed", cause));
+    .catch(failed("read report"));
 };
 bridge.on(Events.stateChanged, (data) => { latest = data as HostStateSnapshot; report(); });
 window.addEventListener("focus", report);

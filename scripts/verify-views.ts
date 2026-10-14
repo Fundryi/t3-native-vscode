@@ -1,6 +1,8 @@
 /** Built webview + real HostState/BridgeHandler, shared across three pages; no VS Code launch or live T3 service. */
 import assert from "node:assert/strict";
 import { mkdir, readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { createServer, type ServerResponse } from "node:http";
 import { chromium, type Page } from "playwright-core";
 import { BridgeHandler, WebviewRegistry } from "../src/host/bridge.js";
@@ -532,7 +534,7 @@ try {
   await second.getByRole("button", { name: "Send message", exact: true }).click();
   await second.waitForFunction(() => (document.querySelector('textarea[aria-label="Message"]') as HTMLTextAreaElement)?.value === "");
   const pathMessage = client.commands.findLast((command) => command.type === "message.dispatch"); assert.ok(pathMessage);
-  assert.equal(pathMessage.text, "Please inspect [@src/example.ts](file:///tmp/t3-vscode/src/example.ts)");
+  assert.equal(pathMessage.text, `Please inspect [@src/example.ts](${pathToFileURL(resolve("/tmp/t3-vscode/src/example.ts"))})`);
   await input.fill("/usage"); await second.getByRole("option").filter({ hasText: "/usage-limits" }).click();
   await accountSidebar.waitForFunction(() => (document.querySelector('.account-usage') as HTMLDetailsElement).open);
   await accountSidebar.getByText("91% left", { exact: true }).waitFor();

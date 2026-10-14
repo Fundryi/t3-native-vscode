@@ -3,9 +3,9 @@
  * Stop subagent to his thread menu (ThreadActionsMenu.tsx) without touching it. The menu is a portal straight into
  * document.body; capture listeners note which thread it opens for, and the host decides which entries apply.
  */
-import { oursRequest } from "./channel";
+import { oursRequest, failed } from "./channel";
 
-const report = (cause: unknown) => console.error("T3 VSCode (fork): thread actions failed", cause);
+const report = failed("thread actions");
 const ICONS: Readonly<Record<string, string>> = {
   stopSubagent: '<rect width="18" height="18" x="3" y="3" rx="2"/>',
   snooze: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',

@@ -8,9 +8,9 @@ import { bridge, Events, Methods } from "../bridge-client";
 import { isObject, type HostStateSnapshot } from "../../shared/bridge";
 import { clearDraft, readDraft } from "../composerDrafts";
 import { settleDraftAttachments } from "../composerAttachments";
-import { oursRequest, registerOursEvent } from "./channel";
+import { oursRequest, registerOursEvent, failed } from "./channel";
 
-const report = (cause: unknown) => console.error("T3 VSCode (fork): layout failed", cause);
+const report = failed("layout");
 const icon = (paths: string) => `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 // A synthetic message: bridge-client accepts it (no source) and hands it to his own handlers.
 const deliver = (event: string, data?: unknown) => window.dispatchEvent(new MessageEvent("message", { data: { event, data } }));

@@ -9,12 +9,13 @@
  */
 import { bridge } from "../bridge-client";
 import type { RpcMethod } from "../../shared/bridge";
+import { failed } from "./channel";
 
 // shortcut: keyed to his 220 px literal and two placeholder strings (Composer.tsx); re-check them on each upstream merge.
 const HIS_CAP = "220px";
 const HINT = " Type @ for files, / for commands.";
 const HIS_PLACEHOLDERS = new Set(["Ask anything, or describe a task\u2026", "Send a follow-up\u2026"]);
-const report = (cause: unknown) => console.error("T3 VSCode (fork): composerFit failed", cause);
+const report = failed("composerFit");
 
 const style = document.createElement("style");
 style.textContent = ".composer-box textarea { max-height: 40vh !important; }";

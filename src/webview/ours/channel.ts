@@ -20,3 +20,7 @@ export function registerOursEvent(kind: string, handler: OursEventHandler): void
 
 /** Never through useActions or run: they treat every result as a HostStateSnapshot. */
 export const oursRequest = <T>(kind: string, params: Readonly<Record<string, unknown>> = {}): Promise<T> => bridge.request<T>(Methods.ours, { ...params, kind });
+
+/** A host without the fork RPC (his fixtures, an older host) answers "Unknown fork request."; that is not an error worth his console. */
+export const unavailable = (cause: unknown): boolean => cause instanceof Error && /Unknown fork request/.test(cause.message);
+export const failed = (what: string) => (cause: unknown): void => { if (!unavailable(cause)) console.error(`T3 VSCode (fork): ${what} failed`, cause); };

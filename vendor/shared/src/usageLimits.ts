@@ -134,8 +134,9 @@ interface AccountReport {
 
 const nativeReport = (provider: ServerProvider): AccountReport => ({
   driver: provider.driver,
-  email: provider.auth.email,
-  workspaceId: provider.auth.workspaceId,
+  // Local adapter (vendor/README.md): older servers and his fixtures send providers without auth.
+  email: provider.auth?.email,
+  workspaceId: provider.auth?.workspaceId,
   usageLimits: provider.usageLimits,
 });
 

@@ -8,8 +8,9 @@ import { bridge, Methods } from "../bridge-client";
 import type { HostStateSnapshot } from "../../shared/bridge";
 import { readDraft, rememberDraftSelection, updateDraft } from "../composerDrafts";
 import { promptBefore, promptEntries, recallText, stepPrompt, type PromptPosition } from "../../shared/ours/reprompt";
+import { failed } from "./channel";
 
-const report = (cause: unknown) => console.error("T3 VSCode (fork): reprompt failed", cause);
+const report = failed("reprompt");
 const icon = (paths: string) => `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 const composer = () => document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message"]');
 

@@ -4,7 +4,7 @@
  * OS file drops (type Files without VS Code's types) stay with his composer. The host parses the strings (dropParse.ts).
  * A paste without text and without files asks the host for the paths of the last Explorer Ctrl+C (pasteCopied).
  */
-import { oursRequest } from "./channel";
+import { oursRequest, failed } from "./channel";
 import { showShiftHint } from "./shiftHint";
 
 const CODE_TYPES = ["application/vnd.code.uri-list", "resourceurls"];
@@ -15,7 +15,7 @@ const typesOf = (event: DragEvent): string[] => [...(event.dataTransfer?.types ?
 const fromCode = (types: ReadonlyArray<string>) => CODE_TYPES.some((type) => types.includes(type));
 // text/plain drive paths are the trail when VS Code's own types do not reach the webview; never with OS files.
 const mayClaim = (types: ReadonlyArray<string>) => fromCode(types) || (types.includes("text/plain") && !types.includes("files"));
-const report = (cause: unknown) => console.error("T3 VSCode (fork): drop failed", cause);
+const report = failed("drop");
 // Read on every event: K layout flips the sidebar between its list ("sidebar") and a chat.
 const noChat = () => document.body.dataset.surface === "sidebar";
 

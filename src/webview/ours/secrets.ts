@@ -9,9 +9,9 @@ import { SECRET_REQUEST_PRIVACY_NOTE } from "@t3tools/client-runtime/secret-requ
 import { bridge, Events } from "../bridge-client";
 import type { HostStateSnapshot } from "../../shared/bridge";
 import { pendingSecretRequests, type SecretRequestRow } from "../../shared/ours/secrets";
-import { oursRequest } from "./channel";
+import { oursRequest, failed } from "./channel";
 
-const report = (cause: unknown) => console.error("T3 VSCode (fork): secret request failed", cause);
+const report = failed("secret request");
 const container = document.createElement("div");
 container.className = "pending-requests ours-secret-requests";
 const busy = new Set<string>();
@@ -62,7 +62,8 @@ bridge.on(Events.stateChanged, (data) => {
 // Initial rows once: an editor tab gets no first push. Not Methods.getState, which marks the view ready (host/bridge.ts)
 // and would release queued events before his App listens.
 void oursRequest<{ revision: number; rows: SecretRequestRow[] }>("secretRequests").then((initial) => {
-  if (initial.revision < revision) return;
+  // A host without the fork RPC (his fixtures) answers with something else: keep the empty list.
+  if (!initial || typeof initial.revision !== "number" || !Array.isArray(initial.rows) || initial.revision < revision) return;
   revision = initial.revision; rows = initial.rows; render();
 }).catch(report);
 new MutationObserver(() => { if (rows.length) place(); }).observe(document.body, { childList: true, subtree: true });

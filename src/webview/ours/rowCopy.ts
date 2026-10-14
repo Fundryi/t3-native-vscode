@@ -9,8 +9,9 @@
 import { bridge, Events, Methods } from "../bridge-client";
 import type { HostStateSnapshot } from "../../shared/bridge";
 import { rowTimeTitle } from "../../shared/ours/rowTime";
+import { failed } from "./channel";
 
-const report = (cause: unknown) => console.error("T3 VSCode (fork): rowCopy failed", cause);
+const report = failed("rowCopy");
 const icon = (paths: string) => `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 const COPY = icon('<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>');
 const CHECK = icon('<path d="M20 6 9 17l-5-5"/>');
