@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-const { stdout } = await promisify(execFile)("pnpm", ["licenses", "list", "--prod", "--json"], { cwd: root, encoding: "utf8" });
+const { stdout } = await promisify(execFile)("pnpm", ["licenses", "list", "--prod", "--json"], { cwd: root, encoding: "utf8", shell: process.platform === "win32" });
 const inventory = JSON.parse(stdout);
 const packages = Object.values(inventory).flat().sort((a, b) => a.name.localeCompare(b.name));
 const sections = ["Third-party software notices\n\nT3 Code's license and copyright notice are in vendor/LICENSE.t3code."];
