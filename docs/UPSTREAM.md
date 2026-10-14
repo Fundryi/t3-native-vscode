@@ -15,3 +15,16 @@ Not a merge of his repo: our own re-vendor of the T3 packages (port map item J, 
 - Effect 4.0.0-rc.115 to 4.0.2 (root package.json, pnpm-workspace.yaml override and patchedDependencies, lockfile).
 - His files touched by the bump (import moves only): src/host/pairing.ts, serverDiscovery.ts, t3Client.ts, fileLinks.ts, pairing.test.ts, scripts/spike.ts.
 - Merge rule for his future releases: take his vendor/ wholesale, then re-apply this re-vendor if his pin is older than 107f6024ea47.
+
+## Checklist after every `git merge upstream/main`
+
+Run after the merge, before build and tests (details in docs/ours/PORT-MAP.md section 0.10):
+
+- The wrapped members still exist with the same parameter order: `notifications.update`, `provider.resolveWebviewView`, `provider.openSession`, `provider.createPanel`, `provider.createNewPanel`, `provider.updateTitles`, `provider.insertReference`, `hostState.sendMessage`, `hostState.queueAction` (`action`, `text`), and the members typed in src/host/ours/types.ts.
+- `ours: "ours"` is still the first key of Methods in src/shared/bridge.ts and `case "ours"` is still the first case in src/host/bridge.ts handle; `activateOurs` is still called in src/extension.ts; `import "./ours/index"` is still in src/webview/main.tsx.
+- package.json: his test glob line still carries the ours globs; our entries still sit first in each array; his Thread Actions view/title entry still has `when: false` (we show one list).
+- Chat tab ids still start with `panel_` (extension.ts mountPanel): src/host/ours/keys.ts (`inT3Tab`), layout.ts and composer.ts rely on it.
+- `grep registerUriHandler src` finds only ours (G breaks if he adds one).
+- scripts/commands.test.mjs still scans src/host/ours.
+- Local vendor adapters still applied: vendor/README.md "Local adapters to re-apply after a sync".
+- Then: pnpm run typecheck, pnpm test, pnpm run build, scripts/verify-ui.mjs, scripts/verify-views.ts, scripts/verify-drag.mjs.

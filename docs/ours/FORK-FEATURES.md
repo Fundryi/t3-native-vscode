@@ -359,6 +359,38 @@ The thread menu (right-click a session, or the chevron in a chat header) gets th
 - Settings: none.
 - Live test: open a chat, click the sparkle next to its title: it spins and a few seconds later the title changes. The T3 view's "..." menu has "Regenerate Title" in its last group, after "More Thread Actions".
 
+## R1 theme: The chat uses VS Code's own colours
+
+- What: in the side bar the chat and the sessions list take the side bar colour (his tokens used the editor colour everywhere), chips, change cards and the plain-look user bubble get a 7% foreground tint so they stay visible there, and only one line runs under the "Back to" bar. Everywhere: icon buttons hover with the toolbar hover colour, buttons are VS Code's secondary buttons (a primary button now darkens on hover with the button hover colour; before it did not change), the "..." and thread action menus use the menu colours, the @ and / suggestions use the list selection colour, scrollbars use the scrollbar slider colours, the composer border and focus ring use the focus border (1 px, inside, so nothing clips it), the connection dot uses the test-passed green and every popup shadow uses the widget shadow. High contrast draws a dashed contrast outline on hovered buttons and menu rows.
+- Text floor: every 9 and 10 px text of his (model picker notes, footnotes, list meta, find counts, composer shortcuts and so on) is raised to .6875rem, 11 px at the default interface size; fixed px sizes (Latest, message rail, shift hint) are now rem, so they follow the interface size. X2's .75rem work rows are untouched.
+- Also: Copy and "use again" on your messages show on hover or keyboard focus, like the assistant's; the plan card wraps its actions under the title and is tighter below 420 px.
+- How: one stylesheet in src/webview/ours/polish.ts, appended after his, so a rule that copies his selector wins on order; `body[data-ours-surface="sidebar"]` is set once from the host's own `data-surface` at load (layout.ts later flips `data-surface` to "panel" for a chat in the side bar). No line of his changed; the editor-tab chat keeps the editor colour.
+- Settings and commands: none.
+- Files: src/webview/ours/polish.ts, src/webview/ours/shiftHint.ts (12 px to .75rem).
+- Anchors: his class names and selectors in src/webview/styles/tokens.css (the small-text list is copied from there). Re-check them after an upstream merge.
+- Live test: Dark Modern, Light Modern and HC Dark, chatlook bubbles and plain: side bar chat and list show no colour seam, user bubble and chips visible; hover each button kind and menu row; Tab into the composer; narrow the side bar to 300 px with a plan card (actions wrap to a second line), then open a plan card in a wide editor tab (Copy sits right next to Implement); check the Latest button now uses the secondary button colour.
+
+## R2 defaults: A new chat starts with my T3 model
+
+- What: a new chat in VS Code starts with the model picked as default in T3 (Settings, New threads; a project override in T3 wins), as T3 web does. Before, his draft took the model of the chat in front or the first provider's model. A model you pick in the draft stays; changing the default in T3 moves an untouched draft at once (T3's settingsUpdated reaches client.config, his onConfig re-emits).
+- Never picked: a T3 default that the picker hides (X1's shared list, legacy models included) or whose provider is off, missing or unavailable. Then his fallback runs, minus hidden models: if it lands on a model the picker hides (the chat in front's model, or a provider's default), the draft takes the first provider's default model if shown, else its first shown model. While his project record names a default model (hostState.ts conversationDraft), that one stays, because his createThread prefers it.
+- Permission mode: stays "auto" (owner question 1 of QOL-ROUND-2: T3's environment mode decodes to full-access when never set, so following it would silently widen). Only a project override of the mode in T3 is followed, and only until you pick a mode in that draft.
+- Tooltips: the permission picker shows T3's one-line meaning of each mode on hover (from T3's docs/user/permission-modes.md).
+- How: no line of his changed. wrap() replaces HostState's private conversationDraft (every draft caller goes through it) and setModes (to note a picked mode); both are read by name, and an upstream rename turns the feature off with one line in "T3 VSCode (fork)". The rule is resolveProjectSettings from the vendored @t3tools/shared, checked against visibleProviderModels (src/host/ours/defaultsRules.ts).
+- Settings and commands: none.
+- Files: src/host/ours/defaults.ts, src/host/ours/defaultsRules.ts (+ test), src/webview/ours/defaults.ts.
+- Live test: set Claude as the default model in T3, open a new chat in VS Code: it shows Claude. Pick another model in the draft: it stays. Hide the default model in T3: the new chat falls back to another model, never the hidden one. Hover the permission picker: the mode's meaning shows.
+
+## R3 viewbar: Native view title buttons, one header row
+
+- What: the T3 side panel uses real VS Code view title buttons. In the sessions list the title bar has "+" (New Chat); in a chat it has a back arrow (Sessions) and a pop-out (open this chat in an editor tab), and our slim "Sessions / pop-out" bar and his duplicate History button are gone, so a chat has one header row. The view title says "Sessions" in the list and the chat title in a chat, with the project name beside it, instead of "T3 VSCODE" twice. Every editor title bar has a T3 button (Focus Chat Input), as in the Claude Code and Codex extensions.
+- Thread buttons in the view title (Open in the T3 App, Copy Link, Thread Actions, Regenerate Title) show only while a chat is on screen (or in editor-tab mode with a chat focused), not over the sessions list.
+- In sidebar mode his "+" buttons are titled "New chat" (they open the chat in the side panel); his list "+" keeps its aria-label "New thread".
+- How: src/host/ours/layout.ts sets the context `t3-vscode.ours.sidebarChat` wherever the K layout flips list and chat, wraps his public `updateTitles` (he resets the sidebar title on every state change) to set the view title and description, posts `layoutMode` for the tooltips, and registers `t3-vscode.ours.viewbar.sessions` (runs his showThreads) and `t3-vscode.ours.viewbar.popOut` (the webview runs his openInTab path, draft included). src/webview/ours/layout.ts holds the hide CSS and the tooltip observer. package.json: view/title and editor/title entries, icons on chat.new and chat.focus. No line of his changed.
+- Settings: none.
+- Live test: the side panel list shows "+" in its title bar; open a chat: the title bar shows the chat name, the back arrow and the pop-out, and inside the panel only his chat header row is left. Any text editor shows the T3 icon top right.
+- Limit: VS Code shows view title buttons always only while T3 is the only view in its container; with the drop view turned on they appear on hover.
+
 ## R4 working: Live "what and how long", and "done" is announced
 
 - While T3 works, his "Working" label in the chat header (also the sticky copy at the top and the footer one) is followed by the time since the run started and the step it is on, for example "Working 1m 12s - npm test". It counts once a second. The step is the newest running step of the active run, with the same label his rows show.
@@ -416,6 +448,16 @@ A click on an edited file's name in a chat opens the file at its first changed l
 - Settings: `t3-vscode.ours.drop.showView`. Commands: none new.
 - Live test: on the existing profile the view is gone under the T3 sidebar. Set `t3-vscode.ours.drop.showView` to true: the view comes back; drag README.md from the Explorer onto it without Shift: a reference lands in the focused chat.
 
+## R11 actions: One Thread Actions list, and Archive can be undone
+
+- What: one "Thread Actions" QuickPick (`t3-vscode.ours.threadActions.more`, formerly titled "More Thread Actions") has every action for the chat in front: his five rows (Rename, Pin or Unpin, Settle or Unsettle, Archive or Restore, Delete) then, under a separator, Q19's rows (Stop subagent, Snooze, Regenerate title, Mark unread, Copy branch, Copy thread ID). The T3 view's "..." menu, the chat tab's "..." menu and the Command Palette all open this list, each only while the chat in front shows a thread. His "Thread Actions" command stays registered but is hidden from the view menu and the palette.
+- Rename asks in an input box (an empty title is refused) and Delete asks in a modal, as his own prompts do; after the prompt the thread and the view are checked again before the action runs.
+- Undo: after any Archive (his thread menu in the chat, this list, his hidden command) a toast "T3: archived "<title>"." offers Undo, which restores the thread.
+- How: no line of his code changed. The rows and prompts are rebuilt in src/host/ours/threadActions.ts and run through the public `hostState.threadAction`; wrap() on `hostState.threadAction` shows the Undo toast after an archive succeeds. package.json: our menu and palette entries point at the full list; his view/title entry for `t3-vscode.threadActions` has `"when": "false"` (the one changed token on one of his lines; drop it on a merge conflict and the "..." shows both lists).
+- Regenerate Title keeps its own entry in the view "..." menu (X3).
+- Settings: none.
+- Live test: open a chat in the side panel and in a tab: both "..." menus show "Thread Actions" with the same rows. Archive a chat from any menu, click Undo in the toast: the chat is back in the list.
+
 ## R12 setup: Pairing works with only the T3 app, and connects by itself the first time
 
 - What: a Windows user with only the T3 desktop app (no `t3` on PATH) pairs anyway, also when the 30-day token runs out: when `t3` is not found, pairing runs the app's own launcher `<T3 home>/bin/t3.cmd` (`bin/t3` on macOS and Linux), which the installed app keeps up to date on every start (T3's DesktopCliShim.ts). If neither exists, the "t3 command could not be found" screen stays as before.
@@ -424,6 +466,29 @@ A click on an edited file's name in a chat opens the file at its first changed l
 - His file touched: src/host/pairing.ts `runPairingCommand` (an optional `command` parameter and three lines in its catch; upstream candidate). Everything else is ours: src/host/ours/reconnect.ts, src/webview/ours/reconnect.ts (DOM notes inside his setup heading and status card), test src/host/ours/pairingLauncher.test.ts.
 - Settings and commands: none.
 - Live test: isolated T3 home with no `t3` on PATH but `<home>/bin/t3.cmd`: pairing succeeds. Start VS Code first, then the T3 app: the view connects without a click.
+
+## R13 focus: Focus never drops to the page
+
+- Sidebar: opening a chat from Sessions puts the caret in its composer (his own focus path, so the remembered caret comes back). "Sessions" puts focus on the row of the chat just left, else the active row, else "Search threads"; the restored list scroll is kept.
+- Removing an attachment or reference chip moves focus to the next chip's X, or to the message box after the last one.
+- Tabbing out of a popup (model picker, history, thread menu, composer options, quote comment, find filters, equation menu, image preview) closes it, and focus stays where Tab put it, so Escape stops a running turn again.
+- Rule: a popup closes only when Tab leaves from inside it (or focus comes from the body or VS Code). A popup that opens without taking focus (find filters, portaled to the end of the page) stays open until Tab reaches into it.
+- Only acts while the webview has focus and only when focus was lost (body, a removed or hidden element); it never moves focus the user or his code already placed.
+- How: no line of his changed. src/webview/ours/focus.ts: a MutationObserver on body[data-ours-chat] (set by layout.ts), a capture click listener on the chip X buttons and a window focusin listener that sends the popup a synthetic Escape (the popup list is the one escape.ts exports). That listener ignores focus moved by the pointer (from a pointerdown until the next key press): a click on the popup's own button must toggle it closed, and his outside-click handlers cover the rest.
+- Settings and commands: none.
+- Live test: keyboard only in the side panel: Enter on a session row, type at once; Tab to "Sessions", Enter: focus is on that chat's row (Enter reopens it); add two files, Tab to the first X, Enter, Enter: both go and the caret is in the message box; open the model picker, Shift+Tab: it closes; in Find, Enter on "Search filters", then Tab until focus is inside the filters popover: it stays open and the filters are reachable, Tab out of it: it closes; start a turn, Escape stops it. With the mouse: open the model picker, click its button again: it closes.
+
+## R14 keys2: Keys inside T3
+
+- What: keys that work while a T3 chat or the sessions list has focus.
+  - Ctrl+Alt+C toggles: in an editor it jumps into the T3 chat (Q2), inside T3 it jumps back to the editor: from the side panel `workbench.action.focusActiveEditorGroup`, from a chat tab `workbench.action.openPreviousRecentlyUsedEditorInGroup` (the tab shares the code's group, so focusing the group would land on the chat again; context `t3-vscode.ours.inT3Tab`).
+  - Ctrl+N (Cmd+N) inside T3 starts a new chat (`t3-vscode.ours.chat.new`); everywhere else it stays VS Code's New File.
+  - Ctrl+Alt+W, "Go to Next Chat That Needs You" (`t3-vscode.ours.chat.nextWaiting`, in the palette while connected): opens the next chat waiting for an approval or an answer, cycling from the chat in front. "Open the Session That Needs You" without an argument now does the same.
+  - Sessions list (side panel list and his History popup): Up, Down, Home, End move over the rows; Down in "Search threads" goes to the first row; F2 renames (his prompt); Delete archives the row (the R11 toast offers Undo) and keeps focus on the next row; an archived row ignores Delete. Ctrl+F in the list focuses "Search threads"; in a chat Ctrl+F stays his find.
+  - F2 in a chat renames it (his header rename was double-click only).
+- How: the webview (src/webview/ours/listKeys.ts) reports window focus and blur through the ours RPC `keys.focus`; the host (src/host/ours/keys.ts) sets the context `t3-vscode.ours.inT3` while any T3 webview has focus, and a wrap() on `registry.remove` clears a view closed while focused. If the context goes stale anyway (a view hidden while focused), the bindings also check `editorTextFocus` (and `listFocus` for Ctrl+N), so Ctrl+Alt+C from a text editor still jumps into T3 and Ctrl+N in the Explorer stays New File. Own key instead of `focusedView`, as Claude Code does with its `sideBarActive`: `focusedView` is not proven to match inside a webview. Delete runs the ours RPC `keys.archive`, which calls `hostState.threadAction(id, "archive")`, so R11's Undo wrapper applies. F2 calls his `threadAction` bridge method with `rename`, so his own input box asks. No line of his changed.
+- Settings: none. Rebind or remove any of the keys in Keyboard Shortcuts.
+- Live test: in a chat tab and in the side panel: Ctrl+Alt+C out and back (in a chat tab, Ctrl+Alt+C brings back the code tab; in the side panel it must not switch editor tabs); Ctrl+N while typing in the composer; Ctrl+Alt+W with two waiting chats (it cycles); in the sessions list Down, End, Home, F2, Delete (Undo toast, focus on the next row), Ctrl+F. Check Keyboard Shortcuts for conflicts on Ctrl+Alt+W.
 
 ## R15 announce: Screen readers hear new cards, and Alt+1 hits the right one
 
@@ -463,68 +528,6 @@ Undo a single change of a turn, not the whole file, and edit right inside the di
 - Files: src/webview/ours/substop.ts.
 - Live test: start a subagent from a chat; its card shows Stop next to the chevron; click it: the card turns to stopped or interrupted and the button goes away.
 
-## R13 focus: Focus never drops to the page
-
-- Sidebar: opening a chat from Sessions puts the caret in its composer (his own focus path, so the remembered caret comes back). "Sessions" puts focus on the row of the chat just left, else the active row, else "Search threads"; the restored list scroll is kept.
-- Removing an attachment or reference chip moves focus to the next chip's X, or to the message box after the last one.
-- Tabbing out of a popup (model picker, history, thread menu, composer options, quote comment, find filters, equation menu, image preview) closes it, and focus stays where Tab put it, so Escape stops a running turn again.
-- Rule: a popup closes only when Tab leaves from inside it (or focus comes from the body or VS Code). A popup that opens without taking focus (find filters, portaled to the end of the page) stays open until Tab reaches into it.
-- Only acts while the webview has focus and only when focus was lost (body, a removed or hidden element); it never moves focus the user or his code already placed.
-- How: no line of his changed. src/webview/ours/focus.ts: a MutationObserver on body[data-ours-chat] (set by layout.ts), a capture click listener on the chip X buttons and a window focusin listener that sends the popup a synthetic Escape (the popup list is the one escape.ts exports). That listener ignores focus moved by the pointer (from a pointerdown until the next key press): a click on the popup's own button must toggle it closed, and his outside-click handlers cover the rest.
-- Settings and commands: none.
-- Live test: keyboard only in the side panel: Enter on a session row, type at once; Tab to "Sessions", Enter: focus is on that chat's row (Enter reopens it); add two files, Tab to the first X, Enter, Enter: both go and the caret is in the message box; open the model picker, Shift+Tab: it closes; in Find, Enter on "Search filters", then Tab until focus is inside the filters popover: it stays open and the filters are reachable, Tab out of it: it closes; start a turn, Escape stops it. With the mouse: open the model picker, click its button again: it closes.
-
-## R1 theme: The chat uses VS Code's own colours
-
-- What: in the side bar the chat and the sessions list take the side bar colour (his tokens used the editor colour everywhere), chips, change cards and the plain-look user bubble get a 7% foreground tint so they stay visible there, and only one line runs under the "Back to" bar. Everywhere: icon buttons hover with the toolbar hover colour, buttons are VS Code's secondary buttons (a primary button now darkens on hover with the button hover colour; before it did not change), the "..." and thread action menus use the menu colours, the @ and / suggestions use the list selection colour, scrollbars use the scrollbar slider colours, the composer border and focus ring use the focus border (1 px, inside, so nothing clips it), the connection dot uses the test-passed green and every popup shadow uses the widget shadow. High contrast draws a dashed contrast outline on hovered buttons and menu rows.
-- Text floor: every 9 and 10 px text of his (model picker notes, footnotes, list meta, find counts, composer shortcuts and so on) is raised to .6875rem, 11 px at the default interface size; fixed px sizes (Latest, message rail, shift hint) are now rem, so they follow the interface size. X2's .75rem work rows are untouched.
-- Also: Copy and "use again" on your messages show on hover or keyboard focus, like the assistant's; the plan card wraps its actions under the title and is tighter below 420 px.
-- How: one stylesheet in src/webview/ours/polish.ts, appended after his, so a rule that copies his selector wins on order; `body[data-ours-surface="sidebar"]` is set once from the host's own `data-surface` at load (layout.ts later flips `data-surface` to "panel" for a chat in the side bar). No line of his changed; the editor-tab chat keeps the editor colour.
-- Settings and commands: none.
-- Files: src/webview/ours/polish.ts, src/webview/ours/shiftHint.ts (12 px to .75rem).
-- Anchors: his class names and selectors in src/webview/styles/tokens.css (the small-text list is copied from there). Re-check them after an upstream merge.
-- Live test: Dark Modern, Light Modern and HC Dark, chatlook bubbles and plain: side bar chat and list show no colour seam, user bubble and chips visible; hover each button kind and menu row; Tab into the composer; narrow the side bar to 300 px with a plan card (actions wrap to a second line), then open a plan card in a wide editor tab (Copy sits right next to Implement); check the Latest button now uses the secondary button colour.
-
-## R2 defaults: A new chat starts with my T3 model
-
-- What: a new chat in VS Code starts with the model picked as default in T3 (Settings, New threads; a project override in T3 wins), as T3 web does. Before, his draft took the model of the chat in front or the first provider's model. A model you pick in the draft stays; changing the default in T3 moves an untouched draft at once (T3's settingsUpdated reaches client.config, his onConfig re-emits).
-- Never picked: a T3 default that the picker hides (X1's shared list, legacy models included) or whose provider is off, missing or unavailable. Then his fallback runs, minus hidden models: if it lands on a model the picker hides (the chat in front's model, or a provider's default), the draft takes the first provider's default model if shown, else its first shown model. While his project record names a default model (hostState.ts conversationDraft), that one stays, because his createThread prefers it.
-- Permission mode: stays "auto" (owner question 1 of QOL-ROUND-2: T3's environment mode decodes to full-access when never set, so following it would silently widen). Only a project override of the mode in T3 is followed, and only until you pick a mode in that draft.
-- Tooltips: the permission picker shows T3's one-line meaning of each mode on hover (from T3's docs/user/permission-modes.md).
-- How: no line of his changed. wrap() replaces HostState's private conversationDraft (every draft caller goes through it) and setModes (to note a picked mode); both are read by name, and an upstream rename turns the feature off with one line in "T3 VSCode (fork)". The rule is resolveProjectSettings from the vendored @t3tools/shared, checked against visibleProviderModels (src/host/ours/defaultsRules.ts).
-- Settings and commands: none.
-- Files: src/host/ours/defaults.ts, src/host/ours/defaultsRules.ts (+ test), src/webview/ours/defaults.ts.
-- Live test: set Claude as the default model in T3, open a new chat in VS Code: it shows Claude. Pick another model in the draft: it stays. Hide the default model in T3: the new chat falls back to another model, never the hidden one. Hover the permission picker: the mode's meaning shows.
-
-## R11 actions: One Thread Actions list, and Archive can be undone
-
-- What: one "Thread Actions" QuickPick (`t3-vscode.ours.threadActions.more`, formerly titled "More Thread Actions") has every action for the chat in front: his five rows (Rename, Pin or Unpin, Settle or Unsettle, Archive or Restore, Delete) then, under a separator, Q19's rows (Stop subagent, Snooze, Regenerate title, Mark unread, Copy branch, Copy thread ID). The T3 view's "..." menu, the chat tab's "..." menu and the Command Palette all open this list, each only while the chat in front shows a thread. His "Thread Actions" command stays registered but is hidden from the view menu and the palette.
-- Rename asks in an input box (an empty title is refused) and Delete asks in a modal, as his own prompts do; after the prompt the thread and the view are checked again before the action runs.
-- Undo: after any Archive (his thread menu in the chat, this list, his hidden command) a toast "T3: archived "<title>"." offers Undo, which restores the thread.
-- How: no line of his code changed. The rows and prompts are rebuilt in src/host/ours/threadActions.ts and run through the public `hostState.threadAction`; wrap() on `hostState.threadAction` shows the Undo toast after an archive succeeds. package.json: our menu and palette entries point at the full list; his view/title entry for `t3-vscode.threadActions` has `"when": "false"` (the one changed token on one of his lines; drop it on a merge conflict and the "..." shows both lists).
-- Regenerate Title keeps its own entry in the view "..." menu (X3).
-- Settings: none.
-- Live test: open a chat in the side panel and in a tab: both "..." menus show "Thread Actions" with the same rows. Archive a chat from any menu, click Undo in the toast: the chat is back in the list.
-
-## R20 longmsg: Long pasted prompts fold
-
-- What: a long message of yours (a big paste, a log, a file) shows only its first lines in the bubble, fading out, with a "Show full message" link under it. A click unfolds it; "Show less" folds it back and keeps the bubble in view. So a 300-line paste no longer pushes the answer off screen. Short messages, and messages only a few lines over the limit, are never folded.
-- The limit is about ten lines (16.5em of message text), never more than 40% of the view height. Works with both chat looks (`bubbles` and `plain`).
-- An unfolded message stays unfolded while the chat is open, also after scrolling it out of view and back (the list remounts rows).
-- How: part of X2's module src/webview/ours/chatlook.ts (one stylesheet): CSS clips the bubble's message text (not the bubble, whose "You" label sits outside it), and a MutationObserver adds the toggle button to bubbles whose text overflows. No line of his changed. Copy and search still use the full text.
-- Settings: none.
-- Live test: paste 300 lines into the box and send: the bubble shows about ten lines and "Show full message"; click it, then "Show less". Try a fenced code block paste too.
-
-## R3 viewbar: Native view title buttons, one header row
-
-- What: the T3 side panel uses real VS Code view title buttons. In the sessions list the title bar has "+" (New Chat); in a chat it has a back arrow (Sessions) and a pop-out (open this chat in an editor tab), and our slim "Sessions / pop-out" bar and his duplicate History button are gone, so a chat has one header row. The view title says "Sessions" in the list and the chat title in a chat, with the project name beside it, instead of "T3 VSCODE" twice. Every editor title bar has a T3 button (Focus Chat Input), as in the Claude Code and Codex extensions.
-- Thread buttons in the view title (Open in the T3 App, Copy Link, Thread Actions, Regenerate Title) show only while a chat is on screen (or in editor-tab mode with a chat focused), not over the sessions list.
-- In sidebar mode his "+" buttons are titled "New chat" (they open the chat in the side panel); his list "+" keeps its aria-label "New thread".
-- How: src/host/ours/layout.ts sets the context `t3-vscode.ours.sidebarChat` wherever the K layout flips list and chat, wraps his public `updateTitles` (he resets the sidebar title on every state change) to set the view title and description, posts `layoutMode` for the tooltips, and registers `t3-vscode.ours.viewbar.sessions` (runs his showThreads) and `t3-vscode.ours.viewbar.popOut` (the webview runs his openInTab path, draft included). src/webview/ours/layout.ts holds the hide CSS and the tooltip observer. package.json: view/title and editor/title entries, icons on chat.new and chat.focus. No line of his changed.
-- Settings: none.
-- Live test: the side panel list shows "+" in its title bar; open a chat: the title bar shows the chat name, the back arrow and the pop-out, and inside the panel only his chat header row is left. Any text editor shows the T3 icon top right.
-- Limit: VS Code shows view title buttons always only while T3 is the only view in its container; with the drop view turned on they appear on hover.
-
 ## R19 emptylist: The empty sessions list explains itself
 
 - What: when the sessions list has no active chat for this folder, under "No active conversations in this workspace." it shows a "Start a chat" button (same as Ctrl+Alt+Shift+N), the line "T3 has N chats in other folders." with Show (only when N is above 0), and "Alt+K adds the selection, Ctrl+Alt+C focuses the chat."
@@ -535,14 +538,11 @@ Undo a single change of a turn, not the whole file, and edit right inside the di
 - Settings: none.
 - Live test: open a parent or sub folder of a T3 project (for example D:\GIT) as the folder: the list shows the block with the count; Show lists those chats, picking one offers its folder; Start a chat opens a new chat. Open an empty window: the footer reads "All T3 folders (no folder open)".
 
-## R14 keys2: Keys inside T3
+## R20 longmsg: Long pasted prompts fold
 
-- What: keys that work while a T3 chat or the sessions list has focus.
-  - Ctrl+Alt+C toggles: in an editor it jumps into the T3 chat (Q2), inside T3 it jumps back to the editor: from the side panel `workbench.action.focusActiveEditorGroup`, from a chat tab `workbench.action.openPreviousRecentlyUsedEditorInGroup` (the tab shares the code's group, so focusing the group would land on the chat again; context `t3-vscode.ours.inT3Tab`).
-  - Ctrl+N (Cmd+N) inside T3 starts a new chat (`t3-vscode.ours.chat.new`); everywhere else it stays VS Code's New File.
-  - Ctrl+Alt+W, "Go to Next Chat That Needs You" (`t3-vscode.ours.chat.nextWaiting`, in the palette while connected): opens the next chat waiting for an approval or an answer, cycling from the chat in front. "Open the Session That Needs You" without an argument now does the same.
-  - Sessions list (side panel list and his History popup): Up, Down, Home, End move over the rows; Down in "Search threads" goes to the first row; F2 renames (his prompt); Delete archives the row (the R11 toast offers Undo) and keeps focus on the next row; an archived row ignores Delete. Ctrl+F in the list focuses "Search threads"; in a chat Ctrl+F stays his find.
-  - F2 in a chat renames it (his header rename was double-click only).
-- How: the webview (src/webview/ours/listKeys.ts) reports window focus and blur through the ours RPC `keys.focus`; the host (src/host/ours/keys.ts) sets the context `t3-vscode.ours.inT3` while any T3 webview has focus, and a wrap() on `registry.remove` clears a view closed while focused. If the context goes stale anyway (a view hidden while focused), the bindings also check `editorTextFocus` (and `listFocus` for Ctrl+N), so Ctrl+Alt+C from a text editor still jumps into T3 and Ctrl+N in the Explorer stays New File. Own key instead of `focusedView`, as Claude Code does with its `sideBarActive`: `focusedView` is not proven to match inside a webview. Delete runs the ours RPC `keys.archive`, which calls `hostState.threadAction(id, "archive")`, so R11's Undo wrapper applies. F2 calls his `threadAction` bridge method with `rename`, so his own input box asks. No line of his changed.
-- Settings: none. Rebind or remove any of the keys in Keyboard Shortcuts.
-- Live test: in a chat tab and in the side panel: Ctrl+Alt+C out and back (in a chat tab, Ctrl+Alt+C brings back the code tab; in the side panel it must not switch editor tabs); Ctrl+N while typing in the composer; Ctrl+Alt+W with two waiting chats (it cycles); in the sessions list Down, End, Home, F2, Delete (Undo toast, focus on the next row), Ctrl+F. Check Keyboard Shortcuts for conflicts on Ctrl+Alt+W.
+- What: a long message of yours (a big paste, a log, a file) shows only its first lines in the bubble, fading out, with a "Show full message" link under it. A click unfolds it; "Show less" folds it back and keeps the bubble in view. So a 300-line paste no longer pushes the answer off screen. Short messages, and messages only a few lines over the limit, are never folded.
+- The limit is about ten lines (16.5em of message text), never more than 40% of the view height. Works with both chat looks (`bubbles` and `plain`).
+- An unfolded message stays unfolded while the chat is open, also after scrolling it out of view and back (the list remounts rows).
+- How: part of X2's module src/webview/ours/chatlook.ts (one stylesheet): CSS clips the bubble's message text (not the bubble, whose "You" label sits outside it), and a MutationObserver adds the toggle button to bubbles whose text overflows. No line of his changed. Copy and search still use the full text.
+- Settings: none.
+- Live test: paste 300 lines into the box and send: the bubble shows about ten lines and "Show full message"; click it, then "Show less". Try a fenced code block paste too.
