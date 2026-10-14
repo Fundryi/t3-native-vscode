@@ -46,6 +46,12 @@
     },
     "commands": [
       {
+        "command": "t3-vscode.ours.threadActions.regenerateTitle",
+        "title": "Regenerate Title",
+        "category": "T3 VSCode",
+        "icon": "$(sparkle)"
+      },
+      {
         "command": "t3-vscode.ours.diffs.openFile",
         "title": "Open File",
         "category": "T3 VSCode",
@@ -340,6 +346,10 @@
       "view/item/context": [],
       "commandPalette": [
         {
+          "command": "t3-vscode.ours.threadActions.regenerateTitle",
+          "when": "t3-vscode.ours.hasThread"
+        },
+        {
           "command": "t3-vscode.ours.diffs.openFile",
           "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/"
         },
@@ -407,6 +417,11 @@
       ],
       "view/title": [
         {
+          "command": "t3-vscode.ours.threadActions.regenerateTitle",
+          "when": "view == t3.webview && t3-vscode.ours.hasThread",
+          "group": "t3ours"
+        },
+        {
           "command": "t3-vscode.ours.log.show",
           "when": "view == t3.webview",
           "group": "t3ours"
@@ -449,6 +464,26 @@
       ]
     },
     "configuration": [
+      {
+        "title": "Fork: Chat look",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.chatlook.style": {
+            "type": "string",
+            "enum": [
+              "bubbles",
+              "plain"
+            ],
+            "enumDescriptions": [
+              "Your messages in a tinted bubble under a You label, the assistant's turn full width behind a left rule, tool rows muted.",
+              "The original look of the extension."
+            ],
+            "default": "bubbles",
+            "scope": "window",
+            "description": "How the chat sets your messages apart from the assistant's replies."
+          }
+        }
+      },
       {
         "title": "Fork: Plan mode",
         "order": 10,

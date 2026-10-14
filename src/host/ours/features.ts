@@ -64,11 +64,11 @@ export { activateThreadActions as threadActions } from "./threadActions.js";
 
 export { activateContextMeter as contextMeter } from "./contextMeter.js";
 
-// X1 models
+export { activateModelSync as models } from "./modelSync.js";
 
-// X2 chatlook
+export { activateChatlook as chatlook } from "./chatlook.js";
 
-// X3 titlebtn
+// X3 titlebtn: its host command lives in threadActions.ts
 
 // R1 theme
 

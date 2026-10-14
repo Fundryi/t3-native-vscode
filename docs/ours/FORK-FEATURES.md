@@ -328,3 +328,33 @@ The thread menu (right-click a session, or the chevron in a chat header) gets th
 - Settings and commands: none.
 - Files: src/webview/ours/shiftHint.ts (the note), one call in src/webview/ours/drop.ts where the bounce is detected.
 - Live test: drag README.md from the Explorer onto the chat without Shift: the note shows over the composer and disappears after 2 s. Drag again with Shift held: the reference lands.
+
+## X1 models: The model picker lists what T3 lists
+
+- Root cause: T3 keeps favorites, hidden models and model order in its server settings, shared by every client of the environment, and its picker hides what is hidden there. His picker kept its own copy in VS Code (defaulting to "hide legacy" only) and never read T3's, so every model hidden in T3 (hundreds of OpenCode routes, old Claude and GPT versions) still showed.
+- What: the picker now uses T3's shared preferences, live: hide or reorder a model in T3 and the VS Code picker follows without a reload. Stars, the Manage models checkboxes and drag-to-reorder in VS Code write back to T3 (setModelFavorites, setModelsHidden, setProviderModelOrder: only the change, applied under T3's settings lock), so T3's own picker follows too.
+- Fallback: while T3 has not yet migrated the preferences to the server (both fields null), or no server is connected, his VS Code store runs as before. A failed write to T3 is logged in "T3 VSCode (fork)" and lands in his VS Code store instead (the picker then still shows T3's list).
+- How: no line of his changed. wrap() replaces `modelPreferences` and `saveModelPreferences` on HostState's private options object (read on every call). T3 answers a write with the new settings before its settingsUpdated event arrives; that answer is used until the event lands, so a checkbox does not flicker back.
+- Not copied from T3: T3 also hides the models of a provider that is enabled but not ready (not installed, unavailable, needs sign-in); his picker shows those rows greyed with "Not installed" or "Unavailable". An instance T3 has preferences for shows its legacy models inline (his rule for any instance with saved preferences), where T3 folds them under "Legacy".
+- Settings and commands: none.
+- Files: src/host/ours/modelSync.ts, src/host/ours/modelSyncRules.ts (the mapping and the delta rules, tested).
+- Live test: open the model picker: the OpenCode count matches T3's picker. Hide a model in T3's settings: it disappears from the VS Code picker. Untick one in Manage models: it disappears from T3's picker.
+
+## X2 chatlook: Who wrote what, at a glance
+
+- What: the chat tells your messages from the assistant's replies the way the Claude Code and Codex chats do. Your message is a tinted bubble on the right (the theme's link color at low strength, a thin border, a squared bottom-right corner) under a small "You" label. The assistant's turn runs full width behind a quiet left rule that starts at his "Assistant" header with the T3 mark and ends at the turn's last row. A new message from you opens with extra space. Tool and command rows ("Worked for", "Ran ...", "Edited ...") are smaller and muted, their opened output stays in full color.
+- Colors come only from VS Code theme variables, so light, dark and high contrast follow the theme (high contrast draws the bubble with the active contrast border and the rule with the contrast border). Narrow sidebar: the rule moves in and the bubble keeps his width rule.
+- Setting: `t3-vscode.ours.chatlook.style`, `bubbles` (default) or `plain` (the original look). Changes apply at once to every open chat.
+- How: one stylesheet scoped under `html[data-ours-chatlook="bubbles"]`, injected by the webview module; no edit in his components. The "You" label is CSS content, so copy and search keep the plain message text.
+- Files: src/webview/ours/chatlook.ts (the look and the attribute), src/host/ours/chatlook.ts (the setting: asked once per view through the ours channel, pushed on change), package.json (section "Fork: Chat look").
+- Anchors: his class names .timeline-row, .user-message, .user-bubble, .message-author, .work-group-toggle, .work-entry and the ported WorkLog's text-sm/text-secondary-label. Re-check them after an upstream merge (typecheck cannot).
+- Live test: open a chat with a few turns in the sidebar and in an editor tab: your messages sit right in a tinted bubble under "You", each reply has the T3 header and a left rule down to its end, tool rows are grey. Switch the setting to `plain`: the original look comes back without a reload. Try a dark, a light and a high contrast theme.
+
+## X3 titlebtn: Regenerate title from the chat header
+
+- What: a small sparkle button right after the thread title in the chat header, tooltip "Regenerate title". A click asks T3 for a new AI title; the button spins (and is disabled) until the new title replaces the old one in place, at most 45 s. Shown only when the server sets `threadTitleRegeneration` (the same rule as Q19's menu entry).
+- Also "Regenerate Title" in the T3 view's "..." menu (last group, next to "More Thread Actions") and in the Command Palette (`t3-vscode.ours.threadActions.regenerateTitle`), both when the chat in front shows a thread. On a server without the flag the command says so.
+- How: no second code path. The button sends Q19's `threadActions.run` request with `regenerateTitle`; the command calls Q19's own `run` in src/host/ours/threadActions.ts. The webview module src/webview/ours/titleButton.ts asks `threadActions.list` once per thread, appends the button to his `.chat-heading` and puts it back when his header remounts. No line of his changed.
+- T3 itself shows this action in its thread menu (threadActionMenu.logic.ts, "Regenerate title"); the header button is the fork's shortcut to it.
+- Settings: none.
+- Live test: open a chat, click the sparkle next to its title: it spins and a few seconds later the title changes. The T3 view's "..." menu has "Regenerate Title" in its last group, after "More Thread Actions".

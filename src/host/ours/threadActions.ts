@@ -67,11 +67,16 @@ export const activateThreadActions: OursFeature = (deps) => {
     });
   };
 
-  const more = async () => {
+  const focusedThread = () => {
     let state;
     try { state = hostState.snapshot(registry.focusedViewId); } catch { state = hostState.snapshot(); }
     const thread = state.threads.find((item) => item.id === state.activeThreadId);
-    if (!thread) { void vscode.window.showInformationMessage("No thread open."); return; }
+    if (!thread) void vscode.window.showInformationMessage("No thread open.");
+    return thread;
+  };
+  const more = async () => {
+    const thread = focusedThread();
+    if (!thread) return;
     const choice = await vscode.window.showQuickPick(entries(thread).map((entry) => ({ label: `$(${entry.icon}) ${entry.label.replace(/\.\.\.$/, "")}`, id: entry.id })),
       { title: thread.title || "Untitled", placeHolder: "More thread actions" });
     if (choice) run(thread, choice.id);
@@ -86,8 +91,16 @@ export const activateThreadActions: OursFeature = (deps) => {
       return true;
     }),
   ];
+  // X3 titlebtn: the same action from the view menu and the palette (the header button uses threadActions.run).
+  const regenerateTitle = () => {
+    const thread = focusedThread();
+    if (!thread) return;
+    if (!entries(thread).some((entry) => entry.id === "regenerateTitle")) { void vscode.window.showInformationMessage("This T3 server cannot regenerate titles."); return; }
+    run(thread, "regenerateTitle");
+  };
   return vscode.Disposable.from(
     vscode.commands.registerCommand("t3-vscode.ours.threadActions.more", more),
+    vscode.commands.registerCommand("t3-vscode.ours.threadActions.regenerateTitle", regenerateTitle),
     { dispose: () => unregister.forEach((stop) => stop()) },
   );
 };
