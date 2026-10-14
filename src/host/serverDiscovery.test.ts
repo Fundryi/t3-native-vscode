@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { discoverServer } from "./serverDiscovery.js";
+import { discoverServer, pidAlive } from "./serverDiscovery.js";
 
 test("Discovery of an absent custom home does not create it or suggest installing the shared service", async (t) => {
   const parent = mkdtempSync(join(tmpdir(), "t3-vscode-discovery-"));
@@ -57,4 +57,11 @@ test("Live-process discovery distinguishes failed probes, protocol mismatch and 
   if (!incompatible.ok) assert.equal(incompatible.problem?.kind, "incompatible");
   protocol = 2;
   assert.equal((await discoverServer(home)).ok, true);
+});
+
+test("A process we may not signal still counts as alive (an elevated T3 app on Windows gives EPERM)", () => {
+  assert.equal(pidAlive(process.pid), true);
+  assert.equal(pidAlive(Number.MAX_SAFE_INTEGER), false);
+  // pid 4 (System) on Windows, pid 1 elsewhere: exists, signalling it is denied unless we are privileged.
+  assert.equal(pidAlive(process.platform === "win32" ? 4 : 1), true);
 });

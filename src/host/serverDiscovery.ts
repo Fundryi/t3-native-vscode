@@ -60,8 +60,9 @@ export const pidAlive = (pid: number): boolean => {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (error) {
+    // EPERM: the process exists but we may not signal it (an elevated T3 app on Windows).
+    return (error as NodeJS.ErrnoException).code === "EPERM";
   }
 };
 
