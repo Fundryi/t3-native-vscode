@@ -48,6 +48,11 @@
     },
     "commands": [
       {
+        "command": "t3-vscode.ours.chat.nextWaiting",
+        "title": "Go to Next Chat That Needs You",
+        "category": "T3 VSCode"
+      },
+      {
         "command": "t3-vscode.ours.viewbar.sessions",
         "title": "Back to Sessions",
         "category": "T3 VSCode",
@@ -268,6 +273,32 @@
     ],
     "keybindings": [
       {
+        "command": "workbench.action.openPreviousRecentlyUsedEditorInGroup",
+        "key": "ctrl+alt+c",
+        "when": "t3-vscode.ours.inT3Tab && !editorTextFocus"
+      },
+      {
+        "command": "workbench.action.focusActiveEditorGroup",
+        "key": "ctrl+alt+c",
+        "when": "t3-vscode.ours.inT3 && !t3-vscode.ours.inT3Tab && !editorTextFocus"
+      },
+      {
+        "command": "t3-vscode.ours.chat.new",
+        "key": "ctrl+n",
+        "mac": "cmd+n",
+        "when": "t3-vscode.ours.inT3 && !editorTextFocus && !terminalFocus && !inputFocus && !listFocus"
+      },
+      {
+        "command": "t3-vscode.ours.chat.nextWaiting",
+        "key": "ctrl+alt+w",
+        "when": "t3-vscode.ours.ready"
+      },
+      {
+        "command": "t3-vscode.ours.chat.focus",
+        "key": "ctrl+alt+c",
+        "when": "(!t3-vscode.ours.inT3 || editorTextFocus) && focusedView != 'workbench.debug.watchExpressionsView'"
+      },
+      {
         "command": "t3-vscode.ours.chat.focus",
         "key": "ctrl+alt+c"
       },
@@ -379,6 +410,10 @@
       ],
       "view/item/context": [],
       "commandPalette": [
+        {
+          "command": "t3-vscode.ours.chat.nextWaiting",
+          "when": "t3-vscode.ours.ready"
+        },
         {
           "command": "t3-vscode.ours.viewbar.sessions",
           "when": "false"

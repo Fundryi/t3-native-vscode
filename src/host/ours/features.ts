@@ -94,7 +94,7 @@ export { activateErrors as errors } from "./errors.js";
 
 // R13 focus
 
-// R14 keys2
+// R14 keys2: lives in keys.ts (Q2 activation, no second feature)
 
 // R15 announce
 

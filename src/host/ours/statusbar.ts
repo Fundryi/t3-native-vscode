@@ -29,7 +29,7 @@ export function activateStatusbar({ hostState, provider }: OursDeps): vscode.Dis
   const command = vscode.commands.registerCommand("t3-vscode.ours.statusbar.open", async (threadId?: unknown) => {
     try {
       if (typeof threadId === "string") await provider.openSession(threadId);
-      else await vscode.commands.executeCommand("t3-vscode.showThreads");
+      else await vscode.commands.executeCommand("t3-vscode.ours.chat.nextWaiting"); // R14: no argument opens the first waiting chat
     } catch (cause) { toastWithLogs("error", String(cause), cause); }
   });
   // R4: "T3: running 3m" keeps counting between state changes, so repaint while something runs.
