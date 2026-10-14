@@ -4,6 +4,34 @@ A VS Code client for a separately running [T3 Code](https://github.com/pingdotgg
 
 0.1.19 is on the [Marketplace](https://marketplace.visualstudio.com/items?itemName=hungtienhuang.t3-vscode) prerelease channel; 0.1.18 remains on the release channel.
 
+## This fork
+
+This is [Fundryi/t3-native-vscode](https://github.com/Fundryi/t3-native-vscode), a fork of [busFred/t3-vscode](https://github.com/busFred/t3-vscode) (the text below this section is his README). It replaces the author's older extension [Fundryi/t3-vscode](https://github.com/Fundryi/t3-vscode), which embedded T3's web page in a VS Code panel and is archived. Three things, side by side:
+
+| | Old: Fundryi/t3-vscode (archived) | Upstream: busFred/t3-vscode | This fork |
+|---|---|---|---|
+| Chat UI | T3's web page in an iframe | Native React chat in VS Code | Upstream's native chat, in the side bar by default |
+| Agents see VS Code | MCP bridge | No | MCP bridge (workspace, tabs, selection, problems, git, terminal; open file, reveal, diff) |
+| Approvals | Notifications | In the chat only | Notifications with buttons, keyboard answers |
+| Files into the chat | Drag and drop, Ctrl+C / Ctrl+V | Attach button, Alt+K inserts a selection | "Add to prompt" menu, Shift+Alt+K for a selection, Ctrl+C in the Explorer then Ctrl+V, a drop view |
+| Upstream merges | n/a | n/a | Our code lives in `src/*/ours/`; his files get the smallest hooks; `git merge upstream/main` works |
+
+What the fork adds on top of upstream (every item has a live test in [docs/ours/FORK-FEATURES.md](docs/ours/FORK-FEATURES.md)):
+
+- **Agents understand this VS Code window.** A loopback MCP server per window; Claude Code and Codex started by T3 get tools for the workspace, open tabs, the active file and selection, problems, git state, terminal output, and can open a file, reveal it or show a diff.
+- **Approvals and questions as VS Code notifications**, answerable by keyboard (Alt+1, Alt+2, ...) and from the status bar.
+- **Status bar** shows which chat runs and for how long; a click goes there. Toasts when a turn finishes, none for the chat you are reading.
+- **Add to prompt**: right-click a file, a folder or a selection; Shift+Alt+K sends the selected lines with their line numbers. Ctrl+C in the Explorer, then Ctrl+V in the chat, inserts file references. A "Drop zone" view takes dragged files while VS Code 1.140+ blocks drops into webviews (an Electron change, see FORK-FEATURES I).
+- **Keys**: focus the chat, new chat, next chat that needs you, Escape stops a running turn, Ctrl+N in a chat starts a new one.
+- **Chat in the side bar** by default (setting to use editor tabs instead), VS Code's own colours, your T3 default model for new chats, plan mode visible and switchable, a context meter, secret requests as a card.
+- **Changes**: a changes card per turn, open the edited file at the change, revert a hunk with VS Code's own arrow, show all changes of a turn.
+- **Threads**: deep links, open in the desktop app, snooze, regenerate title, mark unread, copy branch or id, archive with undo, stop a subagent from its card.
+- **Robustness**: auto-reconnect with buttons, pairing works with only the T3 desktop app, errors you can read, long output opens in an editor, screen readers hear new cards.
+- **t3.json scripts as VS Code tasks**, save all files on send.
+
+Install: the VSIX under `target-installer/` (`pnpm run package`), keeping the upstream extension id. Windows is the first-class platform here; the upstream checks run on Windows too (see docs/STATUS.md).
+
+
 ## In the editor
 
 Captured from the extension in an isolated VS Code window with synthetic conversations.
