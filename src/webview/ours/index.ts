@@ -59,10 +59,10 @@ import "./layout";
 
 // Q21 shiftHint
 
-// Q9 read
+import "./visit";
 
 // Q14 secrets
 
-// Q19 threadActions
+import "./threadActions";
 
-// Q20 contextMeter
+import "./contextMeter";

@@ -56,10 +56,10 @@ export { activateLayout as layout } from "./layout.js";
 
 // Q21 shiftHint
 
-// Q9 read
+export { activateVisit as read } from "./visit.js";
 
 // Q14 secrets
 
-// Q19 threadActions
+export { activateThreadActions as threadActions } from "./threadActions.js";
 
-// Q20 contextMeter
+export { activateContextMeter as contextMeter } from "./contextMeter.js";
