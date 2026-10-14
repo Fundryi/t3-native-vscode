@@ -23,3 +23,35 @@ export { activateSaveOnSend as saveOnSend } from "./saveOnSend.js";
 export { activateDrop as drop } from "./drop.js";
 
 export { activateLayout as layout } from "./layout.js";
+
+// Q1b sidebar
+
+// Q2 keys
+
+// Q3 toasts
+
+// Q4 reconnect
+
+// Q5 escape
+
+// Q7 statusbar2
+
+// Q8 contexts
+
+// Q10 latest
+
+// Q11 reprompt
+
+// Q12 composerFit
+
+// Q13 planMode
+
+// Q15 fileLinks
+
+// Q16 diffs
+
+// Q17 approvalKeys
+
+// Q18 rowCopy
+
+// Q21 shiftHint

@@ -26,3 +26,35 @@ import "./composer";
 import "./drop";
 
 import "./layout";
+
+// Q1b sidebar
+
+// Q2 keys
+
+// Q3 toasts
+
+// Q4 reconnect
+
+// Q5 escape
+
+// Q7 statusbar2
+
+// Q8 contexts
+
+// Q10 latest
+
+// Q11 reprompt
+
+// Q12 composerFit
+
+// Q13 planMode
+
+// Q15 fileLinks
+
+// Q16 diffs
+
+// Q17 approvalKeys
+
+// Q18 rowCopy
+
+// Q21 shiftHint
