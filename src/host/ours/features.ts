@@ -72,7 +72,7 @@ export { activateChatlook as chatlook } from "./chatlook.js";
 
 // R1 theme
 
-// R2 defaults
+export { activateDefaults as defaults } from "./defaults.js";
 
 // R3 viewbar
 
@@ -88,7 +88,7 @@ export { activateErrors as errors } from "./errors.js";
 
 // R10 dropview: package.json only (the drop view gets a when clause on t3-vscode.ours.drop.showView), no code here.
 
-// R11 actions
+// R11 actions: lives in threadActions.ts (Q19 activation, no second feature)
 
 // R12 setup
 

@@ -7,7 +7,7 @@ const SHOW_MS = 2000;
 const style = document.createElement("style");
 style.textContent = `
 .ours-shift-hint { position: fixed; z-index: 1000; transform: translate(-50%, -50%); pointer-events: none; white-space: nowrap;
-  padding: 4px 10px; border-radius: 4px; font-size: 12px; border: 1px solid var(--vscode-widget-border, var(--border));
+  padding: 4px 10px; border-radius: 4px; font-size: .75rem; border: 1px solid var(--vscode-widget-border, var(--border));
   background: var(--vscode-editorHoverWidget-background, var(--card)); color: var(--vscode-editorHoverWidget-foreground, var(--foreground));
   box-shadow: 0 2px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.3)); }`;
 document.head.append(style);

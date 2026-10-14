@@ -473,3 +473,44 @@ Undo a single change of a turn, not the whole file, and edit right inside the di
 - How: no line of his changed. src/webview/ours/focus.ts: a MutationObserver on body[data-ours-chat] (set by layout.ts), a capture click listener on the chip X buttons and a window focusin listener that sends the popup a synthetic Escape (the popup list is the one escape.ts exports). That listener ignores focus moved by the pointer (from a pointerdown until the next key press): a click on the popup's own button must toggle it closed, and his outside-click handlers cover the rest.
 - Settings and commands: none.
 - Live test: keyboard only in the side panel: Enter on a session row, type at once; Tab to "Sessions", Enter: focus is on that chat's row (Enter reopens it); add two files, Tab to the first X, Enter, Enter: both go and the caret is in the message box; open the model picker, Shift+Tab: it closes; in Find, Enter on "Search filters", then Tab until focus is inside the filters popover: it stays open and the filters are reachable, Tab out of it: it closes; start a turn, Escape stops it. With the mouse: open the model picker, click its button again: it closes.
+
+## R1 theme: The chat uses VS Code's own colours
+
+- What: in the side bar the chat and the sessions list take the side bar colour (his tokens used the editor colour everywhere), chips, change cards and the plain-look user bubble get a 7% foreground tint so they stay visible there, and only one line runs under the "Back to" bar. Everywhere: icon buttons hover with the toolbar hover colour, buttons are VS Code's secondary buttons (a primary button now darkens on hover with the button hover colour; before it did not change), the "..." and thread action menus use the menu colours, the @ and / suggestions use the list selection colour, scrollbars use the scrollbar slider colours, the composer border and focus ring use the focus border (1 px, inside, so nothing clips it), the connection dot uses the test-passed green and every popup shadow uses the widget shadow. High contrast draws a dashed contrast outline on hovered buttons and menu rows.
+- Text floor: every 9 and 10 px text of his (model picker notes, footnotes, list meta, find counts, composer shortcuts and so on) is raised to .6875rem, 11 px at the default interface size; fixed px sizes (Latest, message rail, shift hint) are now rem, so they follow the interface size. X2's .75rem work rows are untouched.
+- Also: Copy and "use again" on your messages show on hover or keyboard focus, like the assistant's; the plan card wraps its actions under the title and is tighter below 420 px.
+- How: one stylesheet in src/webview/ours/polish.ts, appended after his, so a rule that copies his selector wins on order; `body[data-ours-surface="sidebar"]` is set once from the host's own `data-surface` at load (layout.ts later flips `data-surface` to "panel" for a chat in the side bar). No line of his changed; the editor-tab chat keeps the editor colour.
+- Settings and commands: none.
+- Files: src/webview/ours/polish.ts, src/webview/ours/shiftHint.ts (12 px to .75rem).
+- Anchors: his class names and selectors in src/webview/styles/tokens.css (the small-text list is copied from there). Re-check them after an upstream merge.
+- Live test: Dark Modern, Light Modern and HC Dark, chatlook bubbles and plain: side bar chat and list show no colour seam, user bubble and chips visible; hover each button kind and menu row; Tab into the composer; narrow the side bar to 300 px with a plan card (actions wrap to a second line), then open a plan card in a wide editor tab (Copy sits right next to Implement); check the Latest button now uses the secondary button colour.
+
+## R2 defaults: A new chat starts with my T3 model
+
+- What: a new chat in VS Code starts with the model picked as default in T3 (Settings, New threads; a project override in T3 wins), as T3 web does. Before, his draft took the model of the chat in front or the first provider's model. A model you pick in the draft stays; changing the default in T3 moves an untouched draft at once (T3's settingsUpdated reaches client.config, his onConfig re-emits).
+- Never picked: a T3 default that the picker hides (X1's shared list, legacy models included) or whose provider is off, missing or unavailable. Then his fallback runs, minus hidden models: if it lands on a model the picker hides (the chat in front's model, or a provider's default), the draft takes the first provider's default model if shown, else its first shown model. While his project record names a default model (hostState.ts conversationDraft), that one stays, because his createThread prefers it.
+- Permission mode: stays "auto" (owner question 1 of QOL-ROUND-2: T3's environment mode decodes to full-access when never set, so following it would silently widen). Only a project override of the mode in T3 is followed, and only until you pick a mode in that draft.
+- Tooltips: the permission picker shows T3's one-line meaning of each mode on hover (from T3's docs/user/permission-modes.md).
+- How: no line of his changed. wrap() replaces HostState's private conversationDraft (every draft caller goes through it) and setModes (to note a picked mode); both are read by name, and an upstream rename turns the feature off with one line in "T3 VSCode (fork)". The rule is resolveProjectSettings from the vendored @t3tools/shared, checked against visibleProviderModels (src/host/ours/defaultsRules.ts).
+- Settings and commands: none.
+- Files: src/host/ours/defaults.ts, src/host/ours/defaultsRules.ts (+ test), src/webview/ours/defaults.ts.
+- Live test: set Claude as the default model in T3, open a new chat in VS Code: it shows Claude. Pick another model in the draft: it stays. Hide the default model in T3: the new chat falls back to another model, never the hidden one. Hover the permission picker: the mode's meaning shows.
+
+## R11 actions: One Thread Actions list, and Archive can be undone
+
+- What: one "Thread Actions" QuickPick (`t3-vscode.ours.threadActions.more`, formerly titled "More Thread Actions") has every action for the chat in front: his five rows (Rename, Pin or Unpin, Settle or Unsettle, Archive or Restore, Delete) then, under a separator, Q19's rows (Stop subagent, Snooze, Regenerate title, Mark unread, Copy branch, Copy thread ID). The T3 view's "..." menu, the chat tab's "..." menu and the Command Palette all open this list, each only while the chat in front shows a thread. His "Thread Actions" command stays registered but is hidden from the view menu and the palette.
+- Rename asks in an input box (an empty title is refused) and Delete asks in a modal, as his own prompts do; after the prompt the thread and the view are checked again before the action runs.
+- Undo: after any Archive (his thread menu in the chat, this list, his hidden command) a toast "T3: archived "<title>"." offers Undo, which restores the thread.
+- How: no line of his code changed. The rows and prompts are rebuilt in src/host/ours/threadActions.ts and run through the public `hostState.threadAction`; wrap() on `hostState.threadAction` shows the Undo toast after an archive succeeds. package.json: our menu and palette entries point at the full list; his view/title entry for `t3-vscode.threadActions` has `"when": "false"` (the one changed token on one of his lines; drop it on a merge conflict and the "..." shows both lists).
+- Regenerate Title keeps its own entry in the view "..." menu (X3).
+- Settings: none.
+- Live test: open a chat in the side panel and in a tab: both "..." menus show "Thread Actions" with the same rows. Archive a chat from any menu, click Undo in the toast: the chat is back in the list.
+
+## R20 longmsg: Long pasted prompts fold
+
+- What: a long message of yours (a big paste, a log, a file) shows only its first lines in the bubble, fading out, with a "Show full message" link under it. A click unfolds it; "Show less" folds it back and keeps the bubble in view. So a 300-line paste no longer pushes the answer off screen. Short messages, and messages only a few lines over the limit, are never folded.
+- The limit is about ten lines (16.5em of message text), never more than 40% of the view height. Works with both chat looks (`bubbles` and `plain`).
+- An unfolded message stays unfolded while the chat is open, also after scrolling it out of view and back (the list remounts rows).
+- How: part of X2's module src/webview/ours/chatlook.ts (one stylesheet): CSS clips the bubble's message text (not the bubble, whose "You" label sits outside it), and a MutationObserver adds the toggle button to bubbles whose text overflows. No line of his changed. Copy and search still use the full text.
+- Settings: none.
+- Live test: paste 300 lines into the box and send: the bubble shows about ten lines and "Show full message"; click it, then "Show less". Try a fenced code block paste too.

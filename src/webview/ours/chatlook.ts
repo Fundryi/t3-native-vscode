@@ -7,6 +7,9 @@
  * Theme variables only (his tokens map them from --vscode-*), so light, dark and high contrast follow VS Code.
  * shortcut: anchored on his class names (.timeline-row, .user-message, .user-bubble, .response-header, .work-group,
  * .work-entry) and on the ported WorkLog's text-sm/text-secondary-label; re-check them on each upstream merge.
+ * R20 longmsg (both looks): a long user message folds to a few lines with a "Show full message" toggle. The clip sits
+ * on the bubble's own .markdown child (not .message-references, which shares the class), never on the bubble: X2's
+ * "You" label sits outside the bubble box. shortcut: same anchors plus .markdown and .message-references.
  */
 import { oursRequest, registerOursEvent, failed } from "./channel";
 
@@ -34,7 +37,9 @@ ${ON} .work-entry pre { color: var(--foreground); }
 @container (max-width: 720px) {
   ${ON} .user-bubble { max-width: calc(100% - 27px); }
   ${ON} .transcript-list .timeline-row:not(:has(.user-message)) { padding-left: 22px; background-position: 7px 0; }
-}`;
+}
+.user-bubble[data-ours-fold="closed"] > .markdown:not(.message-references) { max-height: min(16.5em, 40vh); overflow: clip; -webkit-mask-image: linear-gradient(#000 calc(100% - 3em), transparent); mask-image: linear-gradient(#000 calc(100% - 3em), transparent); }
+.user-bubble > .ours-fold-toggle { display: block; margin: 4px 0 2px auto; font-size: .75rem; }`;
 document.head.append(style);
 
 const apply = (value: unknown) => {
@@ -45,3 +50,45 @@ const apply = (value: unknown) => {
 apply("bubbles");
 registerOursEvent("chatlook", (data) => apply(data.style));
 void oursRequest<{ style?: unknown } | null>("chatlookStyle").then((reply) => apply(reply?.style), failed("chat look"));
+
+// R20 longmsg. The list is virtual and remounts rows on scroll, so the opened ones are kept by row key.
+const reportFold = failed("long message fold");
+const opened = new Set<string>();
+const SHOW = "Show full message", LESS = "Show less";
+const text = (bubble: HTMLElement) => bubble.querySelector<HTMLElement>(":scope > .markdown:not(.message-references)");
+const setFold = (bubble: HTMLElement, open: boolean) => {
+  bubble.dataset.oursFold = open ? "open" : "closed";
+  const toggle = bubble.querySelector<HTMLButtonElement>(":scope > .ours-fold-toggle");
+  if (toggle) { toggle.textContent = open ? LESS : SHOW; toggle.setAttribute("aria-expanded", String(open)); }
+};
+let foldFrame = 0;
+const fold = () => {
+  foldFrame = 0;
+  try {
+    for (const bubble of document.querySelectorAll<HTMLElement>(".user-message > .user-bubble:not([data-ours-fold])")) {
+      const body = text(bubble);
+      if (!body || !body.getClientRects().length) continue; // no text, references only, or not laid out yet
+      bubble.dataset.oursFold = "closed";
+      // Fold only when it hides at least about three lines; otherwise the toggle would reveal next to nothing.
+      if (body.scrollHeight - body.clientHeight < 3 * (parseFloat(getComputedStyle(body).lineHeight) || 20)) { bubble.dataset.oursFold = "none"; continue; }
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "text-button ours-fold-toggle";
+      bubble.append(toggle); // a trailing element child: React updates leave it alone (as reprompt's button)
+      const key = bubble.closest<HTMLElement>("[data-search-row]")?.dataset.searchRow;
+      setFold(bubble, key !== undefined && opened.has(key));
+    }
+  } catch (cause) { reportFold(cause); }
+};
+new MutationObserver(() => { if (!foldFrame) foldFrame = requestAnimationFrame(fold); }).observe(document.body, { childList: true, subtree: true });
+window.addEventListener("click", (event) => {
+  try {
+    const toggle = event.target instanceof Element ? event.target.closest<HTMLElement>(".ours-fold-toggle") : null;
+    const bubble = toggle?.parentElement;
+    if (!bubble) return;
+    const open = bubble.dataset.oursFold !== "open", key = bubble.closest<HTMLElement>("[data-search-row]")?.dataset.searchRow;
+    if (key !== undefined) { if (open) opened.add(key); else opened.delete(key); }
+    setFold(bubble, open);
+    if (!open) bubble.scrollIntoView({ block: "nearest" }); // a 300-line collapse must not strand the view far below
+  } catch (cause) { reportFold(cause); }
+});

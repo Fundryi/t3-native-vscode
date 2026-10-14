@@ -1,7 +1,10 @@
 /**
  * Q19 threadActions: Snooze, Regenerate title, Mark unread, Copy branch, Copy thread ID and Stop subagent.
- * The webview adds them to his thread menu (src/webview/ours/threadActions.ts); "More Thread Actions" offers them as a
- * QuickPick for the focused chat. Each server-flagged action is hidden when the flag is absent (threadActionsList.ts).
+ * The webview adds them to his thread menu (src/webview/ours/threadActions.ts). Each server-flagged action is hidden
+ * when the flag is absent (threadActionsList.ts).
+ * R11 actions: "Thread Actions" (t3-vscode.ours.threadActions.more) is the one QuickPick for the focused chat: his five
+ * rows (rename, pin, settle, archive, delete; his command is hidden in package.json) plus ours. A wrapper on
+ * hostState.threadAction offers Undo after every Archive, from any menu.
  */
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
@@ -10,6 +13,7 @@ import { resolveSnoozePresets } from "@t3tools/client-runtime/state/thread-settl
 import type { ThreadSummary } from "../../shared/bridge.js";
 import { log } from "./log.js";
 import { registerOursRpc } from "./rpc.js";
+import { wrap } from "./wrap.js";
 import { threadActionEntries, type ThreadActionId } from "./threadActionsList.js";
 import type { OursDeps, OursFeature } from "./types.js";
 
@@ -67,20 +71,62 @@ export const activateThreadActions: OursFeature = (deps) => {
     });
   };
 
-  const focusedThread = () => {
-    let state;
-    try { state = hostState.snapshot(registry.focusedViewId); } catch { state = hostState.snapshot(); }
+  const focused = () => {
+    let viewId: string | undefined = registry.focusedViewId, state;
+    try { state = hostState.snapshot(viewId); } catch { viewId = undefined; state = hostState.snapshot(); }
     const thread = state.threads.find((item) => item.id === state.activeThreadId);
     if (!thread) void vscode.window.showInformationMessage("No thread open.");
-    return thread;
+    return { thread, viewId };
+  };
+  const focusedThread = () => focused().thread;
+
+  // His rows, as his t3-vscode.threadActions (src/extension.ts) and his BridgeHandler prompts (src/host/bridge.ts).
+  const hisRows = (thread: ThreadSummary) => [
+    { label: "$(edit) Rename thread", his: "rename" },
+    { label: thread.pinned ? "$(pinned) Unpin thread" : "$(pin) Pin thread", his: thread.pinned ? "unpin" : "pin" },
+    ...(!thread.archived ? [{ label: thread.settled ? "$(debug-restart) Unsettle thread" : "$(check) Settle thread", his: thread.settled ? "unsettle" : "settle" }] : []),
+    { label: thread.archived ? "$(archive) Restore thread" : "$(archive) Archive thread", his: thread.archived ? "unarchive" : "archive" },
+    { label: "$(trash) Delete thread", his: "delete" },
+  ];
+  const runHis = async (thread: ThreadSummary, action: string, viewId: string | undefined) => {
+    let title: string | undefined;
+    if (action === "rename") {
+      title = await vscode.window.showInputBox({ title: "Rename thread", value: thread.title, validateInput: (value) => value.trim() ? null : "Enter a title." });
+      if (title === undefined) return;
+    }
+    if (action === "delete" && await vscode.window.showWarningMessage(`Delete "${thread.title}"?`, { modal: true }, "Delete thread") !== "Delete thread") return;
+    // A prompt may stay open after its chat tab closed (snapshot throws then) or the thread went away.
+    if (!hostState.snapshot(viewId).threads.some((item) => item.id === thread.id)) throw new Error("This thread is not available in the current workspace.");
+    log.info(`Thread actions: ${action} on ${thread.id}.`);
+    await hostState.threadAction(thread.id, action, title);
   };
   const more = async () => {
-    const thread = focusedThread();
+    const { thread, viewId } = focused();
     if (!thread) return;
-    const choice = await vscode.window.showQuickPick(entries(thread).map((entry) => ({ label: `$(${entry.icon}) ${entry.label.replace(/\.\.\.$/, "")}`, id: entry.id })),
-      { title: thread.title || "Untitled", placeHolder: "More thread actions" });
-    if (choice) run(thread, choice.id);
+    const ours = entries(thread).map((entry) => ({ label: `$(${entry.icon}) ${entry.label.replace(/\.\.\.$/, "")}`, id: entry.id }));
+    const choice = await vscode.window.showQuickPick<{ label: string; his?: string; id?: ThreadActionId; kind?: vscode.QuickPickItemKind }>(
+      [...hisRows(thread), { label: "", kind: vscode.QuickPickItemKind.Separator }, ...ours],
+      { title: thread.title || "Untitled", placeHolder: "Thread actions" });
+    if (choice?.his) await runHis(thread, choice.his, viewId).catch((cause: unknown) => {
+      log.error(`Thread actions: ${choice.his} on ${thread.id} failed:`, cause);
+      void vscode.window.showErrorMessage(`T3: ${cause instanceof Error ? cause.message : String(cause)}`);
+    });
+    else if (choice?.id) run(thread, choice.id);
   };
+
+  // Undo for Archive, whichever menu archived (his webview menu, his command, this list): all go through threadAction.
+  const unwrap = wrap(hostState, "threadAction", (original) => async (id, action, title) => {
+    const name = action === "archive" ? hostState.snapshot().threads.find((item) => item.id === id)?.title : undefined;
+    await original(id, action, title);
+    if (action !== "archive") return;
+    void vscode.window.showInformationMessage(`T3: archived "${name || "Untitled"}".`, "Undo").then((choice) => {
+      if (choice !== "Undo") return;
+      hostState.threadAction(id, "unarchive").catch((cause: unknown) => {
+        log.error(`Thread actions: undo archive of ${id} failed:`, cause);
+        void vscode.window.showErrorMessage(`T3: ${cause instanceof Error ? cause.message : String(cause)}`);
+      });
+    });
+  });
 
   const unregister = [
     registerOursRpc("threadActions.list", (params, viewId) => entries(findThread(params, viewId)).map(({ id, label }) => ({ id, label }))),
@@ -101,6 +147,6 @@ export const activateThreadActions: OursFeature = (deps) => {
   return vscode.Disposable.from(
     vscode.commands.registerCommand("t3-vscode.ours.threadActions.more", more),
     vscode.commands.registerCommand("t3-vscode.ours.threadActions.regenerateTitle", regenerateTitle),
-    { dispose: () => unregister.forEach((stop) => stop()) },
+    { dispose: () => { unregister.forEach((stop) => stop()); unwrap(); } },
   );
 };

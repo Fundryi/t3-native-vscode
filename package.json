@@ -54,6 +54,11 @@
     },
     "commands": [
       {
+        "command": "t3-vscode.ours.threadActions.more",
+        "title": "Thread Actions",
+        "category": "T3 VSCode"
+      },
+      {
         "command": "t3-vscode.ours.diffs.compare",
         "title": "Compare with Current File",
         "category": "T3 VSCode",
@@ -302,6 +307,11 @@
       ],
       "editor/title": [
         {
+          "command": "t3-vscode.ours.threadActions.more",
+          "when": "activeWebviewPanelId == 't3Panel' && t3-vscode.ours.hasThread",
+          "group": "t3ours"
+        },
+        {
           "command": "t3-vscode.ours.diffs.compare",
           "when": "resourceScheme == t3-turn-diff",
           "group": "navigation"
@@ -318,11 +328,6 @@
         },
         {
           "command": "t3-vscode.ours.links.copy",
-          "when": "activeWebviewPanelId == 't3Panel' && t3-vscode.ours.hasThread",
-          "group": "t3ours"
-        },
-        {
-          "command": "t3-vscode.threadActions",
           "when": "activeWebviewPanelId == 't3Panel' && t3-vscode.ours.hasThread",
           "group": "t3ours"
         },
@@ -365,6 +370,14 @@
       "view/item/context": [],
       "commandPalette": [
         {
+          "command": "t3-vscode.threadActions",
+          "when": "false"
+        },
+        {
+          "command": "t3-vscode.ours.threadActions.more",
+          "when": "t3-vscode.ours.hasThread"
+        },
+        {
           "command": "t3-vscode.ours.diffs.compare",
           "when": "resourceScheme == t3-turn-diff"
         },
@@ -381,14 +394,6 @@
           "when": "t3-vscode.ours.hasThread"
         },
         {
-          "command": "t3-vscode.ours.diffs.openFile",
-          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/"
-        },
-        {
-          "command": "t3-vscode.ours.diffs.revert",
-          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/"
-        },
-        {
           "command": "t3-vscode.openWebUi",
           "when": "t3-vscode.ours.ready"
         },
@@ -398,10 +403,6 @@
         },
         {
           "command": "t3-vscode.ours.links.copy",
-          "when": "t3-vscode.ours.hasThread"
-        },
-        {
-          "command": "t3-vscode.threadActions",
           "when": "t3-vscode.ours.hasThread"
         },
         {
@@ -441,22 +442,22 @@
           "group": "t3ours"
         },
         {
-          "command": "t3-vscode.ours.diffs.openFile",
-          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/",
-          "group": "t3ours"
-        },
-        {
-          "command": "t3-vscode.ours.diffs.revert",
-          "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/",
-          "group": "t3ours"
-        },
-        {
           "command": "t3-vscode.insertReference",
           "when": "editorTextFocus",
           "group": "t3"
         }
       ],
       "view/title": [
+        {
+          "command": "t3-vscode.ours.threadActions.more",
+          "when": "view == t3.webview && t3-vscode.ours.hasThread",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.threadActions",
+          "when": "false",
+          "group": "1_thread"
+        },
         {
           "command": "t3-vscode.ours.threadActions.regenerateTitle",
           "when": "view == t3.webview && t3-vscode.ours.hasThread",
@@ -468,22 +469,12 @@
           "group": "t3ours"
         },
         {
-          "command": "t3-vscode.ours.threadActions.more",
-          "when": "view == t3.webview",
-          "group": "t3ours"
-        },
-        {
           "command": "t3-vscode.ours.desktop.open",
           "when": "view == t3.webview",
           "group": "navigation@5"
         },
         {
           "command": "t3-vscode.ours.links.copy",
-          "when": "view == t3.webview",
-          "group": "1_thread"
-        },
-        {
-          "command": "t3-vscode.threadActions",
           "when": "view == t3.webview",
           "group": "1_thread"
         },

@@ -73,9 +73,9 @@ import "./chatlook";
 
 import "./titleButton";
 
-// R1 theme
+import "./polish";
 
-// R2 defaults
+import "./defaults";
 
 // R3 viewbar
 
@@ -91,7 +91,7 @@ import "./openline";
 
 // R10 dropview: package.json only (the drop view gets a when clause on t3-vscode.ours.drop.showView), no code here.
 
-// R11 actions
+// R11 actions: host-side only (src/host/ours/threadActions.ts)
 
 // R12 setup
 
@@ -109,4 +109,4 @@ import "./substop";
 
 // R19 emptylist
 
-// R20 longmsg
+// R20 longmsg: in ./chatlook (X2), no import of its own
