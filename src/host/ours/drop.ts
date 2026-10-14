@@ -92,7 +92,7 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
   // One item, not an empty tree: VS Code hides an empty tree behind its welcome text, and the drop target is the tree.
   const item = new vscode.TreeItem("Drop files here");
   item.iconPath = new vscode.ThemeIcon("cloud-upload");
-  item.description = "drag from the Explorer or a tab";
+  // No description: one short row that reads as a drop box; the hover has the details.
   item.tooltip = "Drag files from the Explorer or a tab here to add them to the focused T3 chat. Images go in as attachments. A Shift-drag onto the chat itself is blocked by VS Code 1.140 and newer (Electron 43.7); Ctrl+C in the Explorer and Ctrl+V in the chat also works.";
   const view = vscode.window.createTreeView<vscode.TreeItem>("t3-vscode.ours.drop.view", {
     treeDataProvider: { getChildren: (element) => element ? [] : [item], getTreeItem: (element) => element },

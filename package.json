@@ -40,9 +40,10 @@
         },
         {
           "id": "t3-vscode.ours.drop.view",
-          "name": "Drop files here (no Shift needed)",
+          "name": "Drop zone",
           "when": "config.t3-vscode.ours.drop.showView",
-          "visibility": "collapsed"
+          "initialSize": 1,
+          "visibility": "visible"
         }
       ]
     },
