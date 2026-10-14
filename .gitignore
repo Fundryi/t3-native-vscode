@@ -9,3 +9,4 @@ dist-spike/
 CLAUDE.local.md
 reference/
 .claude/worktrees/
+.dcg/
