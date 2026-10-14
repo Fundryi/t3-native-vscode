@@ -58,3 +58,11 @@ import "./layout";
 // Q18 rowCopy
 
 // Q21 shiftHint
+
+// Q9 read
+
+// Q14 secrets
+
+// Q19 threadActions
+
+// Q20 contextMeter
