@@ -50,7 +50,7 @@ The progress file of this fork. Read it first after a restart, a compaction or a
 
 ## Now
 
-- 09:25: phase 1 merged (85f5846). Map docs/ours/PORT-MAP.md being written; slice 0 building. Lesson: workflow subagents have no StructuredOutput tool here, so agents return plain text and the script parses a VERDICT line. Pairing result still open.
+- 09:40: slice 0 and the map merged (12e33dd). Ten builders run (nine features plus revendor), each with reviewer and one fix round; script phase3-build.js in the Claude session folder. The lead took every default in PORT-MAP.md's open questions. Lesson: workflow subagents have no StructuredOutput tool here, so agents return plain text and the script parses a VERDICT line. Pairing result still open. Owner step before the first live test: in the Extensions view, right-click T3 VSCode and pick Ignore Updates, so his next Marketplace release does not replace our build.
 
 ## Log
 
