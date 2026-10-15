@@ -113,3 +113,43 @@ export { activateEmptyList as emptyList } from "./emptyList.js";
 export { activateImportChat as importchat } from "./importChat.js";
 
 export { activateOneWriter as oneWriter } from "./oneWriter.js";
+
+// P1 idectx
+
+// P2 bgwork
+
+// P3 allchanges
+
+// P4 undoturn
+
+// P5 planready
+
+// P6 goal
+
+// P7 unread
+
+// P8 scope
+
+// P9 lsp
+
+// P10 quiet
+
+// P11 snapmemo
+
+// P12 rewind
+
+// P13 review
+
+// P14 worktree
+
+// P15 modelopts
+
+// P16 tidy
+
+// P17 logs
+
+// P18 help
+
+// P19 mergeback
+
+// P20 deeplink
