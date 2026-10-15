@@ -2,7 +2,7 @@
 import { open, readFile, readdir, stat } from "node:fs/promises";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
-import { claudeListed, claudeOpen, claudeSlug, codexListed, codexNames, codexPrompt, isUuid, pathKey, readClaude, readCodexMeta, type Driver } from "./importChatParse.js";
+import { claudeListed, claudeOpen, claudeSlug, codexListed, codexNames, codexPrompt, isUuid, pathKey, readClaude, readCodexMeta, type ClaudeOpen, type Driver } from "./importChatParse.js";
 
 const MAX_CHATS = 50;
 const CODEX_DAYS = 30; // as T3's own scanner (AgentSessionScanner.ts)
@@ -45,8 +45,8 @@ export async function claudeChats(root: string): Promise<Chat[]> {
   return chats;
 }
 
-/** Whether a Claude Code process has this chat open now (its sessions/<pid>.json, with that pid alive). */
-export async function claudeRunning(sessionId: string): Promise<boolean> {
+/** Whether a Claude Code process has this chat open now (its sessions/<pid>.json, with that pid alive), and whether a turn runs. */
+export async function claudeRunning(sessionId: string): Promise<ClaudeOpen> {
   const folder = join(claudeHome(), "sessions"); // also holds <pid>.<hash>.key files: not read
   const names = (await readdir(folder).catch(() => [] as string[])).filter((name) => name.endsWith(".json"));
   const files = await Promise.all(names.map((name) => readFile(join(folder, name), "utf8").catch(() => ""))); // removed on exit meanwhile

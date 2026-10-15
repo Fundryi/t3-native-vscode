@@ -89,8 +89,12 @@ export function importThreadId(driver: Driver, nativeId: string): string {
  * files: their contents. A file whose pid is dead (Claude crashed) does not count.
  * shortcut: a crashed Claude's pid reused by another process reads as open (the Codex lock has the same limit); compare procStart if that bites.
  */
-export const claudeOpen = (files: ReadonlyArray<string>, sessionId: string, alive: (pid: number) => boolean): boolean =>
-  records(files).some((item) => item.sessionId === sessionId && typeof item.pid === "number" && item.pid > 0 && alive(item.pid));
+export type ClaudeOpen = "busy" | "idle" | null;
+/** "busy": a turn runs there (its status field); "idle": the chat is open but waiting; null: not open. */
+export const claudeOpen = (files: ReadonlyArray<string>, sessionId: string, alive: (pid: number) => boolean): ClaudeOpen => {
+  const live = records(files).filter((item) => item.sessionId === sessionId && typeof item.pid === "number" && item.pid > 0 && alive(item.pid));
+  return live.length === 0 ? null : live.some((item) => item.status === "busy") ? "busy" : "idle";
+};
 
 /**
  * Open in the other tool (Claude session file, Codex writer lock), or written in the last 2 minutes. The age guess stays

@@ -71,24 +71,32 @@ export const activateImportChat: OursFeature = ({ client, hostState, provider })
    * Open in the other tool now. Codex keeps <thread id>.lock in thread-writer-locks while a process has the chat open;
    * Claude Code keeps sessions/<pid>.json with the session id while its process runs. Both are removed on close.
    */
-  const openNow = async (chat: Chat): Promise<boolean> => chat.driver === "codex"
-    ? existsSync(join(codexHome(), "thread-writer-locks", `${chat.nativeId}.lock`)) : claudeRunning(chat.nativeId);
+  // Codex's lock does not say whether a turn runs, so an open Codex chat counts as busy.
+  const openNow = async (chat: Chat): Promise<"busy" | "idle" | null> => chat.driver === "codex"
+    ? (existsSync(join(codexHome(), "thread-writer-locks", `${chat.nativeId}.lock`)) ? "busy" : null) : claudeRunning(chat.nativeId);
 
   /** One writer per session: a chat that may still be open in the other tool asks before T3 takes it over. */
   const confirmLive = async (chat: Chat): Promise<boolean> => {
     const now = Date.now(), modifiedMs = (await stat(chat.file)).mtimeMs;
     const open = await openNow(chat);
-    if (!maybeLive(modifiedMs, now, open)) return true;
     const tool = TOOL[chat.driver];
-    const why = open ? `is open in ${tool} right now` : `changed ${age(modifiedMs, now)} and may still be running in ${tool}`;
-    const go = "I closed it there, continue";
-    log.info(`Continue a chat: ${chat.driver} ${chat.nativeId} ${open ? `is open in ${tool}` : "changed recently"}; asking.`);
+    // Open but idle (owner 2026-10-15): a warning, not a block; nothing writes there until he types there.
+    if (open === "idle") {
+      const go = "Continue here anyway";
+      log.info(`Continue a chat: ${chat.driver} ${chat.nativeId} is open in ${tool} but idle; asking.`);
+      return await vscode.window.showWarningMessage(`This ${tool} chat is still open there, but idle.`,
+        { modal: true, detail: `You can continue it here. Do not type in ${tool} while you do, or the chat can split.` }, go) === go;
+    }
+    if (!maybeLive(modifiedMs, now, open === "busy")) return true;
+    const why = open ? `is running in ${tool} right now` : `changed ${age(modifiedMs, now)} and may still be running in ${tool}`;
+    const go = "I stopped it there, continue";
+    log.info(`Continue a chat: ${chat.driver} ${chat.nativeId} ${open ? `is busy in ${tool}` : "changed recently"}; asking.`);
     if (await vscode.window.showWarningMessage(`This ${tool} chat ${why}.`,
-      { modal: true, detail: `Two tools writing one chat can split it. Stop it and close it in ${tool} first, then continue here.` }, go) !== go) return false;
-    // "I closed it" is checked: the lock or the live session file still there means the chat is still open.
-    if (await openNow(chat)) {
-      log.info(`Continue a chat: ${chat.driver} ${chat.nativeId} is still open in ${tool}; not taken over.`);
-      void vscode.window.showWarningMessage(`This chat is still open in ${tool}. Close it there first, then try again.`);
+      { modal: true, detail: `Two tools writing one chat can split it. Stop it in ${tool} first, then continue here.` }, go) !== go) return false;
+    // "I stopped it" is checked: a turn still running there means the chat is still busy.
+    if (await openNow(chat) === "busy") {
+      log.info(`Continue a chat: ${chat.driver} ${chat.nativeId} is still busy in ${tool}; not taken over.`);
+      void vscode.window.showWarningMessage(`This chat is still running in ${tool}. Stop it there first, then try again.`);
       return false;
     }
     return true;

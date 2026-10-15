@@ -51,9 +51,10 @@ test("Paths, ids and the running guess", () => {
   assert.equal(maybeLive(1_000, 1_000 + 10 * 60_000, true), true);
   // Claude Code's sessions/<pid>.json: open only while that pid lives.
   const sid = "11111111-2222-4333-8444-555555555555", alive = (pid: number) => pid === 4242;
-  const file = (sessionId: string, pid: unknown) => line({ pid, sessionId, cwd: "/x", kind: "interactive" });
-  assert.equal(claudeOpen([file("aaaaaaaa-2222-4333-8444-555555555555", 4242), file(sid, 4242)], sid, alive), true);
-  assert.equal(claudeOpen([file(sid, 7)], sid, alive), false); // stale file, Claude gone
-  assert.equal(claudeOpen([file("aaaaaaaa-2222-4333-8444-555555555555", 4242)], sid, alive), false);
-  assert.equal(claudeOpen([file(sid, "4242"), file(sid, 0), "{broken", ""], sid, () => true), false);
+  const file = (sessionId: string, pid: unknown, status = "idle") => line({ pid, sessionId, cwd: "/x", kind: "interactive", status });
+  assert.equal(claudeOpen([file("aaaaaaaa-2222-4333-8444-555555555555", 4242), file(sid, 4242)], sid, alive), "idle");
+  assert.equal(claudeOpen([file(sid, 4242, "busy")], sid, alive), "busy");
+  assert.equal(claudeOpen([file(sid, 7)], sid, alive), null); // stale file, Claude gone
+  assert.equal(claudeOpen([file("aaaaaaaa-2222-4333-8444-555555555555", 4242)], sid, alive), null);
+  assert.equal(claudeOpen([file(sid, "4242"), file(sid, 0), "{broken", ""], sid, () => true), null);
 });

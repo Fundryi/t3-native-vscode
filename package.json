@@ -648,9 +648,9 @@
         "properties": {
           "t3-vscode.ours.importchat.claude": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "scope": "window",
-            "markdownDescription": "List Claude Code chats in **Continue a Claude Code or Codex Chat** (Codex chats are always listed). Off until tested: by reading T3, the first message on an imported Claude chat fails with \"Session ID ... is already in use\" (T3 sends the id as a new session, not as a resume); only when the chat's folder differs does Claude start a new session silently, and then the agent would not remember the chat."
+            "markdownDescription": "List Claude Code chats in **Continue a Claude Code or Codex Chat** (Codex chats are always listed). Off hides them. Not yet proven live: T3 may start a new Claude session on the first message of a continued chat; if the chat forgets its past, report it."
           }
         }
       },
