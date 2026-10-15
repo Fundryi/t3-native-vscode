@@ -49,6 +49,30 @@
     },
     "commands": [
       {
+        "command": "t3-vscode.ours.help.show",
+        "title": "Help and Settings",
+        "category": "T3 VSCode",
+        "icon": "$(question)"
+      },
+      {
+        "command": "t3-vscode.ours.worktree.new",
+        "title": "New Chat in a Worktree...",
+        "category": "T3 VSCode",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "t3-vscode.ours.undoturn.run",
+        "title": "Undo Turn (Put Back Every File)",
+        "category": "T3 VSCode",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "t3-vscode.ours.diffs.allChanges",
+        "title": "Show All Changes in This Chat",
+        "category": "T3 VSCode",
+        "icon": "$(diff-multiple)"
+      },
+      {
         "command": "t3-vscode.ours.importchat.pick",
         "title": "Continue a Claude Code or Codex Chat",
         "category": "T3 VSCode",
@@ -351,6 +375,16 @@
       ],
       "editor/title": [
         {
+          "command": "t3-vscode.ours.undoturn.run",
+          "when": "resourceScheme == t3-ours-diff",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.ours.diffs.allChanges",
+          "when": "activeWebviewPanelId == 't3Panel' && t3-vscode.ours.hasThread",
+          "group": "navigation"
+        },
+        {
           "command": "t3-vscode.ours.chat.focus",
           "group": "navigation"
         },
@@ -417,6 +451,18 @@
       ],
       "view/item/context": [],
       "commandPalette": [
+        {
+          "command": "t3-vscode.ours.worktree.new",
+          "when": "t3-vscode.ours.ready"
+        },
+        {
+          "command": "t3-vscode.ours.undoturn.run",
+          "when": "resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/"
+        },
+        {
+          "command": "t3-vscode.ours.diffs.allChanges",
+          "when": "t3-vscode.ours.hasThread"
+        },
         {
           "command": "t3-vscode.ours.chat.nextWaiting",
           "when": "t3-vscode.ours.ready"
@@ -492,6 +538,11 @@
       ],
       "editor/context": [
         {
+          "command": "t3-vscode.ours.undoturn.run",
+          "when": "resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/",
+          "group": "t3ours"
+        },
+        {
           "command": "t3-vscode.ours.diffs.openFile",
           "when": "resourceScheme == t3-turn-diff || resourceScheme == t3-ours-diff || diffEditorModifiedUri =~ /^t3-ours-diff:/ || diffEditorOriginalUri =~ /^t3-ours-diff:/",
           "group": "t3ours"
@@ -508,6 +559,21 @@
         }
       ],
       "view/title": [
+        {
+          "command": "t3-vscode.ours.help.show",
+          "when": "view == t3.webview",
+          "group": "t3ours"
+        },
+        {
+          "command": "t3-vscode.fontSettings",
+          "when": "false",
+          "group": "3_appearance"
+        },
+        {
+          "command": "t3-vscode.ours.worktree.new",
+          "when": "view == t3.webview && t3-vscode.ours.ready",
+          "group": "t3ours"
+        },
         {
           "command": "t3-vscode.ours.importchat.pick",
           "when": "view == t3.webview",
@@ -560,7 +626,7 @@
         },
         {
           "command": "t3-vscode.fontSettings",
-          "when": "view == t3.webview",
+          "when": "false",
           "group": "3_appearance"
         },
         {
@@ -584,7 +650,7 @@
             "type": "boolean",
             "default": false,
             "scope": "window",
-            "markdownDescription": "List Claude Code chats in **Continue a Claude Code or Codex Chat** (Codex chats are always listed). Off until tested: T3 may start a new Claude session on the first message of an imported Claude chat, so the agent would not remember it."
+            "markdownDescription": "List Claude Code chats in **Continue a Claude Code or Codex Chat** (Codex chats are always listed). Off until tested: by reading T3, the first message on an imported Claude chat fails with \"Session ID ... is already in use\" (T3 sends the id as a new session, not as a resume); only when the chat's folder differs does Claude start a new session silently, and then the agent would not remember the chat."
           }
         }
       },
@@ -596,19 +662,51 @@
             "type": "boolean",
             "default": true,
             "scope": "window",
-            "description": "Show the \"Drop files here\" view under the T3 VSCode sidebar. Drag files from the Explorer or a tab onto it and they go into the focused chat. A drag straight onto a chat cannot work, with or without Shift: VS Code does not pass a drag from its own Explorer or tabs into a webview. The other way: select files in the Explorer, press Ctrl+C, and paste them into the chat with Ctrl+V."
+            "description": "Show the \"Drop zone\" view under the T3 VSCode sidebar. Drag files from the Explorer or a tab onto it and they go into the focused chat. A drag straight onto a chat cannot work, with or without Shift: VS Code does not pass a drag from its own Explorer or tabs into a webview. The other way: select files in the Explorer, press Ctrl+C, and paste them into the chat with Ctrl+V."
           }
         }
       },
       {
-        "title": "Fork: Drop files view",
+        "title": "Fork: Review",
         "order": 10,
         "properties": {
-          "t3-vscode.ours.drop.showView": {
+          "t3-vscode.ours.review.delivery": {
+            "type": "string",
+            "enum": [
+              "thisChat",
+              "newChat"
+            ],
+            "enumDescriptions": [
+              "Send the review in the chat where /review ran (from Source Control: put it into the focused chat's composer).",
+              "Open a new chat and send the review there."
+            ],
+            "default": "thisChat",
+            "scope": "window",
+            "markdownDescription": "Where **/review** (and Source Control **Review Changes with T3**) sends the review prompt."
+          }
+        }
+      },
+      {
+        "title": "Fork: Plan ready",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.planReady.toast": {
             "type": "boolean",
             "default": true,
             "scope": "window",
-            "description": "Show the \"Drop files here\" view under the T3 VSCode sidebar. Drag files from the Explorer or a tab onto it and they go into the focused chat. A drag straight onto a chat cannot work, with or without Shift: VS Code does not pass a drag from its own Explorer or tabs into a webview. The other way: select files in the Explorer, press Ctrl+C, and paste them into the chat with Ctrl+V."
+            "markdownDescription": "When a plan is ready in a chat you are not reading, show one toast with **Implement**, **Open as Markdown** and **Show** (in place of the turn finished toast). Shows also while VS Code has focus."
+          }
+        }
+      },
+      {
+        "title": "Fork: IDE context",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.ideContext.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "window",
+            "markdownDescription": "Send the file and lines you last looked at with each prompt, as Claude Code and Codex do: the selection of the last file editor (its text, up to 20000 characters), or the file alone when nothing is selected. An **IDE: file:lines** chip next to the send button shows what goes; click it to leave it out of the next message. Slash commands and prompts that already reference that file get nothing."
           }
         }
       },

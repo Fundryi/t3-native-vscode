@@ -1,8 +1,10 @@
-/** The ten context tools of this window (legacy context.js), with their caps, and the meta block every result carries. */
+/** The context tools of this window (legacy context.js, plus P9 lsp.ts), with their caps, and the meta block every result carries. */
 import * as vscode from "vscode";
+import { createEditorTracker } from "../editorTracker.js";
 import { terminalRuns } from "../terminalRuns.js";
 import { openFile, showDiff, type ActionResult } from "./actions.js";
 import { cwdFolder, folders, inside, key, label, resolvePath, slash, workspaceFile } from "./discovery.js";
+import { lspTools } from "./lsp.js";
 import type { McpMeta, McpTool } from "./server.js";
 
 const MAX_TEXT = 8192;
@@ -139,17 +141,7 @@ async function act(run: (path: string) => Promise<ActionResult>, path: unknown, 
 }
 
 export function createTools(): { tools: McpTool[]; meta: McpMeta; dispose(): void } {
-  // The last file editor; kept while focus sits in a webview such as a T3 chat panel.
-  let last: { doc: vscode.TextDocument; sel: vscode.Selection } | null = null;
-  const relevant = (doc: vscode.TextDocument) => doc.uri.scheme === "file" && !!vscode.workspace.getWorkspaceFolder(doc.uri);
-  const track = (editor: vscode.TextEditor | undefined, sel?: vscode.Selection) => { if (editor && relevant(editor.document)) last = { doc: editor.document, sel: sel ?? editor.selection }; };
-  track(vscode.window.activeTextEditor);
-  const subscriptions = vscode.Disposable.from(
-    vscode.window.onDidChangeActiveTextEditor((editor) => track(editor)), // undefined when focus moves into a webview: keep the last one
-    // A background editor may move the remembered document's selection, never become the remembered document.
-    vscode.window.onDidChangeTextEditorSelection((e) => { if (e.textEditor === vscode.window.activeTextEditor || last?.doc === e.textEditor.document) track(e.textEditor, e.selections[0]); }),
-    vscode.workspace.onDidCloseTextDocument((doc) => { if (last?.doc === doc) last = null; }),
-  );
+  const tracker = createEditorTracker();
 
   const tools: McpTool[] = [
     {
@@ -166,7 +158,8 @@ export function createTools(): { tools: McpTool[]; meta: McpMeta; dispose(): voi
       description: "The file the user last worked in inside this VS Code window: path, language, cursor and selected text (lines and characters 1-based). path is null when there is none.",
       inputSchema: noArgs,
       run: () => {
-        if (!last || last.doc.isClosed || !relevant(last.doc)) { last = null; return { path: null }; }
+        const last = tracker.current();
+        if (!last) return { path: null };
         const { doc, sel } = last;
         const range = doc.validateRange(sel); // the document may have changed since the selection event
         let text = doc.getText(range);
@@ -198,6 +191,7 @@ export function createTools(): { tools: McpTool[]; meta: McpMeta; dispose(): voi
       },
       run: (args, { cwd }) => diagnostics(args, cwd),
     },
+    ...lspTools,
     {
       name: "gitState",
       description: "Branch, upstream, ahead/behind, staged and changed files per repository of this VS Code window, from the built-in Git extension (the Source Control view). available is false when the Git extension is off. At most 20 repositories and 200 files per repository.",
@@ -269,5 +263,5 @@ export function createTools(): { tools: McpTool[]; meta: McpMeta; dispose(): voi
     return { window: { label: label(), workspaceFile: workspaceFile(), folders: folders().map((f) => slash(f.uri.fsPath)) }, match, ...(note ? { note } : {}) };
   };
 
-  return { tools, meta, dispose: () => subscriptions.dispose() };
+  return { tools, meta, dispose: () => tracker.dispose() };
 }

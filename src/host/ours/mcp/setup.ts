@@ -12,6 +12,9 @@ import type { OursDeps } from "../types.js";
 import { BRIDGE, folders, isRemote, key, slash } from "./discovery.js";
 
 const NUDGE_OFF = "t3-vscode.ours.mcp.nudgeOff";
+// P10 quiet: when the nudge was last shown; every window waits 7 days after it (Later, a dismiss, or Set up left undone).
+const NUDGE_AT = "t3-vscode.ours.mcp.nudgeShownAt";
+const NUDGE_WAIT_MS = 7 * 24 * 60 * 60_000;
 const bridgePath = slash(BRIDGE);
 const entry = JSON.stringify({ mcpServers: { vscode: { command: "node", args: [bridgePath] } } }, null, 2);
 const ADD = {
@@ -118,15 +121,21 @@ export function activateSetup(deps: OursDeps): vscode.Disposable {
     vscode.commands.registerCommand("t3-vscode.ours.mcp.addCodex", () => type(ADD["Add to Codex"])),
   ];
 
-  // Once per window after the first ready connection, only when no harness has the server; "Not now" is kept.
+  // After the first ready connection, only when no harness has the server, at most once in 7 days across windows;
+  // "Don't ask again" (and the old "Not now") is kept for good.
   let nudged = false;
   const nudge = async () => {
-    if (nudged || remote || deps.context.globalState.get(NUDGE_OFF)) return;
+    const { globalState } = deps.context;
+    if (nudged || remote || globalState.get(NUDGE_OFF)) return;
     nudged = true;
+    const at = globalState.get<number>(NUDGE_AT);
+    if (typeof at === "number" && Date.now() - at < NUDGE_WAIT_MS) return;
     if (Object.values(harnesses()).some(Boolean)) return;
-    const pick = await vscode.window.showInformationMessage("Agents in T3 cannot see VS Code yet.", "Set up", "Not now");
+    // Stored before the toast, so other windows stay quiet while this one is open and after Later or a dismiss.
+    await globalState.update(NUDGE_AT, Date.now());
+    const pick = await vscode.window.showInformationMessage("Let Claude Code and Codex in T3 see this VS Code window (open files, selection, problems)?", "Set up", "Later", "Don't ask again");
     if (pick === "Set up") await showSetup();
-    if (pick === "Not now") await deps.context.globalState.update(NUDGE_OFF, true);
+    if (pick === "Don't ask again") await globalState.update(NUDGE_OFF, true);
   };
   disposables.push(vscode.commands.registerCommand("t3-vscode.ours.mcp.nudge", nudge));
   // His emit loop has no guard and runs inside his connect: this listener never throws.

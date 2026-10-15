@@ -36,3 +36,18 @@ test("Status bar activity: one running thread shows its minutes, in the text and
   assert.deepEqual(state.lines, ["build: running 3m"]);
   assert.equal(activity({ phase: "ready", threads: [thread("build", { status: "running" })] }, now).text, "$(sync~spin) T3: running");
 });
+
+test("Status bar activity: work left running after a turn shows in the hover; only work that wakes the agent changes the text", () => {
+  const background = new Map([["dev", { title: "Running: npm run dev", waiting: false }], ["fleet", { title: "Waiting on 2 subagents", waiting: true }]]);
+  const devOnly = activity({ phase: "ready", threads: [thread("dev")], background });
+  assert.equal(devOnly.text, "T3");
+  assert.deepEqual(devOnly.lines, ["dev: Running: npm run dev"]);
+  assert.deepEqual([devOnly.command, devOnly.args, devOnly.warning, devOnly.wait.length], ["t3-vscode.ours.statusbar.open", ["dev"], false, 0]);
+  const both = activity({ phase: "ready", threads: [thread("dev"), thread("fleet")], background });
+  assert.equal(both.text, "$(clock) T3: waiting on background work");
+  assert.equal(both.command, "t3-vscode.showThreads");
+  // A running thread keeps its own line and text; its roster is not listed twice.
+  const busy = activity({ phase: "ready", threads: [thread("fleet", { status: "running" }), thread("dev")], background });
+  assert.equal(busy.text, "$(sync~spin) T3: running");
+  assert.deepEqual(busy.lines, ["fleet: running", "dev: Running: npm run dev"]);
+});

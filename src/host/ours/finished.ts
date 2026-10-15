@@ -16,6 +16,9 @@ const SETTLE_MS = 2000;
 const setting = () => vscode.workspace.getConfiguration("t3-vscode").get<string>("ours.notify.finished", "unfocused");
 
 let readingView: string | undefined;
+/** P5 planReady: returns true when it handled the turn (its own toast, or none), so Q3 shows no "finished" toast. */
+let planHook: ((threadId: string) => boolean) | undefined;
+export function setPlanReadyHook(hook: ((threadId: string) => boolean) | undefined): void { planHook = hook; }
 let showsThread: ((viewId: string) => string | undefined) | undefined;
 
 /** True when VS Code has focus and the focused chat view shows this thread. False until Q3 is active. */
@@ -47,7 +50,9 @@ export function activateToasts({ hostState, provider }: OursDeps): vscode.Dispos
     const thread = latest.get(threadId);
     const outcome = thread && turnOutcome(thread);
     const mode = setting();
-    if (!thread || !outcome || mode === "off") return;
+    if (!thread || !outcome) return;
+    if (outcome === "finished" && planHook?.(threadId)) return;
+    if (mode === "off") return;
     if (mode === "always" ? isReading(threadId) : vscode.window.state.focused) return;
     const text = `T3: "${thread.title.trim() || "Untitled session"}" ${outcome}.`;
     log.info(`Turn ${outcome} toast for thread ${threadId}.`);

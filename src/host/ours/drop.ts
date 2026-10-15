@@ -6,7 +6,7 @@
  * Chromium's rule against drags between cross-site frames of one page (electron/electron#53669, crbug.com/59081),
  * and the workbench and the webview frame are such frames (docs/ours/FORK-FEATURES.md I). The webview listeners stay
  * for 1.139.1 and for the day it is fixed. Files from Windows Explorer land (the drag starts outside). dragTrace logs
- * every drag that does reach a chat.
+ * every drag that does reach a chat at Debug log level (P17 logs).
  */
 import * as vscode from "vscode";
 import { toastWithLogs } from "./logs.js";
@@ -21,6 +21,7 @@ import type { OursDeps } from "./types.js";
 
 const MAX_INPUT_CHARS = 1_000_000;
 const PASTE_MAX_AGE_MS = 10 * 60_000;
+const DROP_HINTED = "t3-vscode.ours.drop.hinted";
 
 /** Webview input: an absent field is "", anything else must be a string within the cap. */
 function dropString(params: Readonly<Record<string, unknown>>, key: string): string {
@@ -73,7 +74,7 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
   // shortcut: the remembered list goes stale if another app writes a non-text clipboard format after the copy; upgrade when VS Code exposes clipboard resources
   const offPaste = registerOursRpc("pasteCopied", async (_params, viewId) => {
     if (!copied || Date.now() - copied.at >= PASTE_MAX_AGE_MS || await vscode.env.clipboard.readText()) {
-      log.info(`Paste on ${viewId} without text: nothing remembered from an Explorer copy.`);
+      log.debug(`Paste on ${viewId} without text: nothing remembered from an Explorer copy.`);
       return 0;
     }
     log.info(`Paste on ${viewId}: ${copied.lines.length} file(s) from the last Explorer copy.`);
@@ -82,11 +83,15 @@ export function activateDrop(deps: OursDeps): vscode.Disposable {
   });
   // One line per trusted dragenter (at most one per 500 ms) and drop in a chat webview: the evidence for a drop that did nothing.
   const offTrace = registerOursRpc("dragTrace", (params, viewId) => {
-    log.info(`Drag trace: ${String(params.event).slice(0, 20)} types=${typesText(params.types)} shift=${params.shift === true} kinds=${typesText(params.kinds)} view=${viewId}`);
+    log.debug(`Drag trace: ${String(params.event).slice(0, 20)} types=${typesText(params.types)} shift=${params.shift === true} kinds=${typesText(params.kinds)} view=${viewId}`);
   });
+  // P10 quiet: the toast once per install; later bounces only log (the chat's own in-page hint still shows).
   const offHint = registerOursRpc("dropHint", (params) => {
-    log.info(`Drag left the chat at once, types ${typesText(params.types)}; hint shown.`);
-    void vscode.window.showInformationMessage("VS Code 1.140 and newer block a drop from the Explorer or a tab into any chat (Electron 43.7). Drop it on \"Drop files here\" in the T3 side bar, or select it in the Explorer, press Ctrl+C, then Ctrl+V in the chat.");
+    const shown = deps.context.globalState.get(DROP_HINTED) === true;
+    log.info(`Drag left the chat at once, types ${typesText(params.types)}; ${shown ? "hint toast shown before, not again" : "hint shown"}.`);
+    if (shown) return;
+    deps.context.globalState.update(DROP_HINTED, true).then(undefined, (cause: unknown) => log.error("Drop hint flag:", cause));
+    void vscode.window.showInformationMessage("VS Code 1.140 and newer block a drop from the Explorer or a tab into any chat. Drop it on \"Drop files here\" in the T3 side bar, or select it in the Explorer, press Ctrl+C, then Ctrl+V in the chat.");
   });
 
   // One item, not an empty tree: VS Code hides an empty tree behind its welcome text, and the drop target is the tree.

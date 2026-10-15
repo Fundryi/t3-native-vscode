@@ -9,6 +9,7 @@ import { randomUUID } from "node:crypto";
 import type * as vscode from "vscode";
 import { log } from "./log.js";
 import { registerOursRpc } from "./rpc.js";
+import { unreadIds } from "./unread.js";
 import type { OursDeps } from "./types.js";
 
 /** T3's VISIT_DISPATCH_THROTTLE_MS (ChatView.tsx): mid-turn updatedAt bumps come several times a second. */
@@ -46,6 +47,8 @@ export function activateVisit({ client, hostState }: Pick<OursDeps, "client" | "
     const previous = lastShown.get(viewId);
     if (previous && previous !== threadId) sent.delete(previous);
     lastShown.set(viewId, threadId); showing.set(viewId, threadId);
+    // P7: Mark unread rewinds lastVisitedAt but keeps updatedAt, so a chat marked unread is visited again when shown.
+    if (unreadIds(hostState).includes(threadId)) sent.delete(threadId);
     // A finished run (or a newly opened chat) skips the throttle, as T3 does for an unseen completion.
     const wait = params.running === true ? (sentAt.get(threadId) ?? 0) + VISIT_THROTTLE_MS - Date.now() : 0;
     if (wait <= 0) { clearTimeout(timers.get(viewId)); timers.delete(viewId); run(viewId); return; }

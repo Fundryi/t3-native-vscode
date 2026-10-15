@@ -10,6 +10,8 @@ export function setLogChannel(next: vscode.LogOutputChannel | undefined): void {
 const detail = (cause: unknown) => cause instanceof Error ? cause.stack ?? cause.message : String(cause);
 export const log = {
   info: (message: string): void => { if (channel) channel.info(message); else console.log(message); },
+  /** Hidden at VS Code's default Info level; "Developer: Set Log Level..." Debug shows it (P17 logs). */
+  debug: (message: string): void => { if (channel) channel.debug(message); else console.debug(message); },
   error: (message: string, cause?: unknown): void => {
     const text = cause === undefined ? message : `${message} ${detail(cause)}`;
     if (channel) channel.error(text); else console.error(text);

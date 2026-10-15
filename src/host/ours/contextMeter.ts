@@ -12,9 +12,21 @@ import { contextLabel, contextMeter, formatTokens } from "./contextUsage.js";
 import { log } from "./log.js";
 import { registerOursRpc } from "./rpc.js";
 import type { OursDeps } from "./types.js";
+import type { HostState } from "../hostState.js";
 
 const SETTING = "t3-vscode.ours.contextMeter.show";
 const PLAN_PREFIX = "PLEASE IMPLEMENT THIS PLAN:\n";
+
+/** Shared with P5 planReady.ts: leave plan mode, then send the plan as T3's web app does. */
+export async function implementPlan(hostState: HostState, threadId: string, markdown: string, viewId?: string): Promise<void> {
+  await hostState.setModes(threadId, { interactionMode: "default" }, viewId);
+  await hostState.sendMessage(`${PLAN_PREFIX}${markdown.trim()}`, threadId, viewId);
+}
+
+/** Shared with P5 planReady.ts: the plan as an untitled markdown document. */
+export async function openPlanMarkdown(markdown: string): Promise<void> {
+  await vscode.window.showTextDocument(await vscode.workspace.openTextDocument({ language: "markdown", content: `${markdown.trimEnd()}\n` }), { preview: false });
+}
 
 export function activateContextMeter(deps: OursDeps): vscode.Disposable {
   const { hostState } = deps;
@@ -60,14 +72,12 @@ export function activateContextMeter(deps: OursDeps): vscode.Disposable {
           void vscode.window.showWarningMessage("Send or clear the text in the composer first: Implement sends only the plan, and sending clears the composer.");
           return;
         }
-        await hostState.setModes(threadId, { interactionMode: "default" }, viewId);
-        await hostState.sendMessage(`${PLAN_PREFIX}${markdown.trim()}`, threadId, viewId);
+        await implementPlan(hostState, threadId, markdown, viewId);
       } catch (cause) { toast("send the plan", cause); }
     }),
     registerOursRpc("planOpen", async (params, viewId) => {
       try {
-        const { markdown } = plan(params, viewId);
-        await vscode.window.showTextDocument(await vscode.workspace.openTextDocument({ language: "markdown", content: `${markdown.trimEnd()}\n` }), { preview: false });
+        await openPlanMarkdown(plan(params, viewId).markdown);
       } catch (cause) { toast("open the plan", cause); }
     }),
   ];

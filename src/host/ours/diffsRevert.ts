@@ -21,9 +21,9 @@ export const lf = (text: string) => text.replace(/\r\n/g, "\n");
 const refuse = (reason: string): RevertAction => ({ kind: "refuse", reason });
 
 export function revertAction(input: RevertInput): RevertAction {
-  if (input.oldPath !== input.newPath) return refuse("This turn renamed the file. Put it back by hand.");
+  if (input.oldPath !== input.newPath) return refuse("This change renamed the file. Put it back by hand.");
   if (input.dirty) return refuse("The file has unsaved changes. Save or discard them first.");
   if (input.current === undefined) return input.changeType === "deleted" ? { kind: "create", text: input.before } : refuse("The file is no longer on disk.");
-  if (lf(input.current) !== lf(input.after)) return refuse("The file changed after this turn, so it was not reverted.");
+  if (lf(input.current) !== lf(input.after)) return refuse("The file changed after this diff was saved, so it was not reverted.");
   return input.changeType === "new" ? { kind: "delete" } : { kind: "write", text: input.before };
 }

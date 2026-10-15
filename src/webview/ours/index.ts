@@ -117,42 +117,42 @@ import "./emptyList";
 
 // C3 onewriter: host only (wraps sendMessage in src/host/ours/oneWriter.ts), no webview part.
 
-// P1 idectx
+import "./ideContext";
 
-// P2 bgwork
+import "./background";
 
-// P3 allchanges
+// P3 allchanges: one icon in ./threadActions (the entry comes from the host list)
 
-// P4 undoturn
+import "./undoturn";
 
-// P5 planready
+// P5 planready: host toast only (src/host/ours/planReady.ts), no webview code
 
-// P6 goal
+import "./goal";
 
-// P7 unread
+import "./unread";
 
-// P8 scope
+// P8 scope: host only (wraps workspaceRoots in src/host/ours/scope.ts), no webview part.
 
-// P9 lsp
+// P9 lsp: no webview part
 
-// P10 quiet
+// P10 quiet: host only (src/host/ours/mcp/setup.ts, drop.ts, saveOnSend.ts)
 
-// P11 snapmemo
+// P11 snapmemo: host only (src/host/ours/snapshotMemo.ts), no webview code.
 
-// P12 rewind
+import "./rewind";
 
-// P13 review
+import "./review";
 
-// P14 worktree
+// P14 worktree: host only (src/host/ours/worktree.ts); its Thread Actions entry reaches his menu through threadActions.list, icon in ./threadActions.ts.
 
-// P15 modelopts
+import "./modelOptions";
 
 // P16 tidy
 
-// P17 logs
+// P17 logs: host only (log lines in src/host/ours/logs.ts, index.ts, log.ts, drop.ts), no webview code.
 
-// P18 help
+// P18 help: host only (src/host/ours/help.ts), no webview code.
 
-// P19 mergeback
+// P19 mergeback: lives in threadActions.ts (the host lists the entry; one icon there)
 
-// P20 deeplink
+// P20 deeplink: host only (src/host/ours/links.ts)

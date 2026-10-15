@@ -114,42 +114,42 @@ export { activateImportChat as importchat } from "./importChat.js";
 
 export { activateOneWriter as oneWriter } from "./oneWriter.js";
 
-// P1 idectx
+export { activateIdeContext as ideContext } from "./ideContext.js";
 
-// P2 bgwork
+export { activateBackground as background } from "./background.js";
 
-// P3 allchanges
+// P3 allchanges: lives in diffs.ts (Q16 activation) and threadActions.ts (the menu entry), no second feature
 
-// P4 undoturn
+export { activateUndoTurn as undoTurn } from "./undoTurn.js";
 
-// P5 planready
+export { activatePlanReady as planReady } from "./planReady.js";
 
-// P6 goal
+export { activateGoal as goal } from "./goal.js";
 
-// P7 unread
+export { activateUnread as unread } from "./unread.js";
 
-// P8 scope
+export { activateScope as scope } from "./scope.js";
 
-// P9 lsp
+// P9 lsp: no activation; the MCP tools references and workspaceSymbols live in ./mcp/lsp.ts
 
-// P10 quiet
+// P10 quiet: no module; built into mcp/setup.ts, drop.ts and saveOnSend.ts
 
-// P11 snapmemo
+export { activateSnapshotMemo as snapmemo } from "./snapshotMemo.js";
 
-// P12 rewind
+export { activateRewind as rewind } from "./rewind.js";
 
-// P13 review
+export { activateReview as review } from "./review.js";
 
-// P14 worktree
+export { activateWorktree as worktree } from "./worktree.js";
 
-// P15 modelopts
+// P15 modelopts: webview only (src/webview/ours/modelOptions.ts), no host part.
 
 // P16 tidy
 
-// P17 logs
+// P17 logs: lives in logs.ts (server version line), index.ts (activation line) and log.ts (debug level); no second feature
 
-// P18 help
+export { activateHelp as help } from "./help.js";
 
-// P19 mergeback
+// P19 mergeback: lives in threadActions.ts (Q19 activation, no second feature)
 
-// P20 deeplink
+// P20 deeplink: lives in links.ts (G activation, no second feature)

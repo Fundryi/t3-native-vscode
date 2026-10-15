@@ -10,6 +10,7 @@ import * as vscode from "vscode";
 import { OURS_EVENT } from "../../shared/ours/channel.js";
 import { SIDEBAR_VIEW_ID } from "../hostState.js";
 import { otherFolderChats } from "./emptyList.js";
+import { unreadIds } from "./unread.js";
 import { activity } from "./activity.js";
 import { log } from "./log.js";
 import { registerOursRpc } from "./rpc.js";
@@ -82,9 +83,10 @@ export function activateKeys({ hostState, registry, provider }: OursDeps): vscod
       const time = (thread: { lastActiveAt?: string | null; updatedAt: string }) => Date.parse(thread.lastActiveAt ?? thread.updatedAt) || 0;
       const threads = hostState.snapshot(SIDEBAR_VIEW_ID).threads.filter((thread) => !thread.archived).sort((a, b) => time(b) - time(a));
       if (!threads.length) { void vscode.window.showInformationMessage("T3 VSCode: no chats in this workspace yet."); return; }
+      const unread = new Set(unreadIds(hostState)); // P7: the sessions list dot, as a filled circle here
       const picked = await vscode.window.showQuickPick(threads.map((thread) => ({
-        label: thread.title.trim() || "New conversation",
-        description: [thread.pinned ? "pinned" : "", thread.pendingRuntimeRequest ? "needs you" : thread.activeRunId ? "working" : ""].filter(Boolean).join(", "),
+        label: `${unread.has(thread.id) ? "$(circle-filled) " : ""}${thread.title.trim() || "New conversation"}`,
+        description: [unread.has(thread.id) ? "unread" : "", thread.pinned ? "pinned" : "", thread.pendingRuntimeRequest ? "needs you" : thread.activeRunId ? "working" : ""].filter(Boolean).join(", "),
         id: thread.id,
       })), { placeHolder: "Switch to a T3 chat (type to filter)", matchOnDescription: true });
       if (picked) focusComposer(await provider.openSession(picked.id));

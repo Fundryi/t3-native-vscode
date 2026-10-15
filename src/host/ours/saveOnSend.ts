@@ -17,13 +17,18 @@ async function saveDirty(): Promise<void> {
     const dirty = vscode.workspace.textDocuments.filter((document) => document.isDirty && !document.isUntitled).length;
     if (!dirty) return;
     // false: untitled files stay unsaved.
-    if (await vscode.workspace.saveAll(false)) return log.info(`Saved ${dirty} file${dirty === 1 ? "" : "s"} before T3 sent the prompt`);
+    if (await vscode.workspace.saveAll(false)) { lastReason = undefined; return log.info(`Saved ${dirty} file${dirty === 1 ? "" : "s"} before T3 sent the prompt`); }
     warn("VS Code did not save every file.");
   } catch (cause) { warn(cause instanceof Error ? cause.message : String(cause)); }
 }
 
+// P10 quiet: the toast only when the reason changes (a successful save resets it); a repeat is only logged.
+let lastReason: string | undefined;
 function warn(reason: string): void {
-  toastWithLogs("warning", `T3: could not save all files before sending (${reason}). The prompt was sent anyway.`);
+  const message = `T3: could not save all files before sending (${reason}). The prompt was sent anyway.`;
+  if (reason === lastReason) return log.error(message);
+  lastReason = reason;
+  toastWithLogs("warning", message);
 }
 
 export const activateSaveOnSend: OursFeature = ({ hostState }) => {

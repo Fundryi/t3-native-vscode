@@ -29,6 +29,8 @@ import type { OursDeps, OursFeature } from "./types.js";
 export function activateOurs(context: vscode.ExtensionContext, deps: Omit<OursDeps, "context">): vscode.Disposable {
   const channel = vscode.window.createOutputChannel("T3 VSCode (fork)", { log: true });
   setLogChannel(channel);
+  // P17 logs: the first line says which extension and VS Code wrote the log; logs.ts adds the T3 server version.
+  log.info(`T3 VSCode ${String(context.extension.packageJSON.version)}, VS Code ${vscode.version}, ${process.platform}-${process.arch}.`);
   // Keybindings that override his or VS Code's (the Explorer Ctrl+C) stay off until our code runs.
   void vscode.commands.executeCommand("setContext", "t3-vscode.ours.active", true);
   // terminalRuns is shared plumbing (A and D read it), so it is always on.

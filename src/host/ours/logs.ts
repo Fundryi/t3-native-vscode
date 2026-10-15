@@ -15,10 +15,14 @@ export function toastWithLogs(level: "error" | "warning", message: string, cause
 
 export function activateLogs({ hostState }: OursDeps): vscode.Disposable {
   const command = vscode.commands.registerCommand("t3-vscode.ours.log.show", () => log.show());
-  let last = "";
+  let last = "", server = "";
   // His state emits on every transcript update; log only when the phase, notice or problem kind changes.
   const unlisten = hostState.onDidChangeState((state) => {
     try {
+      // P17 logs: once per T3 server (environment) or version change, so the log names both sides that talked.
+      const env = state.environment;
+      const serverLine = env ? `T3 server ${env.serverVersion ?? "(version unknown)"} (environment ${env.environmentId})` : "";
+      if (serverLine && serverLine !== server) { server = serverLine; log.info(serverLine); }
       const kind = state.connectionSetup?.problem?.kind;
       const line = `T3 connection: ${state.phase}${kind ? ` (${kind})` : ""}${state.notice ? `: ${state.notice}` : ""}`;
       if (line === last) return;

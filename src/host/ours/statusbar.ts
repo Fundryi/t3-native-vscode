@@ -4,6 +4,7 @@
  */
 import * as vscode from "vscode";
 import { activity } from "./activity.js";
+import { backgroundTitles } from "./background.js";
 import { log } from "./log.js";
 import { toastWithLogs } from "./logs.js";
 import type { OursDeps } from "./types.js";
@@ -52,7 +53,8 @@ export function activateStatusbar({ hostState, provider }: OursDeps): vscode.Dis
       else if (!now.run.length && tick) { clearInterval(tick); tick = undefined; }
     } catch (cause) { log.error("Fork status bar update failed.", cause); }
   };
-  const unlisten = hostState.onDidChangeState(paint);
+  // P2: work a chat left running after its turn (shell roster) joins the hover; only work that wakes the agent shows.
+  const unlisten = hostState.onDidChangeState((state) => paint({ ...state, background: backgroundTitles(hostState) }));
   return vscode.Disposable.from(
     { dispose: () => { clearInterval(tick); unwrap(); unlisten(); waiting = 0; paintBadge(); view = undefined; } },
     command, item,

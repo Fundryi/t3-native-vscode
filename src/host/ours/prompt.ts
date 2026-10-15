@@ -1,6 +1,6 @@
 /**
  * D add-to-prompt: files, terminal text, the last command, a TODO, a Problem and "review my changes" into the T3 composer.
- * Alt+K (a selection) is his t3-vscode.insertReference. Nothing here ever sends.
+ * Alt+K (a selection) is his t3-vscode.insertReference. Nothing here sends, except the P13 review picker set to a new chat.
  */
 import * as vscode from "vscode";
 import { toastWithLogs } from "./logs.js";
@@ -10,6 +10,7 @@ import { editorReference } from "../editorReference.js";
 import { SIDEBAR_VIEW_ID } from "../hostState.js";
 import { fileReference, insertAttachments, insertFile, insertText, isAttachableImage } from "./composer.js";
 import { fenced, lastCommandText, MAX_PROMPT_CHARS, todoLines } from "./promptText.js";
+import { openReview } from "./review.js";
 import { terminalRuns } from "./terminalRuns.js";
 import type { OursDeps } from "./types.js";
 
@@ -92,8 +93,8 @@ export function activatePrompt(deps: OursDeps): vscode.Disposable {
       await insertFile(deps, reference);
       if (typeof message === "string" && message) await insertText(deps, `${message}${typeof source === "string" && source ? ` (${source})` : ""} `);
     })),
-    // 7. Source Control title.
-    vscode.commands.registerCommand("t3-vscode.ours.prompt.reviewChanges", guarded(() => addText("Review my uncommitted changes in this repository."))),
+    // 7. Source Control title: P13's picker. "This chat" only inserts here (the host cannot see the composer's draft).
+    vscode.commands.registerCommand("t3-vscode.ours.prompt.reviewChanges", guarded(() => openReview(deps, { insert: addText }))),
     vscode.languages.registerCodeActionsProvider({ scheme: "file" }, {
       provideCodeActions: (document, _range, context) => context.diagnostics.slice(0, MAX_FIXES).map((diagnostic) => {
         const action = new vscode.CodeAction(`Fix with T3: ${diagnostic.message.slice(0, 60)}`, vscode.CodeActionKind.QuickFix);

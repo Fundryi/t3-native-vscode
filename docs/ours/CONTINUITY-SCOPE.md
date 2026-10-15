@@ -3,7 +3,7 @@
 Date: 2026-10-15. Status: scouting only, nothing built, nothing live-tested.
 
 `git -C reference/t3code describe --tags` gives `v0.0.46-nightly.20261015.3145`.
-The fork vendor folder is pinned at nightly 20261014.3093 (docs/ours/FORK-FEATURES.md:118).
+The fork vendor folder was pinned at nightly 20261014.3093 when this was written; since 93fcd95 it is 20261015.3145 (docs/ours/FORK-FEATURES.md section J).
 
 Sources: four scout reports (T3, harness, fork, parity). No skeptic verdicts arrived, so the
 lead spot-checked the scouts by re-reading: ClaudeAdapterV2.ts:8528-8550, :9155-9195;
@@ -23,7 +23,7 @@ Short names:
 - Yes. Every direction can work on an unmodified T3 nightly. No T3 change is needed to start.
 - T3 already stores the real Claude session id or Codex thread id of every chat. The fork can read it today.
 - T3 already has an importer for Claude Code and Codex chats. The fork does not call it yet.
-- Two traps, both from reading code, not tested: an imported Claude chat may silently start a NEW Claude session on its first T3 message, and the bulk importer would duplicate chats T3 itself made.
+- Two traps, both from reading code, not tested: the first T3 message on an imported Claude chat fails with "Session ID ... is already in use" (only when the cwd slug differs does it silently start a NEW Claude session; QOL-ROUND-3 section 4), and the bulk importer would duplicate chats T3 itself made.
 - Rule for every direction: one writer per session. Stop the T3 side before opening the chat elsewhere, and close the other side before sending from T3.
 
 ## Decisions (owner, 2026-10-15) and build items
@@ -131,7 +131,7 @@ What the agent remembers vs what T3 shows:
 - Build:
   - src/host/ours/importChat.ts (new): list `~/.claude/projects/<slug>/*.jsonl` (both case spellings, fact 21) and the Codex rollouts under ~/.codex/sessions whose `session_meta.cwd` matches. Read first lines only. Skip sessions T3 made (entrypoint sdk-*, originator "T3 Code") and ids already in any T3 thread providerThreads.
   - Dispatch `thread.create` with `importedNativeThread` (fact 9) through `client.dispatch`, then open the thread. If hostState.createThread is reused, it needs one optional parameter (the smallest touch of his file).
-- Size: M. Risk: HIGH for Claude until tested (facts 3, 15): the first T3 message may silently bind a new Claude id. Codex: low. The T3 view starts empty (no history).
+- Size: M. Risk: HIGH for Claude until tested (facts 3, 15): the first T3 message fails with "already in use", or, when the cwd slug differs, silently binds a new Claude id (QOL-ROUND-3 section 4). Codex: low. The T3 view starts empty (no history).
 - Live test (blocks the Claude half): isolated T3 home, create a thread for a known Claude session, send one message, then read `providerThreads[active].nativeThreadRef.nativeId`. It must equal the original UUID, and the original .jsonl must have grown. If the id changed, ship F2 for Codex only and report the Claude case upstream.
 
 ### F3. "Import all Claude Code / Codex chats of this folder" (bulk, with history)
@@ -159,7 +159,7 @@ Value 5 = best. "T3 has it" means an unmodified nightly offers the surface. The 
 | 2 | Start a chat in a git worktree (CC createWorktree, Codex /worktree) | 3 | M | launch strategy worktree (orchestrationV2.ts:520-537) | Yes; fork sends worktreePath: null (hostState.ts:626) |
 | 3 | Attach the open file and selection to every prompt automatically | 3 | S | composer file context | Yes |
 | 4 | Code-intelligence tools in the MCP bridge (references, workspace symbols) | 3 | S | none (VS Code only) | n/a |
-| 5 | List and stop background shells and monitors | 3 | M | background-work list | Partial: `thread.background-work.settle` (orchestrationV2.ts:3220); a list: not found |
+| 5 | List and stop background shells and monitors | 3 | M | background-work list | Yes: the list is `pendingBackgroundTasks` on the shell row (orchestrationV2.ts:1988) and on the provider thread (:978); `thread.background-work.settle` is server-only, a client stops with `run.interrupt` (QOL-ROUND-3 section 1) |
 | 6 | /review against a base branch, in this chat or a separate one | 3 | M | `review.getDiffPreview` (rpc.ts:439) | Yes |
 | 7 | Reopen closed chat (Ctrl+Shift+T) | 3 | S | none | n/a; fork 0 hits |
 | 8 | Focus view: hide tools, keep prompts and answers | 2 | S | none | n/a |

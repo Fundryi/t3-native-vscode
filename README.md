@@ -16,7 +16,7 @@ This is [Fundryi/t3-native-vscode](https://github.com/Fundryi/t3-native-vscode),
 | Files into the chat | Attach button, Alt+K inserts a selection | "Add to prompt" menu, Shift+Alt+K for a selection, Ctrl+C in the Explorer then Ctrl+V, a drop view |
 | Upstream merges | n/a | Our code lives in `src/*/ours/`; his files get the smallest hooks; `git merge upstream/main` works |
 
-What the fork adds on top of upstream (every item has a live test in [docs/ours/FORK-FEATURES.md](docs/ours/FORK-FEATURES.md)):
+What the fork adds on top of upstream (every item has a live test in [docs/ours/FORK-FEATURES.md](https://github.com/Fundryi/t3-native-vscode/blob/main/docs/ours/FORK-FEATURES.md)):
 
 - **Agents understand this VS Code window.** A loopback MCP server per window; Claude Code and Codex started by T3 get tools for the workspace, open tabs, the active file and selection, problems, git state, terminal output, and can open a file, reveal it or show a diff.
 - **Approvals and questions as VS Code notifications**, answerable by keyboard (Alt+1, Alt+2, ...) and from the status bar.

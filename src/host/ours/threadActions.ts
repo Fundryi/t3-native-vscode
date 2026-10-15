@@ -6,13 +6,19 @@
  * rows (rename, pin, settle, archive, delete; his command is hidden in package.json) plus ours. A wrapper on
  * hostState.threadAction offers Undo after every Archive, from any menu.
  * C1 contnative: "Continue in Claude Code / Codex" and "Copy session ID" for those chats (./continueNative.ts).
+ * P3 allchanges: "Show all changes" opens one multi-diff of every file the chat changed (./diffs.ts).
+ * P14 worktree: "Open Worktree in New Window" for a chat that runs in a git worktree (./worktree.ts starts those).
+ * P19 mergeback: "Merge back into parent" on a fork sends the fork's conversation to its parent as context (thread.merge_back).
  */
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import * as DateTime from "effect/DateTime";
+import { resolveMergeBackTargetThreadId } from "@t3tools/client-runtime/state/thread-relationships";
 import { resolveSnoozePresets } from "@t3tools/client-runtime/state/thread-settled";
+import { resolveLatestMergeBackRun } from "@t3tools/client-runtime/state/thread-workflows";
 import type { ThreadSummary } from "../../shared/bridge.js";
 import { continueNative, copySessionId } from "./continueNative.js";
+import { showAllChanges } from "./diffs.js";
 import { log } from "./log.js";
 import { registerOursRpc } from "./rpc.js";
 import { wrap } from "./wrap.js";
@@ -20,9 +26,16 @@ import { threadActionEntries, type ThreadActionId } from "./threadActionsList.js
 import type { OursDeps, OursFeature } from "./types.js";
 
 export const activateThreadActions: OursFeature = (deps) => {
-  const { client, hostState, registry } = deps;
+  const { client, hostState, registry, provider } = deps;
   const driver = (thread: ThreadSummary) => client.config?.providers.find((provider) => provider.instanceId === thread.modelSelection.instanceId)?.driver;
-  const entries = (thread: ThreadSummary) => threadActionEntries(thread, client.config?.environment.capabilities, driver(thread));
+  // P14: a thread whose workspace is not its project root runs in a git worktree (his workspaceForThread prefers worktreePath).
+  const worktreePath = (thread: ThreadSummary) => {
+    try {
+      const path = hostState.workspaceForThread(thread.id);
+      return path && path !== hostState.snapshot().projects.find((project) => project.id === thread.projectId)?.workspaceRoot ? path : null;
+    } catch { return null; }
+  };
+  const entries = (thread: ThreadSummary) => threadActionEntries(thread, client.config?.environment.capabilities, driver(thread), worktreePath(thread));
   // viewId comes from his attach; the thread must be one this view lists (the webview is a trust boundary).
   const findThread = (params: Readonly<Record<string, unknown>>, viewId: string): ThreadSummary => {
     const thread = typeof params.threadId === "string" ? hostState.snapshot(viewId).threads.find((item) => item.id === params.threadId) : undefined;
@@ -52,6 +65,28 @@ export const activateThreadActions: OursFeature = (deps) => {
     else await hostState.interrupt(thread.id);
   };
 
+  // P19: as T3 web's merge (ThreadRelationshipsControl.tsx): target and run from T3's own resolvers, then open the parent.
+  const mergeBack = async (thread: ThreadSummary) => {
+    const projection = await client.getThreadProjection(thread.id);
+    const targetId = resolveMergeBackTargetThreadId(projection);
+    if (!targetId) throw new Error("This chat is not a fork.");
+    const latest = resolveLatestMergeBackRun(projection);
+    if (!latest) throw new Error("Complete a run in this fork before merging it back.");
+    const parent = hostState.snapshot().threads.find((item) => item.id === targetId)?.title || "the parent chat";
+    const merge = "Merge back";
+    const answer = await vscode.window.showWarningMessage(`Merge "${thread.title || "Untitled"}" back into "${parent}"?`, {
+      modal: true,
+      detail: `The parent chat gets this fork's conversation up to its latest finished turn as context, so its next answer knows the result. Only context moves: files on disk are not touched, and this fork stays as it is.`,
+    }, merge);
+    if (answer !== merge) return;
+    await client.dispatch({ type: "thread.merge_back", commandId: randomUUID(), createdBy: "user", creationSource: "web",
+      sourceThreadId: thread.id, targetThreadId: targetId, sourcePoint: { type: "run", runId: latest.id } });
+    log.info(`Thread actions: merged ${thread.id} back into ${targetId}.`);
+    // A parent outside this workspace's list cannot open here; the merge itself is done.
+    try { await provider.openSession(targetId); }
+    catch (cause) { log.error(`Thread actions: could not open the parent ${targetId}:`, cause); void vscode.window.showInformationMessage(`T3: merged into "${parent}". Open it in T3 to continue there.`); }
+  };
+
   const copy = async (text: string, what: string) => { await vscode.env.clipboard.writeText(text); vscode.window.setStatusBarMessage(`T3: ${what} copied.`, 3000); };
 
   const perform = async (thread: ThreadSummary, action: ThreadActionId): Promise<void> => {
@@ -64,6 +99,9 @@ export const activateThreadActions: OursFeature = (deps) => {
       case "stopSubagent": return stopSubagent(thread);
       case "continueNative": return continueNative(deps, thread);
       case "copySessionId": return copySessionId(deps, thread);
+      case "allChanges": return showAllChanges(client, thread);
+      case "openWorktree": { const path = worktreePath(thread); if (path) await vscode.commands.executeCommand("vscode.openFolder", vscode.Uri.file(path), { forceNewWindow: true }); return; }
+      case "mergeBack": return mergeBack(thread);
     }
   };
   // Detached, so a QuickPick left open never times out the webview request; failures become a toast.
