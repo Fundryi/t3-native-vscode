@@ -144,6 +144,21 @@ export const activateImportChat: OursFeature = ({ client, hostState, registry, p
     try { state = hostState.snapshot(registry.focusedViewId); } catch { state = hostState.snapshot(); }
     const { draft } = state;
     if (!draft.modelSelection) throw new Error("No available provider models. Configure a provider in T3 Code, then reconnect.");
+    // Owner 2026-10-15: the carry-over once went straight to the composer's model; ask first, the composer's model preselected.
+    const current = draft.modelSelection;
+    const choices = (client.config?.providers ?? [])
+      .filter((item) => item.enabled && item.installed && item.availability !== "unavailable")
+      .flatMap((item) => item.models.map((model) => ({
+        label: model.name,
+        description: `${item.displayName ?? item.driver}${item.instanceId === current.instanceId && model.slug === current.model ? "  (current composer model)" : ""}`,
+        selection: { instanceId: item.instanceId, model: model.slug },
+      })))
+      .sort((a, b) => Number(b.description.includes("(current")) - Number(a.description.includes("(current")));
+    const picked = choices.length <= 1 ? choices[0] : await vscode.window.showQuickPick(choices, {
+      title: `Which model continues this ${TOOL[chat.driver]} conversation in T3?`, placeHolder: "The conversation is sent to this chat as its first message", ignoreFocusOut: true,
+    });
+    if (!picked) return;
+    const modelSelection = picked.selection;
     const lines = (await readFile(chat.file, "utf8")).split("\n");
     const turns = chat.driver === "codex" ? codexTurns(lines) : claudeTurns(lines);
     if (!turns.length) { void vscode.window.showInformationMessage(`This ${TOOL[chat.driver]} chat has no messages to carry over.`); return; }
@@ -151,7 +166,7 @@ export const activateImportChat: OursFeature = ({ client, hostState, registry, p
     const title = `From ${TOOL[chat.driver]}: ${(carried.firstPrompt ?? chat.title).slice(0, 60).trim()}`;
     const input = Schema.decodeUnknownSync(OrchestrationV2ThreadLaunchInput)({
       commandId: randomUUID(), creationSource: "web", projectId: await projectFor(chat.root), title, generateTitle: false,
-      modelSelection: draft.modelSelection, runtimeMode: draft.runtimeMode, interactionMode: draft.interactionMode,
+      modelSelection, runtimeMode: draft.runtimeMode, interactionMode: draft.interactionMode,
       workspaceStrategy: { type: "root" }, initialMessage: { text: carried.text, attachments: [] },
     });
     // run and requireSession are private in his T3Client; element access keeps them type-checked (as worktree.ts).

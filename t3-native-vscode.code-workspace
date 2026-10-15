@@ -48,23 +48,25 @@
     "version": "2.0.0",
     "tasks": [
       {
-        // Starts with the workspace (VS Code asks once to allow automatic tasks) and keeps
-        // reference/ on the newest T3 nightly and the original author's head: updates now, then every hour.
+        // Keeps reference/ on the newest T3 nightly and the original author's head, checking every hour.
+        // Manual: a watcher that auto-started on folder open made VS Code ask "Select an instance to terminate" on every reload.
         "label": "References: keep up to date",
         "type": "shell",
         "command": "node",
         "args": ["${workspaceFolder:t3-native-vscode (our fork)}/scripts/references.mjs", "--watch=60"],
         "isBackground": true,
-        "runOptions": { "runOn": "folderOpen", "instanceLimit": 1 },
+        "runOptions": { "instanceLimit": 1 },
         "presentation": { "reveal": "never", "panel": "dedicated" },
         "problemMatcher": []
       },
       {
+        // Runs once when the workspace opens (VS Code asks once to allow automatic tasks), quietly, and ends.
         "label": "References: update now",
         "type": "shell",
         "command": "node",
         "args": ["${workspaceFolder:t3-native-vscode (our fork)}/scripts/references.mjs", "--yes"],
-        "presentation": { "reveal": "always", "panel": "dedicated" },
+        "runOptions": { "runOn": "folderOpen", "instanceLimit": 1 },
+        "presentation": { "reveal": "never", "panel": "dedicated", "close": true },
         "problemMatcher": []
       }
     ]
