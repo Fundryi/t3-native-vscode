@@ -153,3 +153,5 @@ export { activateHelp as help } from "./help.js";
 // P19 mergeback: lives in threadActions.ts (Q19 activation, no second feature)
 
 // P20 deeplink: lives in links.ts (G activation, no second feature)
+
+// C4 carryover: lives in importChat.ts (C2 activation, no second feature); the pure part is importChatCarry.ts

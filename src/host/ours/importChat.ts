@@ -8,20 +8,27 @@
  * A chat that may still be running in the other tool asks first: two tools writing one chat can split it. Open is known
  * from Claude Code's sessions/<pid>.json (live pid) and Codex's writer lock, and re-checked after "I closed it there".
  * A chat already in T3 (ours, or imported by T3's first-run wizard) opens that thread; an archived one is not re-imported.
+ * C4 carryover: without a T3 provider of the chat's driver (Claude run through OpenCode or an API key), or when chosen,
+ * the conversation TEXT goes into a new T3 chat on the composer's model as its first message (importChatCarry.ts).
  */
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
-import { stat } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
+import { ORCHESTRATION_V2_WS_METHODS, OrchestrationV2ThreadLaunchInput } from "@t3tools/contracts";
+import * as Effect from "effect/Effect";
+import * as Schema from "effect/Schema";
+import { carryText, claudeTurns, codexTurns } from "./importChatCarry.js";
 import { log } from "./log.js";
+import { failure } from "./worktree.js";
 import { age, importThreadId, maybeLive, pathKey, type Driver } from "./importChatParse.js";
 import { claudeChats, claudeRunning, codexChats, codexHome, type Chat } from "./importChatScan.js";
 import type { OursFeature } from "./types.js";
 
 const TOOL: Record<Driver, string> = { claudeAgent: "Claude Code", codex: "Codex" };
 
-export const activateImportChat: OursFeature = ({ client, hostState, provider }) => {
+export const activateImportChat: OursFeature = ({ client, hostState, registry, provider }) => {
   const claudeOn = () => vscode.workspace.getConfiguration("t3-vscode.ours.importchat").get<boolean>("claude", false);
 
   /** Resolves when his host state lists the thread (openSession needs it), or rejects after 15 s. */
@@ -37,11 +44,14 @@ export const activateImportChat: OursFeature = ({ client, hostState, provider })
     if (done) unsubscribe();
   });
 
-  /** As T3's own ACP import: the first available instance of that driver with its default model, approval-required. */
+  /**
+   * As T3's own ACP import: the first available instance of that driver with its default model, approval-required.
+   * None (C4): the same session cannot continue in T3, so the picker carries the conversation text over instead.
+   */
   const selection = (driver: Driver) => {
     const instance = client.config?.providers.find((item) => item.driver === driver && item.enabled && item.installed && item.availability !== "unavailable");
     const model = instance?.models.find((item) => item.isDefault) ?? instance?.models[0];
-    if (!instance || !model) throw new Error(`T3 has no ${TOOL[driver]} provider enabled. A ${TOOL[driver]} chat can only continue on T3's own ${TOOL[driver]} provider (an OpenCode or API-key setup is a different session format). In T3 Code open Settings, Providers, enable ${TOOL[driver]}, then try again.`);
+    if (!instance || !model) return undefined;
     const modes = instance.supportedRuntimeModes;
     return { modelSelection: { instanceId: instance.instanceId, model: model.slug }, runtimeMode: !modes?.length || modes.includes("approval-required") ? "approval-required" : modes[0] };
   };
@@ -107,7 +117,9 @@ export const activateImportChat: OursFeature = ({ client, hostState, provider })
     if (existing?.archived) { void vscode.window.showInformationMessage(`This ${TOOL[chat.driver]} chat is archived in T3. Restore it there to continue it.`); return; }
     if (existing) { await provider.openSession(existing.id); return; }
     if (!await confirmLive(chat)) return;
-    const { modelSelection, runtimeMode } = selection(chat.driver);
+    const native = selection(chat.driver);
+    if (!native) throw new Error(`T3 has no ${TOOL[chat.driver]} provider enabled.`);
+    const { modelSelection, runtimeMode } = native;
     const projectId = await projectFor(chat.root);
     // Only a deleted earlier import can still hold the derived id here (active and archived returned above); that chat gets a fresh one.
     const derived = importThreadId(chat.driver, chat.nativeId), threadId = threads.has(derived) ? randomUUID() : derived;
@@ -120,6 +132,34 @@ export const activateImportChat: OursFeature = ({ client, hostState, provider })
     await listed(threadId);
     await provider.openSession(threadId);
     vscode.window.setStatusBarMessage(`T3: continuing the ${TOOL[chat.driver]} chat. Its earlier messages stay in ${TOOL[chat.driver]}; the agent remembers them.`, 8000);
+  };
+
+  /**
+   * C4 carryover: a new T3 chat on the model of the new-chat composer, its first message the transcript as context.
+   * Only reads the chat file, so the one-writer warnings of the same-session path do not apply. One launchThread call
+   * with the root strategy, as T3's own client starts a plain chat (client-runtime operations/commands.ts).
+   */
+  const carryOver = async (chat: Chat) => {
+    let state;
+    try { state = hostState.snapshot(registry.focusedViewId); } catch { state = hostState.snapshot(); }
+    const { draft } = state;
+    if (!draft.modelSelection) throw new Error("No available provider models. Configure a provider in T3 Code, then reconnect.");
+    const lines = (await readFile(chat.file, "utf8")).split("\n");
+    const turns = chat.driver === "codex" ? codexTurns(lines) : claudeTurns(lines);
+    if (!turns.length) { void vscode.window.showInformationMessage(`This ${TOOL[chat.driver]} chat has no messages to carry over.`); return; }
+    const carried = carryText(turns, chat.driver, chat.nativeId, chat.modifiedMs);
+    const title = `From ${TOOL[chat.driver]}: ${(carried.firstPrompt ?? chat.title).slice(0, 60).trim()}`;
+    const input = Schema.decodeUnknownSync(OrchestrationV2ThreadLaunchInput)({
+      commandId: randomUUID(), creationSource: "web", projectId: await projectFor(chat.root), title, generateTitle: false,
+      modelSelection: draft.modelSelection, runtimeMode: draft.runtimeMode, interactionMode: draft.interactionMode,
+      workspaceStrategy: { type: "root" }, initialMessage: { text: carried.text, attachments: [] },
+    });
+    // run and requireSession are private in his T3Client; element access keeps them type-checked (as worktree.ts).
+    const result = await client["run"](client["requireSession"]().client[ORCHESTRATION_V2_WS_METHODS.launchThread](input).pipe(Effect.mapError(failure)));
+    log.info(`Carry-over: ${chat.driver} ${chat.nativeId} -> thread ${result.threadId}, ${carried.turns} turns, ${carried.text.length} chars`);
+    await listed(result.threadId);
+    await provider.openSession(result.threadId);
+    vscode.window.setStatusBarMessage(`T3: the ${TOOL[chat.driver]} conversation went in as context; the original stays in ${TOOL[chat.driver]}.`, 8000);
   };
 
   const pick = async () => {
@@ -139,8 +179,18 @@ export const activateImportChat: OursFeature = ({ client, hostState, provider })
     });
     const what = withClaude ? "Claude Code or Codex" : "Codex";
     if (!items.length) { void vscode.window.showInformationMessage(`No ${what} chats of this folder found${withClaude ? "" : " (Claude Code chats are off: setting t3-vscode.ours.importchat.claude)"}.`); return; }
-    const choice = await vscode.window.showQuickPick(items, { title: `Continue a ${what} chat in T3`, placeHolder: "Newest first. Opens as a T3 chat on the same session.", matchOnDescription: true });
-    if (choice) await importChat(choice.chat);
+    const choice = await vscode.window.showQuickPick(items, { title: `Continue a ${what} chat in T3`, placeHolder: "Newest first. Continues the same session, or a new T3 chat with the conversation as context.", matchOnDescription: true });
+    if (!choice) return;
+    const tool = TOOL[choice.chat.driver];
+    if (!selection(choice.chat.driver)) {
+      log.info(`Continue a chat: T3 has no ${tool} provider enabled (an OpenCode or API-key setup is a different session format); carrying the conversation over instead.`);
+      await carryOver(choice.chat); return;
+    }
+    const how = await vscode.window.showQuickPick([
+      { label: `$(debug-continue) Continue on the same ${tool} session`, carry: false, detail: `On T3's own ${tool} provider; the agent keeps its whole memory.` },
+      { label: "$(comment-discussion) Start a new T3 chat with this conversation as context", carry: true, detail: "Works with any model: the earlier messages go in as text." },
+    ], { title: `Continue "${choice.chat.title}"` });
+    if (how) await (how.carry ? carryOver(choice.chat) : importChat(choice.chat));
   };
 
   return vscode.commands.registerCommand("t3-vscode.ours.importchat.pick", () => pick().catch((cause: unknown) => {

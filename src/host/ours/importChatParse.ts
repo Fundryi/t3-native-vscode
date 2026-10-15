@@ -18,7 +18,7 @@ export function pathKey(path: string, windows = process.platform === "win32"): s
 }
 export const isUuid = (id: string): boolean => UUID.test(id);
 
-const records = (lines: ReadonlyArray<string>): Record<string, unknown>[] => lines.flatMap((line) => {
+export const records = (lines: ReadonlyArray<string>): Record<string, unknown>[] => lines.flatMap((line) => {
   try { const value: unknown = JSON.parse(line); return value && typeof value === "object" ? [value as Record<string, unknown>] : []; }
   catch { return []; }
 });

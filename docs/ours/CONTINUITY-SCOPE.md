@@ -34,6 +34,7 @@ Short names:
   - C1 contnative, section F1: "Continue in Claude Code / Codex" thread action plus "Copy session id". Includes the running-chat modal above. Shown only for Claude Code and Codex chats.
   - C2 importchat, section F2: "T3: Continue a Claude Code or Codex chat" picker for this folder. Build both halves behind one command, but gate the Claude half: run the live test of F2 in an isolated T3 home (T3_VSCODE_HOME or the t3Home setting pointed at a temp folder, never the owner's) as part of the build; if after one message providerThreads[active].nativeThreadRef.nativeId is not the original UUID, hide Claude sessions from the picker, log why, and say so in NOT DONE. Codex sessions always listed.
   - C3 onewriter, section F4: before a send on a Claude Code or Codex chat whose .jsonl or rollout file changed after T3's last turn, ask "This chat was used elsewhere. Continue here?" with "Continue" and "Cancel".
+- Decision (owner 2026-10-15 evening): T3 runs Claude through OpenCode with an API key by design (so T3 can be remote-controlled); T3's own Claude Code provider (driver claudeAgent) stays off and is never required. The native-session path of C2 needs claudeAgent, so for this setup the conversation TEXT is carried over instead: C4 carryover puts the Claude Code or Codex transcript into a new T3 chat on his normal model as its first message (docs/ours/FORK-FEATURES.md "C4 carryover").
 
 ## 1. Facts
 

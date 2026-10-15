@@ -156,3 +156,5 @@ import "./modelOptions";
 // P19 mergeback: lives in threadActions.ts (the host lists the entry; one icon there)
 
 // P20 deeplink: host only (src/host/ours/links.ts)
+
+// C4 carryover: host only (src/host/ours/importChat.ts, importChatCarry.ts), no webview code.

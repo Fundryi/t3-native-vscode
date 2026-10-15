@@ -18,7 +18,7 @@ import { log } from "./log.js";
 import type { OursFeature } from "./types.js";
 
 /** The message of a server error (ThreadLaunchBaseRefError and GitCommandError carry readable ones). */
-const failure = (error: unknown) => new Error(typeof (error as { message?: unknown } | null)?.message === "string" ? (error as { message: string }).message : String(error));
+export const failure = (error: unknown) => new Error(typeof (error as { message?: unknown } | null)?.message === "string" ? (error as { message: string }).message : String(error));
 
 export const activateWorktree: OursFeature = ({ client, hostState, registry, provider }) => {
   /** Resolves when his host state lists the thread (openSession needs it), or rejects after 15 s (as importChat.ts). */
