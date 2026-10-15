@@ -25,6 +25,6 @@
     "test": "vp test run --config ../../vite.config.ts --dir ."
   },
   "dependencies": {
-    "effect": "4.0.2"
+    "effect": "4.0.4"
   }
 }

@@ -16,6 +16,14 @@ Not a merge of his repo: our own re-vendor of the T3 packages (port map item J, 
 - His files touched by the bump (import moves only): src/host/pairing.ts, serverDiscovery.ts, t3Client.ts, fileLinks.ts, pairing.test.ts, scripts/spike.ts.
 - Merge rule for his future releases: take his vendor/ wholesale, then re-apply this re-vendor if his pin is older than 107f6024ea47.
 
+## re-vendor to T3 nightly v0.0.46-nightly.20261015.3145, 2026-10-15
+
+Our own re-vendor again (docs/ours/VENDOR-DRIFT.md block "Re-vendor 3093 -> 3145"). Why: the fork follows the owner's nightly; the facts effect-version and effect-rpc-ping-timeout-patch had been failing on purpose since Effect moved.
+- vendor/contracts, shared, client-runtime and the source-control client definitions: src from T3 339179f50a84, same steps as before (vendor/README.md). New files: client-runtime/src/imageAttachmentSize.ts, state/threadTranscriptHttp.ts, shared/src/threadTranscript.ts; two new package exports.
+- Effect 4.0.2 to 4.0.4; T3 dropped its Effect patch (the ping-timeout hook is a makeProtocolSocket option now), so patches/effect@4.0.2.patch is gone and pnpm-workspace.yaml has no patchedDependencies entry for it.
+- Contract changes that reach the fork: the new event thread.pull-request-link-updated now decodes and applies (before, the stream skipped it); everything else additive. No change in src/, none of his files touched.
+- Merge rule unchanged: take his vendor/ wholesale, then re-apply this re-vendor if his pin is older than 339179f50a84.
+
 ## Checklist after every `git merge upstream/main`
 
 Run after the merge, before build and tests (details in docs/ours/PORT-MAP.md section 0.10):

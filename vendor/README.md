@@ -3,8 +3,9 @@
 Source copied (src only) from the T3 Code repo:
 
 - **Upstream:** https://github.com/pingdotgg/t3code (the fork's read-only clone under `reference/t3code`)
-- **Git sha:** `107f6024ea4786a58a83c921728a113b849de192` (tag `v0.0.46-nightly.20261014.3093`, committed 2026-10-13)
-- **Previous pin:** `7812230572f2d7e042d8d14ada2381fc71377560` (2026-10-05, upstream version 0.0.45)
+- **Git sha:** `339179f50a84dc599cce373dbb48f172f182f44e` (tag `v0.0.46-nightly.20261015.3145`, committed 2026-10-14)
+- **Previous pin:** `107f6024ea4786a58a83c921728a113b849de192` (tag `v0.0.46-nightly.20261014.3093`, committed 2026-10-13)
+- **Earlier pin:** `7812230572f2d7e042d8d14ada2381fc71377560` (2026-10-05, upstream version 0.0.45)
 
 ## What is here
 
@@ -21,7 +22,7 @@ copies hold only `src/client/definition.ts` and a reduced `package.json` (step 6
 
 ## What was excluded
 
-- All `*.test.ts` files (36 in contracts, 77 in shared, 121 in client-runtime).
+- All `*.test.ts` files (39 in contracts, 95 in shared, 134 in client-runtime at 3145).
 - `packages/shared/src/testing/` entirely (testkit: `longTempDir.ts`,
   `symlinks.ts`, `TraceRetention.fixture.mjs`). No non-test source imports it.
 - All `devDependencies` from the copied package.jsons (test-only tooling).
@@ -57,8 +58,8 @@ The vendored manifests declare their runtime dependencies and keep
 version; the root also declares Effect because the host adapter imports it.
 The lockfile resolves the remaining dependencies:
 
-- `effect` **4.0.2**, patched with T3's `patches/effect@4.0.2.patch` (step 7);
-  exactly one copy, duplicates break schema decoding
+- `effect` **4.0.4**, unpatched (step 7); exactly one copy, duplicates break
+  schema decoding
 - `@noble/curves` 1.9.1
 - `@noble/hashes` 1.8.0
 - `jose` 6.2.2
@@ -105,7 +106,8 @@ cp "$UPSTREAM/packages/contracts/package.json"      "$DEST/contracts/package.jso
 cp "$UPSTREAM/packages/shared/package.json"         "$DEST/shared/package.json"
 cp "$UPSTREAM/packages/client-runtime/package.json" "$DEST/client-runtime/package.json"
 cp "$UPSTREAM/LICENSE"                              "$DEST/LICENSE.t3code"
-cp "$UPSTREAM/patches/effect@<version>.patch"       patches/
+# Only while T3 patches Effect (none since nightly 3105, see step 7):
+# cp "$UPSTREAM/patches/effect@<version>.patch"     patches/
 ```
 
 Empty each `src/` first (or use `rsync --delete`): upstream renames and moves
@@ -156,14 +158,16 @@ Then re-apply the package.json edits by hand (they are **not** scripted):
    Drop `@pierre/diffs` from client-runtime's dependencies (only the excluded
    `reviewGuideTour.ts` uses it).
 
-7. Copy T3's Effect patch to `patches/` and list it under
-   `patchedDependencies` in `pnpm-workspace.yaml`; set the root `effect`
-   dependency and the `overrides` entry to the same version. The 4.0.2 patch
-   adds the `RpcClient.ConnectionHooks.onPingTimeout` hook that
-   `client-runtime/src/rpc/session.ts` sets. Since nightly 3105 upstream is on
-   Effect 4.0.4 with no Effect patch (the hook ships in 4.0.4): a sync at that
-   pin or later drops `patches/effect@4.0.2.patch` and its `patchedDependencies`
-   entry and bumps the root `effect` and the override to 4.0.4.
+7. Set the root `effect` dependency, the `effect` entry of every vendored
+   package.json and the `overrides` entry in `pnpm-workspace.yaml` to the
+   upstream catalog version (4.0.4 at this pin). If upstream carries a
+   `patches/effect@<version>.patch` again, copy it to `patches/` and list it
+   under `patchedDependencies`. None at this pin: Effect 4.0.4 ships the
+   ping-timeout hook that `client-runtime/src/rpc/session.ts` sets, as the
+   `onPingTimeout` option of `RpcClient.makeProtocolSocket` (with 4.0.2 it was
+   a `ConnectionHooks` field added by T3's patch, removed in the 3145 sync).
+   After `pnpm install`, check that every `node_modules/effect` link resolves
+   to the same `effect@<version>` store entry.
 
 Update the provenance block at the top of this file, and re-run the
 verification greps: no `three` imports outside `client-runtime/src/device/`,

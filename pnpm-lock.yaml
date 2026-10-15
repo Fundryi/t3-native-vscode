@@ -5,11 +5,10 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  effect: 4.0.2
+  effect: 4.0.4
 
 patchedDependencies:
   '@legendapp/list@3.3.5': 5de1e981072a37b59dfa8d4fe241f9c802257d1ab21d44e809cbc73b8c0bbfe9
-  effect@4.0.2: ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688
 
 importers:
 
@@ -37,8 +36,8 @@ importers:
         specifier: 3.4.16
         version: 3.4.16
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
       katex:
         specifier: 0.16.25
         version: 0.16.25
@@ -152,8 +151,8 @@ importers:
         specifier: workspace:*
         version: link:../source-control-gitlab
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
       three:
         specifier: 0.180.0
         version: 0.180.0
@@ -161,8 +160,8 @@ importers:
   vendor/contracts:
     dependencies:
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
 
   vendor/shared:
     dependencies:
@@ -176,8 +175,8 @@ importers:
         specifier: workspace:*
         version: link:../contracts
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
       jose:
         specifier: 6.2.2
         version: 6.2.2
@@ -227,8 +226,8 @@ importers:
         specifier: workspace:*
         version: link:../source-control-core
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
 
   vendor/source-control-bitbucket:
     dependencies:
@@ -242,8 +241,8 @@ importers:
         specifier: workspace:*
         version: link:../source-control-core
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
 
   vendor/source-control-core:
     dependencies:
@@ -254,8 +253,8 @@ importers:
         specifier: workspace:*
         version: link:../shared
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
 
   vendor/source-control-forgejo:
     dependencies:
@@ -269,8 +268,8 @@ importers:
         specifier: workspace:*
         version: link:../source-control-core
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
 
   vendor/source-control-gitcafe:
     dependencies:
@@ -284,8 +283,8 @@ importers:
         specifier: workspace:*
         version: link:../source-control-core
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
 
   vendor/source-control-github:
     dependencies:
@@ -299,8 +298,8 @@ importers:
         specifier: workspace:*
         version: link:../source-control-core
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
 
   vendor/source-control-gitlab:
     dependencies:
@@ -314,8 +313,8 @@ importers:
         specifier: workspace:*
         version: link:../source-control-core
       effect:
-        specifier: 4.0.2
-        version: 4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688)
+        specifier: 4.0.4
+        version: 4.0.4
 
 packages:
 
@@ -1901,8 +1900,8 @@ packages:
     resolution: {integrity: sha512-UgGlf8IW75je7HZjNDpJdCv4cGJWIi6yumFdZ0R7A8/CIhQiWUjyGLCxdHpd8bmyD1gnkfUNK0oeOXqUS2cpfQ==}
     engines: {ecmascript: '>= es5', node: '>=4'}
 
-  effect@4.0.2:
-    resolution: {integrity: sha512-YeYnLqSFrL4+tCOXRrfNP03w8FILoF/wDl+ukraJAGzXrjcS383W7LAAvGBbLatEyktmLxRq+9xJinx7QzXW5A==}
+  effect@4.0.4:
+    resolution: {integrity: sha512-Sr50OeVSC3M5UkoUYUhFf3EULryhGaZZUf6OzDHTvaznOw7HRlxOKdF3/4nvQXHL22StOyMG3Cvo8Bt7xUp+Ng==}
 
   electron-to-chromium@1.5.444:
     resolution: {integrity: sha512-5ss/uJfoDYDHT0lfJzT6FbcskIzROIOPf0BbbFkGcvDzoJU7i//9GDrwwIHQVmIsrAGiF3ihpADBRIsrEFt1rQ==}
@@ -4351,7 +4350,7 @@ snapshots:
     dependencies:
       version-range: 4.15.0
 
-  effect@4.0.2(patch_hash=ec61ee307eaec3e17f757e0e6a16296ea4b7a8c3188df0c6ec5e66301fd78688): {}
+  effect@4.0.4: {}
 
   electron-to-chromium@1.5.444: {}
 
