@@ -41,7 +41,7 @@ export const activateImportChat: OursFeature = ({ client, hostState, provider })
   const selection = (driver: Driver) => {
     const instance = client.config?.providers.find((item) => item.driver === driver && item.enabled && item.installed && item.availability !== "unavailable");
     const model = instance?.models.find((item) => item.isDefault) ?? instance?.models[0];
-    if (!instance || !model) throw new Error(`T3 has no available ${TOOL[driver]} provider. Enable it in T3 Code, then try again.`);
+    if (!instance || !model) throw new Error(`T3 has no ${TOOL[driver]} provider enabled. A ${TOOL[driver]} chat can only continue on T3's own ${TOOL[driver]} provider (an OpenCode or API-key setup is a different session format). In T3 Code open Settings, Providers, enable ${TOOL[driver]}, then try again.`);
     const modes = instance.supportedRuntimeModes;
     return { modelSelection: { instanceId: instance.instanceId, model: model.slug }, runtimeMode: !modes?.length || modes.includes("approval-required") ? "approval-required" : modes[0] };
   };
