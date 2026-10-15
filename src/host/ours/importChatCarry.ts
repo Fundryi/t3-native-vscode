@@ -71,6 +71,7 @@ export function carryText(turns: ReadonlyArray<Turn>, driver: Driver, sessionId:
     }
     blocks.push(block); used += block.length + 2;
   }
-  const firstPrompt = turns.find((turn) => turn.role === "user")?.text.replace(/\s+/g, " ").trim();
+  // The title skips tag blocks and bare tags (a pasted-content wrapper, a command block) and takes the first real sentence.
+  const firstPrompt = turns.filter((turn) => turn.role === "user").map((turn) => turn.text.replace(/<[^>]{1,80}>/g, " ").replace(/\s+/g, " ").trim()).find((text) => text.length > 0);
   return { text: [heading, ...(cut ? ["(earlier part left out)"] : []), ...blocks.reverse()].join("\n\n"), turns: blocks.length, ...(firstPrompt ? { firstPrompt } : {}) };
 }
