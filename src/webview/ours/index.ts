@@ -111,8 +111,8 @@ import "./emptyList";
 
 // R20 longmsg: in ./chatlook (X2), no import of its own
 
-// C1 contnative
+// C1 contnative: two icons in ./threadActions (the entries come from the host list)
 
 // C2 importchat
 
-// C3 onewriter
+// C3 onewriter: host only (wraps sendMessage in src/host/ours/oneWriter.ts), no webview part.

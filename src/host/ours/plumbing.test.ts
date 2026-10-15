@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { oursRpc, registerOursRpc } from "./rpc.js";
-import { wrap } from "./wrap.js";
+import { Declined, wrap } from "./wrap.js";
 
 test("The ours channel runs only registered kinds", async () => {
   const dispose = registerOursRpc("test.echo", (params, viewId) => ({ text: params.text, viewId }));
@@ -34,6 +34,12 @@ test("A wrapper runs first, keeps his method bound to its instance, and unwraps 
   assert.deepEqual(failing.send("d"), ["d"]);
   wrap(failing, "send", (original) => (text) => { original(text); throw new Error("ours broke later"); });
   assert.deepEqual(failing.send("e"), ["d", "e"]);
+  // Declined (the user said no) passes through and his method does not run.
+  const declined = new His();
+  const unwrapDeclined = wrap(declined, "send", () => () => { throw new Declined("no"); });
+  assert.throws(() => declined.send("f"), Declined);
+  unwrapDeclined();
+  assert.deepEqual(declined.send("g"), ["g"]);
 });
 test("His async rejection stays his: rethrown as is, and still his when our replacement fails after it", async () => {
   const his = { async load(): Promise<string> { throw new Error("his"); } };

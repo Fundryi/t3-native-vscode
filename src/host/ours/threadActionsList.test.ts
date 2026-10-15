@@ -18,3 +18,11 @@ test("threadActions: Stop subagent only on a working subagent thread", () => {
   assert.deepEqual(ids({ ...child, activityRunStatus: "running" }, null), ["stopSubagent", "copyId"]);
   assert.deepEqual(ids({ ...idle, status: "running" }, null), ["copyId"]);
 });
+
+test("contnative: Continue in and Copy session ID only for Claude Code and Codex chats", () => {
+  assert.deepEqual(ids(idle, null, "claudeAgent"), ["continueNative", "copyId", "copySessionId"]);
+  assert.equal(threadActionEntries(idle, null, "codex")[0]?.label, "Continue in Codex...");
+  assert.deepEqual(ids(idle, null, "opencode"), ["copyId"]);
+  assert.deepEqual(ids(idle, null, null), ["copyId"]);
+  assert.deepEqual(ids(idle, null, "toString"), ["copyId"]);
+});

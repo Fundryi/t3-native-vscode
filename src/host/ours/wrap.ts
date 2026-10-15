@@ -10,6 +10,9 @@
  */
 import { log } from "./log.js";
 
+/** Thrown by a replacement BEFORE it calls the original when the user said no: passes through, his method never runs. */
+export class Declined extends Error {}
+
 type Method = (...args: never[]) => unknown;
 type His = { readonly value: unknown } | { readonly error: unknown };
 const isThenable = (value: unknown): value is PromiseLike<unknown> => typeof (value as PromiseLike<unknown> | null)?.then === "function";
@@ -30,6 +33,7 @@ export function wrap<T extends object, K extends keyof T>(target: T, key: K, rep
       catch (error) { his = { error }; throw error; }
     };
     const fallback = (cause: unknown): unknown => {
+      if (cause instanceof Declined) throw cause;
       if (his && "error" in his && his.error === cause) throw cause;
       log.error(`Fork wrapper of ${String(key)} failed; his behavior continues.`, cause);
       if (!his) return bound(...args);

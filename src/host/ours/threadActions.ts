@@ -5,12 +5,14 @@
  * R11 actions: "Thread Actions" (t3-vscode.ours.threadActions.more) is the one QuickPick for the focused chat: his five
  * rows (rename, pin, settle, archive, delete; his command is hidden in package.json) plus ours. A wrapper on
  * hostState.threadAction offers Undo after every Archive, from any menu.
+ * C1 contnative: "Continue in Claude Code / Codex" and "Copy session ID" for those chats (./continueNative.ts).
  */
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
 import * as DateTime from "effect/DateTime";
 import { resolveSnoozePresets } from "@t3tools/client-runtime/state/thread-settled";
 import type { ThreadSummary } from "../../shared/bridge.js";
+import { continueNative, copySessionId } from "./continueNative.js";
 import { log } from "./log.js";
 import { registerOursRpc } from "./rpc.js";
 import { wrap } from "./wrap.js";
@@ -19,7 +21,8 @@ import type { OursDeps, OursFeature } from "./types.js";
 
 export const activateThreadActions: OursFeature = (deps) => {
   const { client, hostState, registry } = deps;
-  const entries = (thread: ThreadSummary) => threadActionEntries(thread, client.config?.environment.capabilities);
+  const driver = (thread: ThreadSummary) => client.config?.providers.find((provider) => provider.instanceId === thread.modelSelection.instanceId)?.driver;
+  const entries = (thread: ThreadSummary) => threadActionEntries(thread, client.config?.environment.capabilities, driver(thread));
   // viewId comes from his attach; the thread must be one this view lists (the webview is a trust boundary).
   const findThread = (params: Readonly<Record<string, unknown>>, viewId: string): ThreadSummary => {
     const thread = typeof params.threadId === "string" ? hostState.snapshot(viewId).threads.find((item) => item.id === params.threadId) : undefined;
@@ -59,6 +62,8 @@ export const activateThreadActions: OursFeature = (deps) => {
       case "copyBranch": if (thread.branch) await copy(thread.branch, "branch"); return;
       case "copyId": return copy(thread.id, "thread ID");
       case "stopSubagent": return stopSubagent(thread);
+      case "continueNative": return continueNative(deps, thread);
+      case "copySessionId": return copySessionId(deps, thread);
     }
   };
   // Detached, so a QuickPick left open never times out the webview request; failures become a toast.
