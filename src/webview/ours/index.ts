@@ -113,6 +113,6 @@ import "./emptyList";
 
 // C1 contnative: two icons in ./threadActions (the entries come from the host list)
 
-// C2 importchat
+// C2 importchat: host only (command palette and the sessions view menu), no webview code.
 
 // C3 onewriter: host only (wraps sendMessage in src/host/ours/oneWriter.ts), no webview part.

@@ -49,6 +49,12 @@
     },
     "commands": [
       {
+        "command": "t3-vscode.ours.importchat.pick",
+        "title": "Continue a Claude Code or Codex Chat",
+        "category": "T3 VSCode",
+        "icon": "$(history)"
+      },
+      {
         "command": "t3-vscode.ours.chat.nextWaiting",
         "title": "Go to Next Chat That Needs You",
         "category": "T3 VSCode"
@@ -503,6 +509,11 @@
       ],
       "view/title": [
         {
+          "command": "t3-vscode.ours.importchat.pick",
+          "when": "view == t3.webview",
+          "group": "t3ours"
+        },
+        {
           "command": "t3-vscode.ours.chat.new",
           "when": "view == t3.webview && !t3-vscode.ours.sidebarChat",
           "group": "navigation@1"
@@ -565,6 +576,18 @@
       ]
     },
     "configuration": [
+      {
+        "title": "Fork: Continue a chat",
+        "order": 10,
+        "properties": {
+          "t3-vscode.ours.importchat.claude": {
+            "type": "boolean",
+            "default": false,
+            "scope": "window",
+            "markdownDescription": "List Claude Code chats in **Continue a Claude Code or Codex Chat** (Codex chats are always listed). Off until tested: T3 may start a new Claude session on the first message of an imported Claude chat, so the agent would not remember it."
+          }
+        }
+      },
       {
         "title": "Fork: Drop files view",
         "order": 10,

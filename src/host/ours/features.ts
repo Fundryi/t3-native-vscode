@@ -110,6 +110,6 @@ export { activateEmptyList as emptyList } from "./emptyList.js";
 
 // C1 contnative: lives in threadActions.ts (continueNative.ts holds the hand-over; Q19 activation, no second feature)
 
-// C2 importchat
+export { activateImportChat as importchat } from "./importChat.js";
 
 export { activateOneWriter as oneWriter } from "./oneWriter.js";
