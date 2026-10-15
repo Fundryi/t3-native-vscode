@@ -26,6 +26,15 @@ Short names:
 - Two traps, both from reading code, not tested: an imported Claude chat may silently start a NEW Claude session on its first T3 message, and the bulk importer would duplicate chats T3 itself made.
 - Rule for every direction: one writer per session. Stop the T3 side before opening the chat elsewhere, and close the other side before sending from T3.
 
+## Decisions (owner, 2026-10-15) and build items
+
+- A running T3 chat is never handed over quietly. "Continue in Claude Code / Codex" on a running chat shows a modal warning (VS Code showWarningMessage with modal: true) that says two tools writing one chat can split it; the buttons are "Stop and continue" and "Cancel". Only "Stop and continue" stops the run (thread.stop), detaches, and opens the chat elsewhere. Nothing else is allowed.
+- First slice, built now in one round: C1 (section F1) and C2 (section F2, the Codex half fully; the Claude half only after its live test passes, see C2 below) and C3 (section F4). Items F3 and F5 wait.
+- Build items for the qol-build workflow (one builder each, worktree .claude/worktrees/<key>, slot lines "// C1 contnative", "// C2 importchat", "// C3 onewriter" in src/host/ours/features.ts and src/webview/ours/index.ts):
+  - C1 contnative, section F1: "Continue in Claude Code / Codex" thread action plus "Copy session id". Includes the running-chat modal above. Shown only for Claude Code and Codex chats.
+  - C2 importchat, section F2: "T3: Continue a Claude Code or Codex chat" picker for this folder. Build both halves behind one command, but gate the Claude half: run the live test of F2 in an isolated T3 home (T3_VSCODE_HOME or the t3Home setting pointed at a temp folder, never the owner's) as part of the build; if after one message providerThreads[active].nativeThreadRef.nativeId is not the original UUID, hide Claude sessions from the picker, log why, and say so in NOT DONE. Codex sessions always listed.
+  - C3 onewriter, section F4: before a send on a Claude Code or Codex chat whose .jsonl or rollout file changed after T3's last turn, ask "This chat was used elsewhere. Continue here?" with "Continue" and "Cancel".
+
 ## 1. Facts
 
 ### 1.A T3 (server)

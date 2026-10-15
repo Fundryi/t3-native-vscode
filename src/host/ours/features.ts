@@ -107,3 +107,9 @@ export { activateOutput as output } from "./output.js";
 export { activateEmptyList as emptyList } from "./emptyList.js";
 
 // R20 longmsg
+
+// C1 contnative
+
+// C2 importchat
+
+// C3 onewriter
